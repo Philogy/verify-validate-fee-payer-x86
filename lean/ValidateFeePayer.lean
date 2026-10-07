@@ -2,6 +2,7 @@ import ValidateFeePayer.Bytes
 import ValidateFeePayer.Region
 import ValidateFeePayer.Image
 import ValidateFeePayer.Memory
+import ValidateFeePayer.MemoryFacts
 import ValidateFeePayer.Instr
 import ValidateFeePayer.Decode
 import ValidateFeePayer.Print
