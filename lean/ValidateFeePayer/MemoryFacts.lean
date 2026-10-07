@@ -23,10 +23,10 @@ namespace Mapping
 
 @[simp] theorem contains_set {mp : Mapping} {a x : UInt64} {h : mp.Contains a} {v : UInt8} :
     (mp.set a h v).Contains x ↔ mp.Contains x := by
-  simp [set, Contains, endAddr, ByteArray.size_set']
+  simp [set, Contains, endAddress, ByteArray.size_set']
 
-@[simp] theorem perm_set {mp : Mapping} {a : UInt64} {h : mp.Contains a} {v : UInt8} :
-    (mp.set a h v).perm = mp.perm := rfl
+@[simp] theorem permissions_set {mp : Mapping} {a : UInt64} {h : mp.Contains a} {v : UInt8} :
+    (mp.set a h v).permissions = mp.permissions := rfl
 
 theorem get_set_same {mp : Mapping} {a : UInt64} {h : mp.Contains a} {v : UInt8} (h' : (mp.set a h v).Contains a) :
     (mp.set a h v).get a h' = v := by
@@ -74,7 +74,7 @@ theorem go_setByte_same {acc : Access} {a : UInt64} {v : UInt8} {ms : List Mappi
   | cons mp rest ih =>
     simp only [setByte]
     by_cases hc : mp.Contains a
-    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Perm.allows]
+    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Permissions.allows]
       simp [Mapping.get_set_same]
     · simp only [hc, ↓reduceDIte, byte.go]
       apply ih
@@ -91,7 +91,7 @@ theorem go_setByte_ne {acc : Access} {a x : UInt64} {v : UInt8} {ms : List Mappi
   | cons mp rest ih =>
     simp only [setByte]
     by_cases hc : mp.Contains a
-    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Mapping.perm_set]
+    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Mapping.permissions_set]
       by_cases hx : mp.Contains x
       · simp [hx, Mapping.get_set_ne _ hx hne]
       · simp [hx]

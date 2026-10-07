@@ -106,7 +106,7 @@ fn region(name: &str, doc: &str, vaddr: u64, contents: &Contents) -> String {
 /-- {doc} -/
 def {name} : Region where
   name := \"{name}\"
-  vaddr := {vaddr:#x}
+  address := {vaddr:#x}
   contents := {}
 ",
         contents.lean()

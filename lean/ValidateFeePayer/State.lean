@@ -62,7 +62,7 @@ inductive Stop where
   deriving Repr
 
 def Size.width : Size → Width
-  | .b8 => .w1 | .b32 => .w4 | .b64 => .w8
+  | .b8 => .bytes1 | .b32 => .bytes4 | .b64 => .bytes8
 
 /-- One instruction: reads and updates the state, or stops. -/
 abbrev M := StateT State (Except Stop)
@@ -154,22 +154,22 @@ def readX128 (aligned : Bool) : XRM → M (BitVec 128)
   | .mem a => do
     let addr ← ea a
     if aligned && addr % 16 != 0 then throw (.misaligned addr)
-    return BitVec.ofNat 128 (← load .w16 addr)
+    return BitVec.ofNat 128 (← load .bytes16 addr)
 
 /-- A 64-bit operand (`xmm/m64`): the low lane of a register. No alignment
 requirement. -/
 def readX64 : XRM → M UInt64
   | .reg x => do return (← xmm x).toNat.toUInt64
-  | .mem a => do return (← load .w8 (← ea a)).toUInt64
+  | .mem a => do return (← load .bytes8 (← ea a)).toUInt64
 
 def push (v : UInt64) : M Unit := do
   let sp := (← reg .rsp) - 8
-  store .w8 sp v.toNat
+  store .bytes8 sp v.toNat
   setReg64 .rsp sp
 
 def pop : M UInt64 := do
   let sp ← reg .rsp
-  let v ← load .w8 sp
+  let v ← load .bytes8 sp
   setReg64 .rsp (sp + 8)
   return v.toUInt64
 

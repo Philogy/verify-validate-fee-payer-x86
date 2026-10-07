@@ -3,7 +3,7 @@ import ValidateFeePayer.Bytes
 /-!
 A region is a contiguous piece of the carved image: code of one function, or
 one data object. Addresses are as in the binary, i.e. at load base 0; at base
-`B` a region starts at `B + vaddr`, and its bytes there follow from its
+`loadBase` a region starts at `loadBase + address`, and its bytes there follow from its
 `Contents` alone.
 -/
 
@@ -17,7 +17,7 @@ inductive Contents where
   the same at every base. -/
   | constant (bytes : ByteArray)
   /-- An 8-byte slot (GOT entry) that the dynamic loader fills with
-  `B + target`; the code calls through it. -/
+  `loadBase + target`; the code calls through it. -/
   | pointer (target : UInt64)
   /-- An object whose address the code only passes on, to the panic, which is
   terminal. Its contents can never matter, so only its size is kept, and the
@@ -33,26 +33,27 @@ def size : Contents → Nat
   | pointer _ => 8
   | addressOnly size => size
 
-/-- The bytes in memory when the binary is loaded at base `B`; `none` if the
+/-- The bytes in memory when the binary is loaded at `loadBase`; `none` if the
 region is not mapped. -/
-def bytesAt (B : UInt64) : Contents → Option ByteArray
+def bytesAt (loadBase : UInt64) : Contents → Option ByteArray
   | code bytes | constant bytes => some bytes
-  | pointer target => some (UInt64.toLEBytes (B + target))
+  | pointer target => some (UInt64.toLEBytes (loadBase + target))
   | addressOnly _ => none
 
 def isCode : Contents → Bool
   | code _ => true
   | _ => false
 
-theorem size_bytesAt {c : Contents} {B : UInt64} {bytes : ByteArray}
-    (h : c.bytesAt B = some bytes) : bytes.size = c.size := by
+theorem size_bytesAt {c : Contents} {loadBase : UInt64} {bytes : ByteArray}
+    (h : c.bytesAt loadBase = some bytes) : bytes.size = c.size := by
   cases c <;> simp [bytesAt] at h <;> subst h <;> rfl
 
 end Contents
 
 structure Region where
   name : String
-  vaddr : UInt64
+  /-- Start address as in the binary, i.e. at load base 0 (ELF: `vaddr`). -/
+  address : UInt64
   contents : Contents
 
 namespace Region
@@ -60,17 +61,17 @@ namespace Region
 def size (r : Region) : Nat := r.contents.size
 
 /-- One past the last address, as a `Nat` so it cannot wrap. -/
-def endAddr (r : Region) : Nat := r.vaddr.toNat + r.size
+def endAddress (r : Region) : Nat := r.address.toNat + r.size
 
 /-- `addr` (at load base 0) lies inside the region. -/
-def Contains (r : Region) (addr : UInt64) : Prop := r.vaddr.toNat ≤ addr.toNat ∧ addr.toNat < r.endAddr
+def Contains (r : Region) (addr : UInt64) : Prop := r.address.toNat ≤ addr.toNat ∧ addr.toNat < r.endAddress
 
 instance (r : Region) (addr : UInt64) : Decidable (r.Contains addr) := by
   unfold Contains; infer_instance
 
 end Region
 
-def Disjoint (a b : Region) : Prop := a.endAddr ≤ b.vaddr.toNat ∨ b.endAddr ≤ a.vaddr.toNat
+def Disjoint (a b : Region) : Prop := a.endAddress ≤ b.address.toNat ∨ b.endAddress ≤ a.address.toNat
 
 instance (a b : Region) : Decidable (Disjoint a b) := by unfold Disjoint; infer_instance
 

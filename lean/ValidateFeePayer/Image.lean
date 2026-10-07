@@ -6,7 +6,7 @@ namespace ValidateFeePayer.Image
 /-- `_RNvNtCs1L62bQgIuY7_10solana_svm14account_loader18validate_fee_payer` -/
 def validate_fee_payer : Region where
   name := "validate_fee_payer"
-  vaddr := 0x27f3560
+  address := 0x27f3560
   contents := .code ⟨#[
     0x55, 0x41, 0x57, 0x41, 0x56, 0x41, 0x54, 0x53, 0x48, 0x83, 0xec, 0x10, 0x48, 0x89, 0xf0, 0x48,
     0x8b, 0x76, 0x08, 0x48, 0x85, 0xf6, 0x74, 0x4b, 0xf3, 0x0f, 0x6f, 0x05, 0xe0, 0xda, 0xaf, 0xfd,
@@ -48,7 +48,7 @@ def validate_fee_payer : Region where
 /-- `_RNvNtCs1L62bQgIuY7_10solana_svm15rent_calculator42check_static_account_rent_state_transition` -/
 def check_static_account_rent_state_transition : Region where
   name := "check_static_account_rent_state_transition"
-  vaddr := 0x27f3790
+  address := 0x27f3790
   contents := .code ⟨#[
     0x41, 0x56, 0x53, 0x50, 0x48, 0x81, 0xf9, 0x00, 0x00, 0xa0, 0x00, 0x0f, 0x87, 0x72, 0x01, 0x00,
     0x00, 0x49, 0x8b, 0x00, 0x4d, 0x8b, 0x40, 0x08, 0x49, 0xba, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -81,13 +81,13 @@ def check_static_account_rent_state_transition : Region where
 /-- file name referenced by panic_location -/
 def panic_location_file : Region where
   name := "panic_location_file"
-  vaddr := 0x2b5e4d
+  address := 0x2b5e4d
   contents := .addressOnly 0x5b
 
 /-- u64 -> f64: subtracted to recover each half as an f64 -/
 def u64_to_f64_bias : Region where
   name := "u64_to_f64_bias"
-  vaddr := 0x2e59a0
+  address := 0x2e59a0
   contents := .constant ⟨#[
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x45
   ]⟩
@@ -95,7 +95,7 @@ def u64_to_f64_bias : Region where
 /-- u64 -> f64: high words of 2^52 and 2^84, spliced onto the u64's halves -/
 def u64_to_f64_exponents : Region where
   name := "u64_to_f64_exponents"
-  vaddr := 0x2e6f30
+  address := 0x2e6f30
   contents := .constant ⟨#[
     0x00, 0x00, 0x30, 0x43, 0x00, 0x00, 0x30, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
   ]⟩
@@ -103,7 +103,7 @@ def u64_to_f64_exponents : Region where
 /-- solana_sdk_ids::system_program::ID, compared against the account owner -/
 def system_program_id : Region where
   name := "system_program_id"
-  vaddr := 0x2f1060
+  address := 0x2f1060
   contents := .constant ⟨#[
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -112,7 +112,7 @@ def system_program_id : Region where
 /-- f64 -> u64: the cast saturates above the largest f64 below 2^64 -/
 def f64_max_below_2pow64 : Region where
   name := "f64_max_below_2pow64"
-  vaddr := 0x2f3b78
+  address := 0x2f3b78
   contents := .constant ⟨#[
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x43
   ]⟩
@@ -120,7 +120,7 @@ def f64_max_below_2pow64 : Region where
 /-- f64 -> u64: values >= 2^63 are converted after subtracting 2^63 -/
 def f64_2pow63 : Region where
   name := "f64_2pow63"
-  vaddr := 0x2f5f28
+  address := 0x2f5f28
   contents := .constant ⟨#[
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x43
   ]⟩
@@ -128,25 +128,25 @@ def f64_2pow63 : Region where
 /-- message of the expect() in Rent::minimum_balance; passed to expect_failed -/
 def panic_msg : Region where
   name := "panic_msg"
-  vaddr := 0x60cd1c
+  address := 0x60cd1c
   contents := .addressOnly 0x26
 
 /-- core::panic::Location { /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-rent-4.5.0/src/lib.rs, line 120, col 14 }; passed to expect_failed -/
 def panic_location : Region where
   name := "panic_location"
-  vaddr := 0x3759860
+  address := 0x3759860
   contents := .addressOnly 0x18
 
 /-- pointer slot, loaded with B + 0x12be100 (core::option::expect_failed) -/
 def got_expect_failed : Region where
   name := "got_expect_failed"
-  vaddr := 0x37e9378
+  address := 0x37e9378
   contents := .pointer 0x12be100
 
 /-- pointer slot, loaded with B + 0x27f3790 (check_static_account_rent_state_transition) -/
 def got_check_static_account_rent_state_transition : Region where
   name := "got_check_static_account_rent_state_transition"
-  vaddr := 0x37f5120
+  address := 0x37f5120
   contents := .pointer 0x27f3790
 
 def functions : List Region := [validate_fee_payer, check_static_account_rent_state_transition]

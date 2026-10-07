@@ -17,7 +17,7 @@ bytes) written in. -/
 def obj (base : UInt64) (size : Nat) (fields : List (Nat × List UInt8)) : Mapping :=
   let bytes := fields.foldl (fun (bs : Array UInt8) (off, v) =>
     v.zipIdx.foldl (fun bs (b, i) => bs.set! (off + i) b) bs) (Array.replicate size 0)
-  { base, bytes := ⟨bytes⟩, perm := .rw }
+  { base, bytes := ⟨bytes⟩, permissions := .readWrite }
 
 def u64 (v : Nat) : List UInt8 := leBytes 8 v
 def u32 (v : Nat) : List UInt8 := leBytes 4 v
@@ -43,14 +43,14 @@ structure Case where
   threshold : Float := 2.0
   fee : Nat
   relax : Bool := false
-  B : UInt64 := 0x555555554000
+  loadBase : UInt64 := 0x555555554000
   /-- Free stack at entry. -/
   free : Nat := 4096
 
 def nonceData : List UInt8 := u32 1 ++ u32 1 ++ List.replicate 72 0
 
 def Case.entry (c : Case) : Entry :=
-  { B := c.B
+  { loadBase := c.loadBase
     args := { result := resultAt, payerAccount := accountAt, payerIndex := 7,
               errorMetrics := metricsAt, rent := rentAt, fee := c.fee.toUInt64, relax := c.relax }
     stackLo := 0x7ffffff00000 - 8 - c.free.toUInt64
@@ -82,18 +82,18 @@ def read (s : State) (w : Width) (a : UInt64) : Option Nat := (s.mem.read w a).t
 /-- Returned, with `rax` pointing at the result, which has tag `tag`. -/
 def returnsTag (c : Case) (tag : Nat) : Bool :=
   match c.run with
-  | .exited .returned s => s.gpr[Reg.rax.toFin] == resultAt && read s .w4 resultAt == some tag
+  | .exited .returned s => s.gpr[Reg.rax.toFin] == resultAt && read s .bytes4 resultAt == some tag
       && s.rsp == c.entry.rsp + 8
   | _ => false
 
 def metric (c : Case) (off : Nat) : Option Nat :=
   match c.run with
-  | .exited .returned s => read s .w8 (metricsAt + off.toUInt64)
+  | .exited .returned s => read s .bytes8 (metricsAt + off.toUInt64)
   | _ => none
 
 def lamportsAfter (c : Case) : Option Nat :=
   match c.run with
-  | .exited .returned s => read s .w8 (accountAt + account_shared_data.lamports.toUInt64)
+  | .exited .returned s => read s .bytes8 (accountAt + account_shared_data.lamports.toUInt64)
   | _ => none
 
 def stopReason (c : Case) : String :=
@@ -137,7 +137,7 @@ def minBalance (lpb : Nat) (thr : Float) : Nat := (Float.ofNat (208 * lpb) * thr
 -- index (7) as a byte after the tag. Draining it to zero is allowed.
 #guard returnsTag { lamports := 900000, fee := 10000 } InsufficientFundsForRent
 #guard (match ({ lamports := 900000, fee := 10000 } : Case).run with
-  | .exited .returned s => read s .w1 (resultAt + result.account_index.toUInt64) == some 7
+  | .exited .returned s => read s .bytes1 (resultAt + result.account_index.toUInt64) == some 7
   | _ => false)
 #guard returnsTag { lamports := 900000, fee := 900000 } Ok
 
@@ -156,12 +156,12 @@ guard below the stack. -/
 
 /-! Alignment: the f64 constants are 16-byte aligned at a page-aligned base;
 at a base that is only 8-aligned, `punpckldq`'s memory operand is not. -/
-def floatPathAt (B : UInt64) : Case :=
-  { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := 3.3, B }
+def floatPathAt (loadBase : UInt64) : Case :=
+  { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := 3.3, loadBase }
 #guard (stopReason (floatPathAt 0x555555554008)).startsWith "ValidateFeePayer.X86.Stop.misaligned"
 #guard returnsTag (floatPathAt 0x555555554000) Ok
 -- The integer path never touches them, so it runs at that base.
-#guard returnsTag { lamports := 1000, fee := 100, B := 0x555555554008 } Ok
+#guard returnsTag { lamports := 1000, fee := 100, loadBase := 0x555555554008 } Ok
 
 /-! Undefined flags: a branch on a flag nobody wrote stops the machine. -/
 def jeAtEntry (c : Case) : Except Stop Unit :=

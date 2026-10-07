@@ -179,7 +179,7 @@ inductive Exit where
 /-- What does not change during a run. -/
 structure Env where
   /-- Load base of the binary. -/
-  B : UInt64
+  loadBase : UInt64
   /-- Addresses outside the carved code where execution may legitimately
   go, and what reaching each means. -/
   exits : List (UInt64 × Exit)
@@ -212,7 +212,7 @@ def step (env : Env) (s : State) : Outcome :=
   match env.exitAt s.rip with
   | some e => .exited e s
   | none =>
-    match instrAt (s.rip - env.B) with
+    match instrAt (s.rip - env.loadBase) with
     | none => .badJump s
     | some e =>
       match (exec e.instr).run { s with rip := s.rip + e.len.toUInt64 } with

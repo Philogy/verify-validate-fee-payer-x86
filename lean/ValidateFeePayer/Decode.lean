@@ -311,8 +311,8 @@ def sweep : (fuel : Nat) → (addr : UInt64) → List UInt8 → Except (UInt64 �
 
 def decodeRegion (r : Region) : Except (UInt64 × DecodeError) (List Decoded) :=
   match r.contents with
-  | .code bytes => sweep bytes.size r.vaddr bytes.toList
-  | _ => throw (r.vaddr, .unsupported "not a code region")
+  | .code bytes => sweep bytes.size r.address bytes.toList
+  | _ => throw (r.address, .unsupported "not a code region")
 
 /-- Every instruction of the carved functions, in address order. -/
 def decodeImage : Except (UInt64 × DecodeError) (List Decoded) := do
