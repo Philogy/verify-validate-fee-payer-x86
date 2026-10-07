@@ -25,7 +25,7 @@ TLS or syscalls.
 | 16 XMM regs `xmm0…xmm15` | 128 each | Code only uses `xmm0–2`, but they are caller-saved, so model all 16. Legacy-SSE encodings leave YMM upper halves alone, so the YMM halves stay out of the model; the oracle can ignore them. |
 | `MXCSR` | 32 | Read: rounding mode (`RC`), `FTZ`, `DAZ`, exception masks. Written: **sticky** exception flags `IE DE ZE OE UE PE`. `cvttsd2si` sets `IE` on out-of-range/NaN, and `mulsd`/`addsd`/`subsd` set `PE` when inexact. Default `0x1F80`: all masked, round-to-nearest. With all masks set, SSE never traps, so the result is just a value plus flags. |
 | Memory | byte-addressed, 2^64 | Each address is either *unmapped* or *mapped* with its permissions (R/W/X). We only need: carved code (R/X), carved data and GOT (R), and stack (R/W). Everything else is unmapped, and an access there faults. |
-| Outcome | sum type | `running`, `returned` (top-level `ret`), `called f` (leaves the carve, e.g. into `check_static_account_rent_state_transition` or the panic), `fault` (#PF/#GP/#UD). |
+| Outcome | sum type | In the model (`Machine.lean`): `running`; `exited returned`/`exited panicked` on reaching the caller's return address or `expect_failed` (the call into `check_static_account_rent_state_transition` stays inside the carve); `badJump`; `stopped` with a page fault, a misaligned SSE operand (#GP), a read of an undefined flag, or an unmodelled MXCSR setting. |
 
 ### Stack
 
