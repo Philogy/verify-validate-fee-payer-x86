@@ -52,14 +52,14 @@ def nonceData : List UInt8 := u32 1 ++ u32 1 ++ List.replicate 72 0
 def Case.entry (c : Case) : Entry :=
   { loadBase := c.loadBase
     args := { result := resultAt, payerAccount := accountAt, payerIndex := 7,
-              errorMetrics := metricsAt, rent := rentAt, fee := c.fee.toUInt64, relax := c.relax }
-    stackLo := 0x7ffffff00000 - 8 - c.free.toUInt64
-    stale := ⟨Array.replicate c.free 0xaa⟩
-    retAddr := 0x400000
-    above := ⟨Array.replicate 55 0xbb⟩
-    regs := Vector.replicate 16 0x1234567890abcdef
-    xmm := Vector.replicate 16 0
-    mxcsr := mxcsrDefault
+              errorMetrics := metricsAt, rent := rentAt, fee := c.fee.toUInt64, relaxMinBalanceCheck := c.relax }
+    stackLow := 0x7ffffff00000 - 8 - c.free.toUInt64
+    freeStackBytes := ⟨Array.replicate c.free 0xaa⟩
+    returnAddress := 0x400000
+    callerStack := ⟨Array.replicate 55 0xbb⟩
+    otherRegisters := Vector.replicate 16 0x1234567890abcdef
+    vectorRegisters := Vector.replicate 16 0
+    floatControl := defaultFloatControl
     objects := [
       obj resultAt 16 [],
       obj accountAt account_shared_data.size
@@ -77,13 +77,14 @@ def Case.entry (c : Case) : Entry :=
 
 def Case.run (c : Case) : Outcome := X86.run c.entry.env 1000 c.entry.state
 
-def read (s : State) (w : Width) (a : UInt64) : Option Nat := (s.mem.read w a).toOption.map (·.toNat)
+def read (s : State) (w : Width) (a : UInt64) : Option Nat := (s.memory.read w a).toOption.map (·.toNat)
 
-/-- Returned, with `rax` pointing at the result, which has tag `tag`. -/
+/-- Returned, with `accumulator` (x86: `rax`) pointing at the result, which has tag `tag`. -/
 def returnsTag (c : Case) (tag : Nat) : Bool :=
   match c.run with
-  | .exited .returned s => s.gpr[Reg.rax.toFin] == resultAt && read s .bytes4 resultAt == some tag
-      && s.rsp == c.entry.rsp + 8
+  | .exited .returned s =>
+    s.registers[Register.accumulator.index] == resultAt && read s .bytes4 resultAt == some tag
+      && s.stackPointer == c.entry.stackPointer + 8
   | _ => false
 
 def metric (c : Case) (off : Nat) : Option Nat :=
@@ -100,7 +101,7 @@ def stopReason (c : Case) : String :=
   match c.run with
   | .stopped why _ => reprStr why
   | .exited e _ => reprStr e
-  | .badJump s => s!"badJump {s.rip}"
+  | .badJump s => s!"badJump {s.instructionPointer}"
   | .running _ => "running"
 
 open result.tags transaction_error_metrics
@@ -147,7 +148,7 @@ def minBalance (lpb : Nat) (thr : Float) : Nat := (Float.ofNat (208 * lpb) * thr
   == "ValidateFeePayer.X86.Exit.panicked"
 
 /-! The stack: the deepest normal path (into the callee) uses 88 bytes below
-the entry `rsp`; the panic from the callee 96. One byte less faults on the
+the entry stack pointer; the panic from the callee 96. One byte less faults on the
 guard below the stack. -/
 #guard returnsTag { lamports := 1000, fee := 100, free := 88 } Ok
 #guard (stopReason { lamports := 1000, fee := 100, free := 87 }).startsWith "ValidateFeePayer.X86.Stop.fault (ValidateFeePayer.Fault.unmapped"
@@ -155,7 +156,7 @@ guard below the stack. -/
 #guard (stopReason { lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, free := 95 }).startsWith "ValidateFeePayer.X86.Stop.fault"
 
 /-! Alignment: the f64 constants are 16-byte aligned at a page-aligned base;
-at a base that is only 8-aligned, `punpckldq`'s memory operand is not. -/
+at a base that is only 8-aligned, `interleaveLow32`'s (x86: `punpckldq`) memory operand is not. -/
 def floatPathAt (loadBase : UInt64) : Case :=
   { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := 3.3, loadBase }
 #guard (stopReason (floatPathAt 0x555555554008)).startsWith "ValidateFeePayer.X86.Stop.misaligned"
@@ -164,18 +165,18 @@ def floatPathAt (loadBase : UInt64) : Case :=
 #guard returnsTag { lamports := 1000, fee := 100, loadBase := 0x555555554008 } Ok
 
 /-! Undefined flags: a branch on a flag nobody wrote stops the machine. -/
-def jeAtEntry (c : Case) : Except Stop Unit :=
-  ((exec (.jcc .e 0)).run c.entry.state).map (fun _ => ())
+def jumpIfEqualAtEntry (c : Case) : Except Stop Unit :=
+  ((execute (.jumpIf .equal 0)).run c.entry.state).map (fun _ => ())
 
-#guard match jeAtEntry { lamports := 1, fee := 1 } with
-  | .error (.undefinedRead .zf) => true | _ => false
+#guard match jumpIfEqualAtEntry { lamports := 1, fee := 1 } with
+  | .error (.undefinedFlagRead .zero) => true | _ => false
 
--- `imul` leaves ZF undefined.
-def jeAfterImul (c : Case) : Except Stop Unit :=
-  ((do exec (.imul .rax (.reg .rax) none); exec (.jcc .e 0)).run c.entry.state).map (fun _ => ())
+-- `multiplySigned` (x86: `imul`) leaves `zero` undefined.
+def jumpIfEqualAfterMultiply (c : Case) : Except Stop Unit :=
+  ((do execute (.multiplySigned .accumulator (.register .accumulator) none); execute (.jumpIf .equal 0)).run c.entry.state).map (fun _ => ())
 
-#guard match jeAfterImul { lamports := 1, fee := 1 } with
-  | .error (.undefinedRead .zf) => true | _ => false
+#guard match jumpIfEqualAfterMultiply { lamports := 1, fee := 1 } with
+  | .error (.undefinedFlagRead .zero) => true | _ => false
 
 /-! F64 against the host CPU on random operands (bit-exact; NaN payloads
 are compared only as NaN, since hosts differ there). -/
@@ -206,12 +207,12 @@ def f64Mismatches (n : Nat) : Nat := Id.run do
     for (mine, hw) in [((F64.add a b).1, (fa + fb).toBits), ((F64.sub a b).1, (fa - fb).toBits),
                        ((F64.mul a b).1, (fa * fb).toBits)] do
       unless mine == hw || (F64.isNaN mine && F64.isNaN hw) do bad := bad + 1
-    let ((zf, pf, cf), _) := F64.ucomisd a b
+    let ((zero, parity, carry), _) := F64.compareUnordered a b
     let hw := if F64.isNaN a || F64.isNaN b then (true, true, true)
       else if fa < fb then (false, false, true) else if fa == fb then (true, false, false)
       else (false, false, false)
-    unless (zf, pf, cf) == hw do bad := bad + 1
-    if !F64.isNaN a && fa.abs < 9.0e18 && (F64.cvttsd2si a).1 != fa.toInt64.toUInt64 then bad := bad + 1
+    unless (zero, parity, carry) == hw do bad := bad + 1
+    if !F64.isNaN a && fa.abs < 9.0e18 && (F64.truncateToInt64 a).1 != fa.toInt64.toUInt64 then bad := bad + 1
   return bad
 
 #guard f64Mismatches 20000 == 0

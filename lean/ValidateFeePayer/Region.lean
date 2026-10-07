@@ -64,7 +64,8 @@ def size (r : Region) : Nat := r.contents.size
 def endAddress (r : Region) : Nat := r.address.toNat + r.size
 
 /-- `addr` (at load base 0) lies inside the region. -/
-def Contains (r : Region) (addr : UInt64) : Prop := r.address.toNat ≤ addr.toNat ∧ addr.toNat < r.endAddress
+def Contains (r : Region) (addr : UInt64) : Prop :=
+  r.address.toNat ≤ addr.toNat ∧ addr.toNat < r.endAddress
 
 instance (r : Region) (addr : UInt64) : Decidable (r.Contains addr) := by
   unfold Contains; infer_instance

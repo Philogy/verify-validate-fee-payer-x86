@@ -3,7 +3,9 @@ import ValidateFeePayer.Decode
 /-!
 Intel-syntax text of a decoded instruction, in llvm-objdump's format, so
 `Checks.lean` can compare the decoder with `Disasm.lean` operand for operand.
-Only used for that check.
+
+This is the one place that maps the model's descriptive names to x86
+mnemonics and register names. Only used for that check.
 -/
 
 namespace ValidateFeePayer.X86.Print
@@ -15,85 +17,136 @@ def hex (n : Nat) : String := "0x" ++ hexDigits n
 def signedHex (v : Int) : String :=
   if v < 0 then "-" ++ hex v.natAbs else hex v.toNat
 
-def reg64 : Reg → String
-  | .rax => "rax" | .rcx => "rcx" | .rdx => "rdx" | .rbx => "rbx"
-  | .rsp => "rsp" | .rbp => "rbp" | .rsi => "rsi" | .rdi => "rdi"
-  | r => "r" ++ toString r.toFin.val
+/-- The x86 suffix of a condition, as in `jne`, `sete`, `cmovae`. -/
+def conditionSuffix : Condition → String
+  | .overflow => "o" | .notOverflow => "no" | .below => "b" | .aboveOrEqual => "ae"
+  | .equal => "e" | .notEqual => "ne" | .belowOrEqual => "be" | .above => "a"
+  | .negative => "s" | .notNegative => "ns" | .parityEven => "p" | .parityOdd => "np"
+  | .less => "l" | .greaterOrEqual => "ge" | .lessOrEqual => "le" | .greater => "g"
 
-def reg (sz : Size) (r : Reg) : String :=
-  let i := r.toFin.val
-  match sz with
-  | .b64 => reg64 r
-  | .b32 => if i < 8 then ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"][i]! else reg64 r ++ "d"
-  | .b8 => if i < 8 then ["al", "cl", "dl", "bl", "spl", "bpl", "sil", "dil"][i]! else reg64 r ++ "b"
+def arithmeticMnemonic : ArithmeticOp → String
+  | .add => "add" | .or => "or" | .subtractWithBorrow => "sbb" | .and => "and"
+  | .subtract => "sub" | .xor => "xor" | .compare => "cmp" | .testBits => "test"
 
-def xmm (x : Xmm) : String := "xmm" ++ toString x.val
+/-- The mnemonic llvm-objdump prints. -/
+def mnemonic : Instruction → String
+  | .arithmetic op .. => arithmeticMnemonic op
+  | .move .. => "mov"
+  | .moveImmediate64 .. => "movabs"
+  | .moveZeroExtendByte .. => "movzx"
+  | .loadAddress .. => "lea"
+  | .increment .. => "inc"
+  | .multiplySigned .. => "imul"
+  | .shiftRightSigned .. => "sar"
+  | .setIf c _ => "set" ++ conditionSuffix c
+  | .moveIf c .. => "cmov" ++ conditionSuffix c
+  | .push _ => "push"
+  | .pop _ => "pop"
+  | .jumpIf c _ => "j" ++ conditionSuffix c
+  | .jump _ => "jmp"
+  | .call _ => "call"
+  | .returnToCaller => "ret"
+  | .moveVectorUnaligned .. => "movdqu"
+  | .moveVectorAligned .. => "movapd"
+  | .moveIntegerToVector .. => "movq"
+  | .vectorBitwise .xor .. => "pxor"
+  | .vectorBitwise .or .. => "por"
+  | .vectorBitwise .xorDoubles .. => "xorpd"
+  | .testVectorBits .. => "ptest"
+  | .interleaveLow32 .. => "punpckldq"
+  | .interleaveHighDoubles .. => "unpckhpd"
+  | .subtractDoublePairs .. => "subpd"
+  | .scalarDouble .add .. => "addsd"
+  | .scalarDouble .subtract .. => "subsd"
+  | .scalarDouble .multiply .. => "mulsd"
+  | .compareDoubles .. => "ucomisd"
+  | .truncateDoubleToInt64 .. => "cvttsd2si"
 
-def addr : Addr → String
-  | .rip d => "[rip" ++ (if d < 0 then " - " ++ hex d.natAbs else " + " ++ hex d.toNat) ++ "]"
-  | .sib base index d =>
-    let terms := (base.map reg64).toList ++
-      (index.map fun (r, s) => if s.val = 0 then reg64 r else toString (2 ^ s.val) ++ "*" ++ reg64 r).toList
+/-- The x86 name of a register's full 64 bits. -/
+def register64 : Register → String
+  | .accumulator => "rax" | .counter => "rcx" | .data => "rdx" | .base => "rbx"
+  | .stackPointer => "rsp" | .framePointer => "rbp" | .sourceIndex => "rsi"
+  | .destinationIndex => "rdi"
+  | r => "r" ++ toString r.index.val
+
+/-- The x86 name of a register's low `size` bits. -/
+def register (size : OperandSize) (r : Register) : String :=
+  let i := r.index.val
+  match size with
+  | .bits64 => register64 r
+  | .bits32 => if i < 8 then ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"][i]! else register64 r ++ "d"
+  | .bits8 => if i < 8 then ["al", "cl", "dl", "bl", "spl", "bpl", "sil", "dil"][i]! else register64 r ++ "b"
+
+def vectorRegister (v : VectorRegister) : String := "xmm" ++ toString v.val
+
+def address : Address → String
+  | .relativeToNextInstruction d =>
+    "[rip" ++ (if d < 0 then " - " ++ hex d.natAbs else " + " ++ hex d.toNat) ++ "]"
+  | .baseIndex base index d =>
+    let terms := (base.map register64).toList ++
+      (index.map fun (r, s) =>
+        if s.val = 0 then register64 r else toString (2 ^ s.val) ++ "*" ++ register64 r).toList
     let body := " + ".intercalate terms
-    let disp :=
+    let displacement :=
       if d = 0 then ""
       else if terms.isEmpty then signedHex d
       else if d < 0 then " - " ++ hex d.natAbs else " + " ++ hex d.toNat
-    "[" ++ body ++ disp ++ "]"
+    "[" ++ body ++ displacement ++ "]"
 
-def ptr (bytes : Nat) (a : Addr) : String :=
+def memory (bytes : Nat) (a : Address) : String :=
   (match bytes with
-   | 1 => "byte" | 2 => "word" | 4 => "dword" | 8 => "qword" | _ => "xmmword") ++ " ptr " ++ addr a
+   | 1 => "byte" | 2 => "word" | 4 => "dword" | 8 => "qword" | _ => "xmmword") ++ " ptr " ++ address a
 
-def bytesOf (sz : Size) : Nat := sz.bits / 8
+def bytesOf (size : OperandSize) : Nat := size.bits / 8
 
-def rm (sz : Size) : RM → String
-  | .reg r => reg sz r
-  | .mem a => ptr (bytesOf sz) a
+def operand (size : OperandSize) : RegisterOrMemory → String
+  | .register r => register size r
+  | .memory a => memory (bytesOf size) a
 
-def xrm (bytes : Nat) : XRM → String
-  | .reg x => xmm x
-  | .mem a => ptr bytes a
+def vectorOperand (bytes : Nat) : VectorOrMemory → String
+  | .register v => vectorRegister v
+  | .memory a => memory bytes a
 
 /-- llvm-objdump prints 64-bit immediates signed and narrower ones unsigned. -/
-def imm (sz : Size) (v : UInt64) : String :=
-  match sz with
-  | .b64 => signedHex (if v.toNat < 2 ^ 63 then (v.toNat : Int) else v.toNat - 2 ^ 64)
-  | _ => hex (v.toNat % 2 ^ sz.bits)
+def immediate (size : OperandSize) (v : UInt64) : String :=
+  match size with
+  | .bits64 => signedHex (if v.toNat < 2 ^ 63 then (v.toNat : Int) else v.toNat - 2 ^ 64)
+  | _ => hex (v.toNat % 2 ^ size.bits)
 
-def src (sz : Size) : Src → String
-  | .rm x => rm sz x
-  | .imm v => imm sz v
+def source (size : OperandSize) : Source → String
+  | .operand x => operand size x
+  | .immediate v => immediate size v
 
-def ops (l : List String) : String := ", ".intercalate l
+def list (l : List String) : String := ", ".intercalate l
 
 /-- The text of `i`, which ends at `next` (for branch targets). -/
-def instr (next : UInt64) (i : Instr) : String :=
-  let target (rel : Int) := hex ((next.toNat + rel) % 2 ^ 64).toNat
+def instruction (next : UInt64) (i : Instruction) : String :=
+  let target (offset : Int) := hex ((next.toNat + offset) % 2 ^ 64).toNat
   let body := match i with
-    | .alu _ sz d s => ops [rm sz d, src sz s]
-    | .mov sz d s => ops [rm sz d, src sz s]
-    | .movabs d v => ops [reg64 d, hex v.toNat]
-    | .movzx sz d s => ops [reg sz d, rm .b8 s]
-    | .lea d a => ops [reg64 d, addr a]
-    | .inc sz d => rm sz d
-    | .imul d s none => ops [reg64 d, rm .b64 s]
-    | .imul d s (some v) => ops [reg64 d, rm .b64 s, imm .b64 v]
-    | .sar d c => ops [rm .b64 d, hex c.toNat]
-    | .setcc _ d => rm .b8 d
-    | .cmov _ sz d s => ops [reg sz d, rm sz s]
-    | .push r | .pop r => reg64 r
-    | .jcc _ rel | .jmp rel => target rel
-    | .call t => rm .b64 t
-    | .ret => ""
-    | .movdqu d s | .movapd d s | .xbit _ d s | .ptest d s | .punpckldq d s
-    | .unpckhpd d s | .subpd d s => ops [xmm d, xrm 16 s]
-    | .movq d s => ops [xmm d, rm .b64 s]
-    | .sd _ d s | .ucomisd d s => ops [xmm d, xrm 8 s]
-    | .cvttsd2si d s => ops [reg64 d, xrm 8 s]
-  if body.isEmpty then i.mnemonic else i.mnemonic ++ " " ++ body
+    | .arithmetic _ size d s => list [operand size d, source size s]
+    | .move size d s => list [operand size d, source size s]
+    | .moveImmediate64 d v => list [register64 d, hex v.toNat]
+    | .moveZeroExtendByte size d s => list [register size d, operand .bits8 s]
+    | .loadAddress d a => list [register64 d, address a]
+    | .increment size d => operand size d
+    | .multiplySigned d s none => list [register64 d, operand .bits64 s]
+    | .multiplySigned d s (some v) => list [register64 d, operand .bits64 s, immediate .bits64 v]
+    | .shiftRightSigned d c => list [operand .bits64 d, hex c.toNat]
+    | .setIf _ d => operand .bits8 d
+    | .moveIf _ size d s => list [register size d, operand size s]
+    | .push r | .pop r => register64 r
+    | .jumpIf _ offset | .jump offset => target offset
+    | .call t => operand .bits64 t
+    | .returnToCaller => ""
+    | .moveVectorUnaligned d s | .moveVectorAligned d s | .vectorBitwise _ d s | .testVectorBits d s
+    | .interleaveLow32 d s | .interleaveHighDoubles d s | .subtractDoublePairs d s =>
+      list [vectorRegister d, vectorOperand 16 s]
+    | .moveIntegerToVector d s => list [vectorRegister d, operand .bits64 s]
+    | .scalarDouble _ d s | .compareDoubles d s => list [vectorRegister d, vectorOperand 8 s]
+    | .truncateDoubleToInt64 d s => list [register64 d, vectorOperand 8 s]
+  if body.isEmpty then mnemonic i else mnemonic i ++ " " ++ body
 
 def entry (e : Decoded) : UInt64 × Nat × String :=
-  (e.addr, e.len, instr (e.addr + e.len.toUInt64) e.instr)
+  (e.address, e.length, instruction (e.address + e.length.toUInt64) e.instruction)
 
 end ValidateFeePayer.X86.Print

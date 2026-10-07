@@ -1,5 +1,5 @@
 import ValidateFeePayer.Memory
-import ValidateFeePayer.Instr
+import ValidateFeePayer.Instruction
 
 /-!
 The x86-64 user-mode state the carved code can observe or change (see
@@ -8,171 +8,198 @@ The x86-64 user-mode state the carved code can observe or change (see
 
 namespace ValidateFeePayer.X86
 
+/-- The status flags: one-bit facts about the last result, which
+conditional instructions read. -/
 inductive Flag where
-  | cf | pf | af | zf | sf | of
+  /-- Unsigned overflow: a carry out of, or borrow into, the top bit (x86: `CF`). -/
+  | carry
+  /-- The low byte of the result has an even number of set bits (x86: `PF`). -/
+  | parity
+  /-- A carry out of bit 3 (x86: `AF`). Nothing here reads it. -/
+  | auxiliaryCarry
+  /-- The result is zero (x86: `ZF`). -/
+  | zero
+  /-- The top bit of the result, i.e. it is negative as a signed number (x86: `SF`). -/
+  | sign
+  /-- Signed overflow (x86: `OF`). -/
+  | overflow
   deriving DecidableEq, Repr
 
-/-- The six status flags. `none` means architecturally undefined: the last
-instruction that wrote the flag left it undefined (e.g. `imul` and `ZF`), or
-nothing in the program has written it yet. Real CPUs hold some value there,
-but the program must not depend on it, so reading one stops the machine with
-`undefinedRead` instead of guessing. -/
+/-- The six status flags (x86: in `RFLAGS`). `none` means architecturally
+undefined: the last instruction that wrote the flag left it undefined (e.g.
+`multiplySigned` and `zero`), or nothing in the program has written it yet.
+Real CPUs hold some value there, but the program must not depend on it, so
+reading one stops the machine with `undefinedFlagRead` instead of guessing. -/
 structure Flags where
-  cf : Option Bool
-  pf : Option Bool
-  af : Option Bool
-  zf : Option Bool
-  sf : Option Bool
-  of : Option Bool
+  carry : Option Bool
+  parity : Option Bool
+  auxiliaryCarry : Option Bool
+  zero : Option Bool
+  sign : Option Bool
+  overflow : Option Bool
   deriving DecidableEq, Repr
 
 def Flags.undefined : Flags := ⟨none, none, none, none, none, none⟩
 
 def Flags.get (f : Flags) : Flag → Option Bool
-  | .cf => f.cf | .pf => f.pf | .af => f.af | .zf => f.zf | .sf => f.sf | .of => f.of
+  | .carry => f.carry | .parity => f.parity | .auxiliaryCarry => f.auxiliaryCarry
+  | .zero => f.zero | .sign => f.sign | .overflow => f.overflow
 
-/-- Default MXCSR: all exceptions masked, round to nearest, no FTZ/DAZ, no
-flags raised. -/
-def mxcsrDefault : UInt32 := 0x1f80
+/-- The default floating-point control and status word (x86: `MXCSR =
+0x1f80`): all exceptions masked, round to nearest, no flush-to-zero or
+denormals-are-zero, no exception flags raised. -/
+def defaultFloatControl : UInt32 := 0x1f80
 
 structure State where
-  /-- Address of the next instruction to execute. -/
-  rip : UInt64
-  gpr : Vector UInt64 16
+  /-- Address of the next instruction to execute (x86: `rip`, the
+  instruction pointer). -/
+  instructionPointer : UInt64
+  /-- The 16 general-purpose registers, indexed by `Register.index`. -/
+  registers : Vector UInt64 16
   flags : Flags
-  /-- The direction flag. No carved instruction reads or writes it; the ABI
-  makes it clear on entry, and the oracle checks it stays so. -/
-  df : Bool
-  xmm : Vector (BitVec 128) 16
-  mxcsr : UInt32
-  mem : Memory
+  /-- The direction flag (x86: `DF`). No carved instruction reads or writes
+  it; the ABI makes it clear on entry, and the oracle checks it stays so. -/
+  directionFlag : Bool
+  /-- The 16 vector registers (x86: `xmm0` … `xmm15`). -/
+  vectorRegisters : Vector (BitVec 128) 16
+  /-- Floating-point control (rounding, masks) and sticky exception flags
+  (x86: `MXCSR`). -/
+  floatControl : UInt32
+  memory : Memory
 
 /-- Why the machine stopped in the middle of an instruction. The state is
 the one before that instruction: a faulting instruction has no effect. -/
 inductive Stop where
   /-- Page fault: the access is to an unmapped address or not permitted. -/
   | fault (f : Fault)
-  /-- `#GP` from a misaligned 16-byte SSE memory operand. -/
-  | misaligned (addr : UInt64)
+  /-- A misaligned 16-byte vector memory operand (x86: `#GP`, general
+  protection fault). -/
+  | misaligned (address : UInt64)
   /-- A read of a flag that is undefined (`Flags`). -/
-  | undefinedRead (f : Flag)
-  /-- A setting outside what is modelled, e.g. non-default MXCSR control
-  bits for a floating-point instruction. -/
+  | undefinedFlagRead (f : Flag)
+  /-- A setting outside what is modelled, e.g. non-default floating-point
+  control bits for a floating-point instruction. -/
   | unsupported (what : String)
   deriving Repr
 
-def Size.width : Size → Width
-  | .b8 => .bytes1 | .b32 => .bytes4 | .b64 => .bytes8
+def OperandSize.width : OperandSize → Width
+  | .bits8 => .bytes1 | .bits32 => .bytes4 | .bits64 => .bytes8
 
-/-- One instruction: reads and updates the state, or stops. -/
-abbrev M := StateT State (Except Stop)
+/-- One instruction's computation: reads and updates the state, or stops. -/
+abbrev Exec := StateT State (Except Stop)
 
-namespace M
+namespace Exec
 
-def reg (r : Reg) : M UInt64 := do return (← get).gpr[r.toFin]
+def readRegister (r : Register) : Exec UInt64 := do return (← get).registers[r.index]
 
-/-- Write a 64-bit register. -/
-def setReg64 (r : Reg) (v : UInt64) : M Unit :=
-  modify fun s => { s with gpr := s.gpr.set r.toFin v }
+/-- Write all 64 bits of a register. -/
+def writeRegister64 (r : Register) (v : UInt64) : Exec Unit :=
+  modify fun s => { s with registers := s.registers.set r.index v }
 
-def mask (sz : Size) (v : Nat) : Nat := v % 2 ^ sz.bits
+/-- The low `size.bits` bits of `v`. -/
+def truncate (size : OperandSize) (v : Nat) : Nat := v % 2 ^ size.bits
 
 /-- Write a register at operand size: 32-bit writes zero the upper half,
 8-bit writes keep bits 8–63. -/
-def setReg (sz : Size) (r : Reg) (v : Nat) : M Unit := do
-  match sz with
-  | .b64 => setReg64 r v.toUInt64
-  | .b32 => setReg64 r (mask .b32 v).toUInt64
-  | .b8 => setReg64 r (((← reg r) &&& ~~~0xff) ||| (mask .b8 v).toUInt64)
+def writeRegister (size : OperandSize) (r : Register) (v : Nat) : Exec Unit := do
+  match size with
+  | .bits64 => writeRegister64 r v.toUInt64
+  | .bits32 => writeRegister64 r (truncate .bits32 v).toUInt64
+  | .bits8 => writeRegister64 r (((← readRegister r) &&& ~~~0xff) ||| (truncate .bits8 v).toUInt64)
 
-def liftFault (x : Except Fault α) : M α :=
+def liftFault (x : Except Fault α) : Exec α :=
   match x with
   | .ok v => pure v
   | .error f => throw (.fault f)
 
-def ea : Addr → M UInt64
-  | .rip d => do return (← get).rip + (d % 2 ^ 64).toNat.toUInt64
-  | .sib base index d => do
-    let b ← match base with | some r => reg r | none => pure 0
-    let i ← match index with | some (r, s) => do pure ((← reg r) <<< s.val.toUInt64) | none => pure 0
+/-- The address a memory operand refers to (x86: its "effective address"). -/
+def effectiveAddress : Address → Exec UInt64
+  | .relativeToNextInstruction d => do
+    return (← get).instructionPointer + (d % 2 ^ 64).toNat.toUInt64
+  | .baseIndex base index d => do
+    let b ← match base with | some r => readRegister r | none => pure 0
+    let i ← match index with
+      | some (r, scale) => do pure ((← readRegister r) <<< scale.val.toUInt64)
+      | none => pure 0
     return b + i + (d % 2 ^ 64).toNat.toUInt64
 
-def load (w : Width) (a : UInt64) : M Nat := do
-  return (← liftFault ((← get).mem.read w a)).toNat
+def load (w : Width) (a : UInt64) : Exec Nat := do
+  return (← liftFault ((← get).memory.read w a)).toNat
 
-def store (w : Width) (a : UInt64) (v : Nat) : M Unit := do
-  let m ← liftFault ((← get).mem.write w a (BitVec.ofNat _ v))
-  modify fun s => { s with mem := m }
+def store (w : Width) (a : UInt64) (v : Nat) : Exec Unit := do
+  let m ← liftFault ((← get).memory.write w a (BitVec.ofNat _ v))
+  modify fun s => { s with memory := m }
 
-/-- An integer operand, zero-extended to `Nat`, below `2 ^ sz.bits`. -/
-def readRM (sz : Size) : RM → M Nat
-  | .reg r => do return mask sz (← reg r).toNat
-  | .mem a => do load sz.width (← ea a)
+/-- An integer operand, zero-extended to `Nat`, below `2 ^ size.bits`. -/
+def readOperand (size : OperandSize) : RegisterOrMemory → Exec Nat
+  | .register r => do return truncate size (← readRegister r).toNat
+  | .memory a => do load size.width (← effectiveAddress a)
 
-def writeRM (sz : Size) : RM → Nat → M Unit
-  | .reg r, v => setReg sz r v
-  | .mem a, v => do store sz.width (← ea a) (mask sz v)
+def writeOperand (size : OperandSize) : RegisterOrMemory → Nat → Exec Unit
+  | .register r, v => writeRegister size r v
+  | .memory a, v => do store size.width (← effectiveAddress a) (truncate size v)
 
-def readSrc (sz : Size) : Src → M Nat
-  | .rm x => readRM sz x
-  | .imm v => pure (mask sz v.toNat)
+def readSource (size : OperandSize) : Source → Exec Nat
+  | .operand x => readOperand size x
+  | .immediate v => pure (truncate size v.toNat)
 
-def flag (f : Flag) : M Bool := do
+def readFlag (f : Flag) : Exec Bool := do
   match (← get).flags.get f with
   | some b => pure b
-  | none => throw (.undefinedRead f)
+  | none => throw (.undefinedFlagRead f)
 
-def setFlags (f : Flags) : M Unit := modify fun s => { s with flags := f }
+def writeFlags (f : Flags) : Exec Unit := modify fun s => { s with flags := f }
 
-def cond : Cond → M Bool
-  | .o => flag .of
-  | .no => return !(← flag .of)
-  | .b => flag .cf
-  | .ae => return !(← flag .cf)
-  | .e => flag .zf
-  | .ne => return !(← flag .zf)
-  | .be => return (← flag .cf) || (← flag .zf)
-  | .a => return !(← flag .cf) && !(← flag .zf)
-  | .s => flag .sf
-  | .ns => return !(← flag .sf)
-  | .p => flag .pf
-  | .np => return !(← flag .pf)
-  | .l => return (← flag .sf) != (← flag .of)
-  | .ge => return (← flag .sf) == (← flag .of)
-  | .le => return (← flag .zf) || (← flag .sf) != (← flag .of)
-  | .g => return !(← flag .zf) && (← flag .sf) == (← flag .of)
+/-- Whether a condition holds, from the flags. -/
+def holds : Condition → Exec Bool
+  | .overflow => readFlag .overflow
+  | .notOverflow => return !(← readFlag .overflow)
+  | .below => readFlag .carry
+  | .aboveOrEqual => return !(← readFlag .carry)
+  | .equal => readFlag .zero
+  | .notEqual => return !(← readFlag .zero)
+  | .belowOrEqual => return (← readFlag .carry) || (← readFlag .zero)
+  | .above => return !(← readFlag .carry) && !(← readFlag .zero)
+  | .negative => readFlag .sign
+  | .notNegative => return !(← readFlag .sign)
+  | .parityEven => readFlag .parity
+  | .parityOdd => return !(← readFlag .parity)
+  | .less => return (← readFlag .sign) != (← readFlag .overflow)
+  | .greaterOrEqual => return (← readFlag .sign) == (← readFlag .overflow)
+  | .lessOrEqual => return (← readFlag .zero) || (← readFlag .sign) != (← readFlag .overflow)
+  | .greater => return !(← readFlag .zero) && (← readFlag .sign) == (← readFlag .overflow)
 
-def xmm (x : Xmm) : M (BitVec 128) := do return (← get).xmm[x]
+def readVector (v : VectorRegister) : Exec (BitVec 128) := do return (← get).vectorRegisters[v]
 
-def setXmm (x : Xmm) (v : BitVec 128) : M Unit :=
-  modify fun s => { s with xmm := s.xmm.set x v }
+def writeVector (v : VectorRegister) (x : BitVec 128) : Exec Unit :=
+  modify fun s => { s with vectorRegisters := s.vectorRegisters.set v x }
 
-/-- A 128-bit operand. Legacy-SSE memory operands must be 16-byte aligned
-unless the instruction is an unaligned one (`movdqu`). -/
-def readX128 (aligned : Bool) : XRM → M (BitVec 128)
-  | .reg x => xmm x
-  | .mem a => do
-    let addr ← ea a
-    if aligned && addr % 16 != 0 then throw (.misaligned addr)
-    return BitVec.ofNat 128 (← load .bytes16 addr)
+/-- A 128-bit operand. A memory operand must be 16-byte aligned unless the
+instruction is an unaligned one (`moveVectorUnaligned`). -/
+def readVector128 (aligned : Bool) : VectorOrMemory → Exec (BitVec 128)
+  | .register v => readVector v
+  | .memory a => do
+    let address ← effectiveAddress a
+    if aligned && address % 16 != 0 then throw (.misaligned address)
+    return BitVec.ofNat 128 (← load .bytes16 address)
 
-/-- A 64-bit operand (`xmm/m64`): the low lane of a register. No alignment
-requirement. -/
-def readX64 : XRM → M UInt64
-  | .reg x => do return (← xmm x).toNat.toUInt64
-  | .mem a => do return (← load .bytes8 (← ea a)).toUInt64
+/-- A 64-bit operand (x86: `xmm/m64`): the low half of a register. No
+alignment requirement. -/
+def readVector64 : VectorOrMemory → Exec UInt64
+  | .register v => do return (← readVector v).toNat.toUInt64
+  | .memory a => do return (← load .bytes8 (← effectiveAddress a)).toUInt64
 
-def push (v : UInt64) : M Unit := do
-  let sp := (← reg .rsp) - 8
+def push (v : UInt64) : Exec Unit := do
+  let sp := (← readRegister .stackPointer) - 8
   store .bytes8 sp v.toNat
-  setReg64 .rsp sp
+  writeRegister64 .stackPointer sp
 
-def pop : M UInt64 := do
-  let sp ← reg .rsp
+def pop : Exec UInt64 := do
+  let sp ← readRegister .stackPointer
   let v ← load .bytes8 sp
-  setReg64 .rsp (sp + 8)
+  writeRegister64 .stackPointer (sp + 8)
   return v.toUInt64
 
-end M
+end Exec
 
 end ValidateFeePayer.X86

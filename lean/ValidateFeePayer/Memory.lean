@@ -150,7 +150,8 @@ pointer slots included, as after RELRO) read-only. Address-only objects are
 not mapped. -/
 def Region.mapping (loadBase : UInt64) (r : Region) : Option Mapping :=
   r.contents.bytesAt loadBase |>.map fun bytes =>
-    { base := loadBase + r.address, bytes, permissions := if r.contents.isCode then .readExecute else .readOnly }
+    { base := loadBase + r.address, bytes,
+      permissions := if r.contents.isCode then .readExecute else .readOnly }
 
 def imageMappings (loadBase : UInt64) : List Mapping := regions.filterMap (·.mapping loadBase)
 

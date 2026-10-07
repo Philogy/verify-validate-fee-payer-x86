@@ -33,7 +33,8 @@ theorem regions_within_image : regions.all (·.endAddress ≤ imageEnd) := by
   set_option maxRecDepth 5000 in decide
 
 /-- A region mapped at a valid base sits at `loadBase + address` without wrapping. -/
-theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region} (hr : r ∈ regions)
+theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region}
+    (hr : r ∈ regions)
     {m : Mapping} (hm : r.mapping loadBase = some m) :
     m.base.toNat = loadBase.toNat + r.address.toNat ∧ m.endAddress = loadBase.toNat + r.endAddress := by
   have hne := List.all_eq_true.1 regions_nonempty r hr
@@ -77,9 +78,9 @@ theorem codeTable_eq_objdump : codeTable.map Print.entry = Disasm.listing := by
 
 /-- Every relative branch lands on a decoded instruction. -/
 theorem branch_targets :
-    codeTable.all (fun e => match e.instr with
-      | .jcc _ rel | .jmp rel =>
-        (instrAt ((e.addr.toNat + e.len + rel) % 2 ^ 64).toNat.toUInt64).isSome
+    codeTable.all (fun e => match e.instruction with
+      | .jumpIf _ offset | .jump offset =>
+        (instructionAt ((e.address.toNat + e.length + offset) % 2 ^ 64).toNat.toUInt64).isSome
       | _ => true) := by
   set_option maxRecDepth 100000 in decide +kernel
 

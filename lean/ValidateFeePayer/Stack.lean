@@ -3,8 +3,8 @@ import ValidateFeePayer.Memory
 /-!
 # The stack
 
-The stack is not separate state: it is the stack pointer (x86: `rsp`) plus one read/write mapping of
-the ordinary memory model. A stack overflow is therefore not a separate
+The stack is not separate state: it is the stack pointer (x86: `rsp`) plus
+one read/write mapping of the ordinary memory model. A stack overflow is therefore not a separate
 mechanism either: a `push` or `call` below the mapping touches an unmapped
 address and stops the machine with a page fault, as on Linux, where the
 kernel then delivers `SIGSEGV` (and Rust's handler prints "stack overflow").
