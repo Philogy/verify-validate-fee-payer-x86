@@ -6,5 +6,10 @@ import ValidateFeePayer.Instr
 import ValidateFeePayer.Decode
 import ValidateFeePayer.Print
 import ValidateFeePayer.Disasm
+import ValidateFeePayer.F64
+import ValidateFeePayer.State
+import ValidateFeePayer.Stack
+import ValidateFeePayer.Entry
+import ValidateFeePayer.Tests
 import ValidateFeePayer.Checks
 import ValidateFeePayer.Machine

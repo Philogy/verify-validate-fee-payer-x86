@@ -93,7 +93,7 @@ def instr (next : UInt64) (i : Instr) : String :=
     | .cvttsd2si d s => ops [reg64 d, xrm 8 s]
   if body.isEmpty then i.mnemonic else i.mnemonic ++ " " ++ body
 
-def entry (e : Entry) : UInt64 × Nat × String :=
+def entry (e : Decoded) : UInt64 × Nat × String :=
   (e.addr, e.len, instr (e.addr + e.len.toUInt64) e.instr)
 
 end ValidateFeePayer.X86.Print

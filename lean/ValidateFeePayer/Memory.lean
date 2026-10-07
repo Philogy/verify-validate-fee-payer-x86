@@ -150,22 +150,10 @@ def Region.mapping (B : UInt64) (r : Region) : Option Mapping :=
 
 def imageMappings (B : UInt64) : List Mapping := regions.filterMap (·.mapping B)
 
-/-- Bytes reserved below `rsp` that a leaf frame may use without moving it. -/
-def redZone : Nat := 128
-
-/-- The stack at entry, read/write. `above` is what lies from `rsp` up: the
-return address, the stack arguments and as much of the caller's frame as the
-proof needs. `below` is the `below.size` bytes under `rsp`; their contents
-are stale, so a specification quantifies over them. It must cover the
-callees' frames plus the red zone. Everything under it is unmapped, acting as
-the guard page. -/
-def stackMapping (rsp : UInt64) (below above : ByteArray) : Mapping :=
-  { base := rsp - below.size.toUInt64, bytes := below ++ above, perm := .rw }
-
-/-- The memory at entry: the carved image at load base `B`, the stack and the
-argument structs (each its own mapping, usually read/write). A
-specification requires it to be `WellFormed`; the image part is by
-`imageMappings_disjoint`. -/
+/-- The memory at entry: the carved image at load base `B`, the stack (a
+read/write mapping, see `Stack.lean`) and the argument structs (each its own
+mapping, usually read/write). A specification requires it to be
+`WellFormed`; the image part is by `imageMappings_disjoint`. -/
 def initialMemory (B : UInt64) (stack : Mapping) (args : List Mapping) : Memory :=
   ⟨imageMappings B ++ stack :: args⟩
 

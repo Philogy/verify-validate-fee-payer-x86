@@ -293,7 +293,7 @@ def decode (bytes : List UInt8) : Except DecodeError (Instr × Nat) := do
   pure (i, len)
 
 /-- A decoded instruction at its address (at load base 0). -/
-structure Entry where
+structure Decoded where
   addr : UInt64
   instr : Instr
   len : Nat
@@ -301,7 +301,7 @@ structure Entry where
 
 /-- Decode back to back from `addr` until the bytes run out. `fuel` bounds
 the number of instructions (each is at least one byte). -/
-def sweep : (fuel : Nat) → (addr : UInt64) → List UInt8 → Except (UInt64 × DecodeError) (List Entry)
+def sweep : (fuel : Nat) → (addr : UInt64) → List UInt8 → Except (UInt64 × DecodeError) (List Decoded)
   | _, _, [] => pure []
   | 0, addr, _ => throw (addr, .unsupported "out of fuel")
   | fuel + 1, addr, bytes => do
@@ -309,24 +309,24 @@ def sweep : (fuel : Nat) → (addr : UInt64) → List UInt8 → Except (UInt64 �
     let rest ← sweep fuel (addr + len.toUInt64) (bytes.drop len)
     pure (⟨addr, i, len⟩ :: rest)
 
-def decodeRegion (r : Region) : Except (UInt64 × DecodeError) (List Entry) :=
+def decodeRegion (r : Region) : Except (UInt64 × DecodeError) (List Decoded) :=
   match r.contents with
   | .code bytes => sweep bytes.size r.vaddr bytes.toList
   | _ => throw (r.vaddr, .unsupported "not a code region")
 
 /-- Every instruction of the carved functions, in address order. -/
-def decodeImage : Except (UInt64 × DecodeError) (List Entry) := do
+def decodeImage : Except (UInt64 × DecodeError) (List Decoded) := do
   let parts ← Image.functions.mapM decodeRegion
   pure parts.flatten
 
 /-- The predecoded code. `Checks.lean` proves `decodeImage = .ok codeTable`,
 so the fallback is never taken. -/
-def codeTable : List Entry :=
+def codeTable : List Decoded :=
   match decodeImage with
   | .ok t => t
   | .error _ => []
 
 /-- The instruction at `addr` (at load base 0), if one starts there. -/
-def instrAt (addr : UInt64) : Option Entry := codeTable.find? (·.addr == addr)
+def instrAt (addr : UInt64) : Option Decoded := codeTable.find? (·.addr == addr)
 
 end ValidateFeePayer.X86
