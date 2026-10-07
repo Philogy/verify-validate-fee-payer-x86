@@ -1,0 +1,5 @@
+import ValidateFeePayer.Region
+import ValidateFeePayer.Image
+import ValidateFeePayer.Memory
+import ValidateFeePayer.Checks
+import ValidateFeePayer.Machine

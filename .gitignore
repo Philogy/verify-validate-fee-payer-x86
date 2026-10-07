@@ -1,0 +1,4 @@
+/carve/target/
+/lean/.lake/
+# Container build cache (cargo target dir and registry); see ci-image.sh.
+/cache/

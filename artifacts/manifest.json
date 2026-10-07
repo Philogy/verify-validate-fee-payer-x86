@@ -1,0 +1,218 @@
+{
+  "source_sha256": "3f0a1e446ba474e54aecd11f33844a73343f460cf275ef40c27659d7ab7fd34d",
+  "load_base": "addresses assume load base 0; at base B add B to every address and to every relocation value",
+  "functions": [
+    {
+      "name": "validate_fee_payer",
+      "symbol": "_RNvNtCs1L62bQgIuY7_10solana_svm14account_loader18validate_fee_payer",
+      "vaddr": "0x27f3560",
+      "size": "0x230",
+      "sha256": "3ddecafc4098544d5ba8cdb0c96520f558520309932fd92bb2ed718561f84719",
+      "file": "validate_fee_payer.bin"
+    },
+    {
+      "name": "check_static_account_rent_state_transition",
+      "symbol": "_RNvNtCs1L62bQgIuY7_10solana_svm15rent_calculator42check_static_account_rent_state_transition",
+      "vaddr": "0x27f3790",
+      "size": "0x19c",
+      "sha256": "f47817a790b147274ebca812a266768584322ef0ff2da02b3529e423af5cfca4",
+      "file": "check_static_account_rent_state_transition.bin"
+    }
+  ],
+  "data": [
+    {
+      "name": "panic_location_file",
+      "vaddr": "0x2b5e4d",
+      "size": "0x5b",
+      "bytes": "2f7573722f6c6f63616c2f636172676f2f72656769737472792f7372632f696e6465782e6372617465732e696f2d313934396366386336623562353537662f736f6c616e612d72656e742d342e352e302f7372632f6c69622e7273",
+      "read_by_code": false,
+      "relocations": [],
+      "description": "file name referenced by panic_location"
+    },
+    {
+      "name": "u64_to_f64_bias",
+      "vaddr": "0x2e59a0",
+      "size": "0x10",
+      "bytes": "00000000000030430000000000003045",
+      "read_by_code": true,
+      "relocations": [],
+      "description": "u64 -> f64: subtracted to recover each half as an f64"
+    },
+    {
+      "name": "u64_to_f64_exponents",
+      "vaddr": "0x2e6f30",
+      "size": "0x10",
+      "bytes": "00003043000030450000000000000000",
+      "read_by_code": true,
+      "relocations": [],
+      "description": "u64 -> f64: high words of 2^52 and 2^84, spliced onto the u64's halves"
+    },
+    {
+      "name": "system_program_id",
+      "vaddr": "0x2f1060",
+      "size": "0x20",
+      "bytes": "0000000000000000000000000000000000000000000000000000000000000000",
+      "read_by_code": true,
+      "relocations": [],
+      "description": "solana_sdk_ids::system_program::ID, compared against the account owner"
+    },
+    {
+      "name": "f64_max_below_2pow64",
+      "vaddr": "0x2f3b78",
+      "size": "0x8",
+      "bytes": "ffffffffffffef43",
+      "read_by_code": true,
+      "relocations": [],
+      "description": "f64 -> u64: the cast saturates above the largest f64 below 2^64"
+    },
+    {
+      "name": "f64_2pow63",
+      "vaddr": "0x2f5f28",
+      "size": "0x8",
+      "bytes": "000000000000e043",
+      "read_by_code": true,
+      "relocations": [],
+      "description": "f64 -> u64: values >= 2^63 are converted after subtracting 2^63"
+    },
+    {
+      "name": "panic_msg",
+      "vaddr": "0x60cd1c",
+      "size": "0x26",
+      "bytes": "4d6178696d756d207065726d69747465642064617461206c656e677468206578636565646564",
+      "read_by_code": false,
+      "relocations": [],
+      "description": "message of the expect() in Rent::minimum_balance; passed to expect_failed"
+    },
+    {
+      "name": "panic_location",
+      "vaddr": "0x3759860",
+      "size": "0x18",
+      "bytes": "4d5e2b00000000005b00000000000000780000000e000000",
+      "read_by_code": false,
+      "relocations": [
+        {
+          "offset": "0x0",
+          "value": "0x2b5e4d"
+        }
+      ],
+      "description": "core::panic::Location { /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-rent-4.5.0/src/lib.rs, line 120, col 14 }; passed to expect_failed"
+    },
+    {
+      "name": "got_expect_failed",
+      "vaddr": "0x37e9378",
+      "size": "0x8",
+      "bytes": "00e12b0100000000",
+      "read_by_code": true,
+      "relocations": [
+        {
+          "offset": "0x0",
+          "value": "0x12be100"
+        }
+      ],
+      "description": "pointer slot, loaded with B + 0x12be100 (core::option::expect_failed)"
+    },
+    {
+      "name": "got_check_static_account_rent_state_transition",
+      "vaddr": "0x37f5120",
+      "size": "0x8",
+      "bytes": "90377f0200000000",
+      "read_by_code": true,
+      "relocations": [
+        {
+          "offset": "0x0",
+          "value": "0x27f3790"
+        }
+      ],
+      "description": "pointer slot, loaded with B + 0x27f3790 (check_static_account_rent_state_transition)"
+    }
+  ],
+  "panic_entry": {
+    "symbol": "_RNvNtCsgxBkk5gSRhY_4core6option13expect_failed",
+    "vaddr": "0x12be100"
+  },
+  "mnemonics": {
+    "add": 2,
+    "addsd": 2,
+    "and": 2,
+    "call": 3,
+    "cmovae": 2,
+    "cmovbe": 2,
+    "cmovne": 3,
+    "cmp": 23,
+    "cvttsd2si": 4,
+    "imul": 5,
+    "inc": 3,
+    "ja": 6,
+    "jae": 2,
+    "jb": 1,
+    "je": 12,
+    "jmp": 8,
+    "jne": 11,
+    "lea": 5,
+    "mov": 53,
+    "movapd": 4,
+    "movdqu": 4,
+    "movq": 4,
+    "movzx": 4,
+    "mulsd": 2,
+    "or": 3,
+    "pop": 7,
+    "por": 1,
+    "ptest": 1,
+    "punpckldq": 2,
+    "push": 8,
+    "pxor": 2,
+    "ret": 2,
+    "sar": 2,
+    "sbb": 1,
+    "setb": 2,
+    "sete": 4,
+    "sub": 5,
+    "subpd": 2,
+    "subsd": 2,
+    "test": 13,
+    "ucomisd": 4,
+    "unpckhpd": 2,
+    "xor": 7,
+    "xorpd": 2
+  },
+  "layout": {
+    "account_shared_data": {
+      "size": "0x40",
+      "align": "0x8",
+      "lamports": "0x8",
+      "owner": "0x10",
+      "rent_epoch": "0x30",
+      "data_arc": "0x0",
+      "arc_inner": {
+        "data_ptr": "0x18",
+        "data_len": "0x20",
+        "data_capacity": "0x10"
+      }
+    },
+    "rent": {
+      "size": "0x18",
+      "lamports_per_byte": "0x0",
+      "exemption_threshold": "0x8",
+      "burn_percent": "0x10"
+    },
+    "transaction_error_metrics": {
+      "size": "0xc0",
+      "counter_size": "0x8",
+      "account_not_found": "0x20",
+      "insufficient_funds": "0x50",
+      "invalid_account_for_fee": "0x58"
+    },
+    "result": {
+      "size": "0xc",
+      "tags": {
+        "AccountNotFound": "0x39",
+        "InsufficientFundsForFee": "0x3b",
+        "InsufficientFundsForRent": "0x56",
+        "InvalidAccountForFee": "0x3c",
+        "Ok": "0xffffffff"
+      },
+      "account_index": "0x4"
+    }
+  }
+}

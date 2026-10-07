@@ -1,0 +1,27 @@
+[package]
+name = "vfp-carve"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Not a member of the agave workspace. Cargo.lock started as a copy of the
+# workspace lockfile, so shared dependencies resolve to the same versions the
+# validator was built with.
+[workspace]
+
+[dependencies]
+anyhow = "=1.0.104"
+iced-x86 = { version = "=1.21.0", default-features = false, features = ["std", "decoder", "instr_info"] }
+object = { version = "=0.39.1", default-features = false, features = ["std", "read_core", "elf"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+sha2 = "=0.10.9"
+
+# Only used to measure layouts; versions as pinned in the workspace.
+solana-account = "=5.1.0"
+solana-pubkey = "=4.4.0"
+solana-rent = "=4.5.0"
+solana-sdk-ids = "=3.1.0"
+solana-svm = { path = "../../svm", features = ["agave-unstable-api"] }
+solana-transaction-error = "=4.1.0"
+

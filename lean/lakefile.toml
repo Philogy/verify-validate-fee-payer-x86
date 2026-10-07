@@ -1,0 +1,5 @@
+name = "ValidateFeePayer"
+defaultTargets = ["ValidateFeePayer"]
+
+[[lean_lib]]
+name = "ValidateFeePayer"
