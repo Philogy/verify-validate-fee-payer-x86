@@ -2,5 +2,9 @@ import ValidateFeePayer.Bytes
 import ValidateFeePayer.Region
 import ValidateFeePayer.Image
 import ValidateFeePayer.Memory
+import ValidateFeePayer.Instr
+import ValidateFeePayer.Decode
+import ValidateFeePayer.Print
+import ValidateFeePayer.Disasm
 import ValidateFeePayer.Checks
 import ValidateFeePayer.Machine

@@ -1,4 +1,6 @@
 import ValidateFeePayer.Memory
+import ValidateFeePayer.Print
+import ValidateFeePayer.Disasm
 
 /-!
 Facts about the generated image that later proofs rely on, checked by the
@@ -58,5 +60,29 @@ theorem imageMappings_disjoint {B : UInt64} (hB : ValidBase B) :
   unfold Disjoint at hd
   unfold Mapping.Disjoint
   omega
+
+/-! ## The decoder -/
+
+namespace X86
+
+/-- The strict decoder accepts every instruction of the carved code, so
+`codeTable` is the real sweep, not its fallback. -/
+theorem decodeImage_ok : decodeImage.toOption = some codeTable := by
+  set_option maxRecDepth 100000 in decide +kernel
+
+/-- The decoder agrees with llvm-objdump (`Disasm.lean`) on every
+instruction's address, length, mnemonic and operands. -/
+theorem codeTable_eq_objdump : codeTable.map Print.entry = Disasm.listing := by
+  set_option maxRecDepth 100000 in decide +kernel
+
+/-- Every relative branch lands on a decoded instruction. -/
+theorem branch_targets :
+    codeTable.all (fun e => match e.instr with
+      | .jcc _ rel | .jmp rel =>
+        (instrAt ((e.addr.toNat + e.len + rel) % 2 ^ 64).toNat.toUInt64).isSome
+      | _ => true) := by
+  set_option maxRecDepth 100000 in decide +kernel
+
+end X86
 
 end ValidateFeePayer
