@@ -5,22 +5,23 @@
 # which has to happen on the validator's target (x86_64-linux), and that
 # image's binutils assemble and check the standalone ELF.
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
 if [[ -z ${VFP_IN_CI_IMAGE:-} ]]; then
-  source verify-validate-fee-payer/ci-image.sh
+  source "$(dirname "$0")/ci-image.sh"
   check_pins
-  run_in_ci_image --env VFP_IN_CI_IMAGE=1 -- verify-validate-fee-payer/make-artifacts.sh
+  run_in_ci_image --env VFP_IN_CI_IMAGE=1 -- /vfp/make-artifacts.sh
   exit
 fi
 
+# In the container: this repository is /vfp, agave and build.sh's output /solana.
+cd /vfp
 binary=/solana/target/install/bin/agave-validator
-out=verify-validate-fee-payer/artifacts
+out=artifacts
 
 rm -rf "$out"
 cargo run --locked --release --quiet \
-  --manifest-path verify-validate-fee-payer/carve/Cargo.toml --target-dir /solana/target/carve \
-  -- "$binary" "$out" verify-validate-fee-payer/lean/ValidateFeePayer/Image.lean
+  --manifest-path carve/Cargo.toml --target-dir /solana/target/carve \
+  -- "$binary" "$out" lean/ValidateFeePayer/Image.lean
 cd "$out"
 
 as --64 -o standalone.o standalone.S

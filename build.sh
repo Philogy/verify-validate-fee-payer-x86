@@ -10,13 +10,12 @@
 #     wall-clock build time, which shifts .rodata and with it the rip-relative
 #     displacements in unrelated code.
 set -euo pipefail
-cd "$(dirname "$0")/.."
-source verify-validate-fee-payer/ci-image.sh
+source "$(dirname "$0")/ci-image.sh"
 check_pins
 
 run_in_ci_image \
   --env CARGO_PROFILE_RELEASE_STRIP=none \
-  --env "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" \
+  --env "SOURCE_DATE_EPOCH=$(git -C "$AGAVE" log -1 --format=%ct)" \
   -- \
   scripts/cargo-install-all.sh --no-build-dcou-bins --no-build-platform-tools --no-spl-token \
   /solana/target/install

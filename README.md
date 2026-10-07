@@ -10,13 +10,17 @@ fixed memory it can reach and the layout of the values it works on.
 Requires Docker; the CI image is amd64-only, so enable Rosetta on Apple Silicon.
 
 ```sh
-verify-validate-fee-payer/build.sh            # agave-validator, ~10 min under Rosetta
-verify-validate-fee-payer/make-artifacts.sh   # carve, measure, check -> artifacts/
+git submodule update --init --depth 1   # agave/, pinned to the commit below
+./build.sh            # agave-validator, ~10 min under Rosetta
+./make-artifacts.sh   # carve, measure, check -> artifacts/ and lean/ValidateFeePayer/Image.lean
 ```
 
-Both run in Anza's CI image through `ci/docker-run.sh`, the wrapper CI uses
-(`ci-image.sh` has the pins and mounts). `build.sh` runs
-`scripts/cargo-install-all.sh`, the release build script.
+Both run in Anza's CI image through agave's `ci/docker-run.sh`, the wrapper
+CI uses, which mounts `agave/` at `/solana`; `ci-image.sh` has the pins and
+mounts this repository at `/vfp`. `build.sh` runs
+`scripts/cargo-install-all.sh`, the release build script. The container's
+cargo target dir and registry live in `cache/` (gitignored; override with
+`VFP_CACHE`); the binary ends up in `cache/target/install/bin/`.
 
 | Pin | Value |
 |---|---|
@@ -32,9 +36,15 @@ Deviations from a release build, none of which change code generation:
 - `SOURCE_DATE_EPOCH` is the commit time. Otherwise OpenSSL embeds the
   wall-clock build time, which shifts `.rodata` and with it rip-relative
   displacements throughout the binary.
+- git is disabled in the container, so `version/build.rs` does not embed
+  the commit hash (`solana-version` then reports no commit). This one does
+  change code generation: with the hash embedded the binary's sha256 is
+  `2f91db73…`, both functions move by `0x6a0` and their rip-relative
+  displacements change. A CI release build, which has git, therefore matches
+  that variant, not the artifacts here.
 
-Two clean builds from different checkout paths produced byte-identical
-binaries (sha256 `3f0a1e446ba474e54aecd11f33844a73343f460cf275ef40c27659d7ab7fd34d`).
+Two clean builds from different checkout paths, and a rebuild after moving
+agave into this repository as a submodule, produced byte-identical binaries (sha256 `3f0a1e446ba474e54aecd11f33844a73343f460cf275ef40c27659d7ab7fd34d`).
 
 Caveat: Anza's published Linux tarball is built by `ci/publish-tarball.sh`
 directly on a release-build agent, not in this image. The toolchain matches,

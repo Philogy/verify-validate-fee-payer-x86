@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2024"
 publish = false
 
-# Not a member of the agave workspace. Cargo.lock started as a copy of the
+# Not a member of the agave workspace (the submodule at ../agave). Cargo.lock started as a copy of the
 # workspace lockfile, so shared dependencies resolve to the same versions the
 # validator was built with.
 [workspace]
@@ -22,6 +22,6 @@ solana-account = "=5.1.0"
 solana-pubkey = "=4.4.0"
 solana-rent = "=4.5.0"
 solana-sdk-ids = "=3.1.0"
-solana-svm = { path = "../../svm", features = ["agave-unstable-api"] }
+solana-svm = { path = "../agave/svm", features = ["agave-unstable-api"] }
 solana-transaction-error = "=4.1.0"
 
