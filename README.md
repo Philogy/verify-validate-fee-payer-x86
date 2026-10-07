@@ -115,3 +115,13 @@ panic runtime, which leaves this binary for libc and libgcc. Reaching that
 address is the terminal "panicked" outcome. It happens only through
 `Rent::minimum_balance`'s `expect`, when `rent.lamports_per_byte` is above
 its cap.
+
+## TODO
+
+- **Re-pin to the git-enabled build (deferred to the end).** The artifacts
+  and `Image.lean` come from the build with git disabled (see above). A CI
+  release build embeds the commit hash, which moves both functions by `0x6a0`
+  and changes their rip-relative displacements. Before the final proof,
+  rebuild with git available in the container, regenerate the carve and
+  `Image.lean`, and re-run `lake build`; nothing should depend on the
+  current addresses except through `Image.lean`.
