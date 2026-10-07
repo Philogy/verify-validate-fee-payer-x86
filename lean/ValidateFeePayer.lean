@@ -1,3 +1,4 @@
+import ValidateFeePayer.Bytes
 import ValidateFeePayer.Region
 import ValidateFeePayer.Image
 import ValidateFeePayer.Memory

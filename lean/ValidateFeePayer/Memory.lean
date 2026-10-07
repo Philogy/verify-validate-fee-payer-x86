@@ -21,7 +21,9 @@ def ValidBase (B : UInt64) : Prop := B.toNat + imageEnd ≤ 2 ^ 64
 instance : DecidablePred ValidBase := fun _B => inferInstanceAs (Decidable (_ ≤ _))
 
 def fixedMemory (B : UInt64) (addr : UInt64) : Option UInt8 :=
-  regions.findSome? fun r => (r.load B).byteAt? addr
+  regions.findSome? fun r => r.contents.bytesAt B >>= fun bytes =>
+    let base := B + r.vaddr
+    if base ≤ addr then bytes[(addr - base).toNat]? else none
 
 /-- Where execution starts. -/
 def entry (B : UInt64) : UInt64 := B + Image.validate_fee_payer.vaddr

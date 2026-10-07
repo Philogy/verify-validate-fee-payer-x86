@@ -1,12 +1,54 @@
 //! `Image.lean` for the `lean/` package: the carved regions, the panic entry
 //! and the measured layout as Lean definitions. The `Region` type and loading
 //! at an arbitrary base live in `ValidateFeePayer/Region.lean`.
+//!
+//! Each region gets one kind of contents, mirroring Lean's `Region.Contents`:
+//! code, a constant the code reads, a pointer slot (whose bytes depend on the
+//! load base, so only its target is recorded), or an object whose address is
+//! only passed on (so only its size is recorded). Anything else is an error.
 
 use {
-    crate::{code::Code, data::DataObject, layout::Layout},
-    anyhow::{Result, bail},
+    crate::{code::Code, data::DataObject, elf::Relocation, layout::Layout},
+    anyhow::{Context, Result, bail, ensure},
     serde_json::Value,
 };
+
+enum Contents<'a> {
+    Code(&'a [u8]),
+    Constant(&'a [u8]),
+    Pointer(u64),
+    AddressOnly(usize),
+}
+
+impl<'a> Contents<'a> {
+    fn of_data(o: &'a DataObject) -> Result<Self> {
+        if !o.read_by_code {
+            // Relocated words inside (the panic Location's file pointer) are
+            // dropped with the rest of the contents.
+            return Ok(Self::AddressOnly(o.bytes.len()));
+        }
+        match o.relocations[..] {
+            [] => Ok(Self::Constant(&o.bytes)),
+            [Relocation { offset: 0, value }] if o.bytes.len() == 8 => {
+                ensure!(
+                    o.bytes == value.to_le_bytes(),
+                    "pointer slot bytes differ from its relocation value"
+                );
+                Ok(Self::Pointer(value))
+            }
+            _ => bail!("read object with relocated words that is not a pointer slot"),
+        }
+    }
+
+    fn lean(&self) -> String {
+        match self {
+            Self::Code(bytes) => format!(".code {}", byte_array(bytes)),
+            Self::Constant(bytes) => format!(".constant {}", byte_array(bytes)),
+            Self::Pointer(target) => format!(".pointer {target:#x}"),
+            Self::AddressOnly(size) => format!(".addressOnly {size:#x}"),
+        }
+    }
+}
 
 pub fn module(
     source_sha256: &str,
@@ -22,25 +64,12 @@ namespace ValidateFeePayer.Image
 "
     );
     for f in &code.functions {
-        s += &region(
-            f.name,
-            &format!("`{}`", f.symbol),
-            f.vaddr,
-            f.bytes,
-            &[],
-            true,
-        );
+        let contents = Contents::Code(f.bytes);
+        s += &region(f.name, &format!("`{}`", f.symbol), f.vaddr, &contents);
     }
     for o in data {
-        let relocations: Vec<_> = o.relocations.iter().map(|r| (r.offset, r.value)).collect();
-        s += &region(
-            &o.name,
-            &o.description,
-            o.vaddr,
-            &o.bytes,
-            &relocations,
-            o.read_by_code,
-        );
+        let contents = Contents::of_data(o).with_context(|| o.name.clone())?;
+        s += &region(&o.name, &o.description, o.vaddr, &contents);
     }
 
     let names = |names: Vec<&str>| names.join(", ");
@@ -71,14 +100,20 @@ namespace Layout
     Ok(s)
 }
 
-fn region(
-    name: &str,
-    doc: &str,
-    vaddr: u64,
-    bytes: &[u8],
-    relocations: &[(u64, u64)],
-    read: bool,
-) -> String {
+fn region(name: &str, doc: &str, vaddr: u64, contents: &Contents) -> String {
+    format!(
+        "
+/-- {doc} -/
+def {name} : Region where
+  name := \"{name}\"
+  vaddr := {vaddr:#x}
+  contents := {}
+",
+        contents.lean()
+    )
+}
+
+fn byte_array(bytes: &[u8]) -> String {
     let rows: Vec<String> = bytes
         .chunks(16)
         .map(|row| {
@@ -86,29 +121,7 @@ fn region(
             format!("    {}", row.join(", "))
         })
         .collect();
-    let mut s = format!(
-        "
-/-- {doc} -/
-def {name} : Region where
-  name := \"{name}\"
-  vaddr := {vaddr:#x}
-  bytes := ⟨#[
-{}
-  ]⟩
-",
-        rows.join(",\n")
-    );
-    if !relocations.is_empty() {
-        let relocations: Vec<String> = relocations
-            .iter()
-            .map(|(offset, value)| format!("{{ offset := {offset}, value := {value:#x} }}"))
-            .collect();
-        s += &format!("  relocations := [{}]\n", relocations.join(", "));
-    }
-    if !read {
-        s += "  readByCode := false\n";
-    }
-    s
+    format!("⟨#[\n{}\n  ]⟩", rows.join(",\n"))
 }
 
 /// Nested JSON objects become namespaces; "0x..." leaves become `Nat` defs.
