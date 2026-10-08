@@ -169,25 +169,26 @@ def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UIn
 def modifyMetrics (f : ErrorMetrics → ErrorMetrics) : SpecM Unit :=
   modify fun s => { s with metrics := f s.metrics }
 
+def getAccount : SpecM Account := do return (← get).account
+
 def validateFeePayer (payerIndex : UInt16) (rent : Rent) (fee : UInt64) (relax : Bool) :
     SpecM (Except TransactionError Unit) := do
-  let account := (← get).account
-  if account.lamports = 0 then
+  if (← getAccount).lamports = 0 then
     modifyMetrics fun m => { m with accountNotFound := saturatingIncrement m.accountNotFound }
     return .error .accountNotFound
-  let some kind := systemAccountKind account
+  let some kind := systemAccountKind (← getAccount)
     | modifyMetrics fun m => { m with invalidAccountForFee := saturatingIncrement m.invalidAccountForFee }
       return .error .invalidAccountForFee
   let minBalance ← match kind with
     | .system => pure 0
     | .nonce => minimumBalance rent nonceStateSize.toUInt64
-  if account.lamports < minBalance ∨ account.lamports - minBalance < fee then
+  if (← getAccount).lamports.toNat < fee.toNat + minBalance.toNat then
     modifyMetrics fun m => { m with insufficientFunds := saturatingIncrement m.insufficientFunds }
     return .error .insufficientFundsForFee
-  -- `checked_sub_lamports(fee)` cannot fail here: `lamports ≥ minBalance + fee`.
-  let postBalance := account.lamports - fee
-  modify fun s => { s with account.lamports := postBalance }
-  checkStaticAccountRentStateTransition account.lamports postBalance account.data.length.toUInt64 rent
+  let preBalance := (← getAccount).lamports
+  let postBalance := preBalance - fee
+  modify ({ · with account.lamports := postBalance })
+  checkStaticAccountRentStateTransition preBalance postBalance (← getAccount).data.length.toUInt64 rent
     payerIndex relax
 
 end ValidateFeePayer.Spec

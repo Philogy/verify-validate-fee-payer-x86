@@ -16,7 +16,7 @@ outside the code, or reads an undefined flag. -/
 theorem validateFeePayer_correct (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool)
     (s : State) (pre : Pre c refs rent relax s) :
     match (Spec.validateFeePayer c.payerIndex rent c.fee relax).run refs with
-    | .error _ => ∃ s', run c.exits fuel s = .panicked s'
+    | .error .maximumPermittedDataLengthExceeded => ∃ s', run c.exits fuel s = .panicked s'
     | .ok (result, refs') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s result refs' s' := by
   sorry
 
