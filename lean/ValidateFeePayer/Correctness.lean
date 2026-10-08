@@ -1,7 +1,9 @@
 import ValidateFeePayer.Contract
+import ValidateFeePayer.Proof.Correctness
 
 /-!
-The correctness theorem. Its proof is the one `sorry` in the package.
+The correctness theorem. Its statement lives here; the proof is in
+`ValidateFeePayer/Proof/`, reduced to the one symbolic-execution `sorry`.
 -/
 
 namespace ValidateFeePayer
@@ -17,7 +19,7 @@ theorem validateFeePayer_correct (c : Call) (refs : Spec.MutRefs) (rent : Spec.R
     (s : State) (pre : Pre c refs rent relax s) :
     match (Spec.validateFeePayer c.payerIndex rent c.fee relax).run refs with
     | .error .maximumPermittedDataLengthExceeded => ∃ s', run c.exits fuel s = .panicked s'
-    | .ok (result, refs') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s result refs' s' := by
-  sorry
+    | .ok (result, refs') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s result refs' s' :=
+  correct c refs rent relax s pre
 
 end ValidateFeePayer
