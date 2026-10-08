@@ -1,29 +1,21 @@
-import ValidateFeePayer.Bytes
+import X86.Bytes
 
 /-!
-A region is a contiguous piece of the carved image: code of one function, or
-one data object. Addresses are as in the binary, i.e. at load base 0; at base
-`loadBase` a region starts at `loadBase + address`, and its bytes there follow from its
-`Contents` alone.
+A region is one carved piece of the binary: a function's code or one data
+object. Addresses are as in the binary, i.e. at load base 0.
 -/
 
 namespace ValidateFeePayer
 
 inductive Contents where
-  /-- Machine code of a carved function. It has no relocations, so its bytes
-  are the same at every base. -/
   | code (bytes : ByteArray)
-  /-- Data the code reads. It contains no relocated words, so its bytes are
-  the same at every base. -/
   | constant (bytes : ByteArray)
-  /-- An 8-byte slot (GOT entry) that the dynamic loader fills with
-  `loadBase + target`; the code calls through it. -/
+  /-- A GOT slot, which the dynamic loader fills with `loadBase + target`. -/
   | pointer (target : UInt64)
-  /-- An object whose address the code only passes on, to the panic, which is
-  terminal. Its contents can never matter, so only its size is kept, and the
-  memory model leaves it unmapped: a read of it faults. The panic `Location`
-  is one, although it holds a relocated pointer to its file name: that pointer
-  is only ever read by the panic runtime, so it is dropped with the rest. -/
+  /-- An object whose address the code only passes to the panic. The panic
+  is terminal, so its contents can never matter; only its size is kept and
+  it is left unmapped. This includes the panic `Location`, whose file-name
+  pointer is relocated but only read by the panic runtime. -/
   | addressOnly (size : Nat)
 
 namespace Contents
@@ -33,11 +25,11 @@ def size : Contents → Nat
   | pointer _ => 8
   | addressOnly size => size
 
-/-- The bytes in memory when the binary is loaded at `loadBase`; `none` if the
-region is not mapped. -/
+-- Code and constants contain no relocated words, so their bytes are the same
+-- at every base.
 def bytesAt (loadBase : UInt64) : Contents → Option ByteArray
   | code bytes | constant bytes => some bytes
-  | pointer target => some (UInt64.toLEBytes (loadBase + target))
+  | pointer target => some ⟨(X86.littleEndianBytes 8 (loadBase + target)).toArray⟩
   | addressOnly _ => none
 
 def isCode : Contents → Bool
@@ -52,7 +44,6 @@ end Contents
 
 structure Region where
   name : String
-  /-- Start address as in the binary, i.e. at load base 0 (ELF: `vaddr`). -/
   address : UInt64
   contents : Contents
 
@@ -60,14 +51,13 @@ namespace Region
 
 def size (r : Region) : Nat := r.contents.size
 
-/-- One past the last address, as a `Nat` so it cannot wrap. -/
+-- A `Nat`, so that a region that ends at `2^64` does not wrap around to 0.
 def endAddress (r : Region) : Nat := r.address.toNat + r.size
 
-/-- `addr` (at load base 0) lies inside the region. -/
-def Contains (r : Region) (addr : UInt64) : Prop :=
-  r.address.toNat ≤ addr.toNat ∧ addr.toNat < r.endAddress
+def Contains (r : Region) (address : UInt64) : Prop :=
+  r.address.toNat ≤ address.toNat ∧ address.toNat < r.endAddress
 
-instance (r : Region) (addr : UInt64) : Decidable (r.Contains addr) := by
+instance (r : Region) (address : UInt64) : Decidable (r.Contains address) := by
   unfold Contains; infer_instance
 
 end Region

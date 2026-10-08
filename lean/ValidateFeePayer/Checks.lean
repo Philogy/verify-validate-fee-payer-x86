@@ -1,29 +1,23 @@
-import ValidateFeePayer.Memory
-import ValidateFeePayer.Print
+import ValidateFeePayer.Loader
+import ValidateFeePayer.Code
 import ValidateFeePayer.Disasm
+import X86.Print
 
-/-!
-Facts about the generated image that later proofs rely on, checked by the
-kernel. A regenerated `Image.lean` that breaks one fails the build here.
--/
+-- A regenerated `Image.lean` that breaks one of these fails the build here.
 
 namespace ValidateFeePayer
-open Image
+open Image X86
 
 theorem regions_disjoint : regions.Pairwise Disjoint := by
   set_option maxRecDepth 5000 in decide
 
-/-- The two pointer slots the code calls through hold, after loading, the
-callee's entry point and the panic entry. -/
 theorem got_targets :
     got_check_static_account_rent_state_transition.contents
       = .pointer check_static_account_rent_state_transition.address ∧
     got_expect_failed.contents = .pointer Image.panicEntry := ⟨rfl, rfl⟩
 
-/-- Functions are code regions, whose bytes are the same at every base. -/
 theorem functions_are_code : functions.all (·.contents.isCode) := by decide
 
-/-- The panic entry is not inside any carved region. -/
 theorem panic_unmapped : regions.all fun r => !decide (r.Contains Image.panicEntry) := by decide
 
 theorem regions_nonempty : regions.all (0 < ·.size) := by
@@ -32,7 +26,6 @@ theorem regions_nonempty : regions.all (0 < ·.size) := by
 theorem regions_within_image : regions.all (·.endAddress ≤ imageEnd) := by
   set_option maxRecDepth 5000 in decide
 
-/-- A region mapped at a valid base sits at `loadBase + address` without wrapping. -/
 theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region}
     (hr : r ∈ regions)
     {m : Mapping} (hm : r.mapping loadBase = some m) :
@@ -49,7 +42,6 @@ theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBas
   simp only [Mapping.endAddress, UInt64.toNat_add, Nat.mod_eq_of_lt this]
   exact ⟨trivial, by omega⟩
 
-/-- At a valid base the carved image's mappings do not overlap. -/
 theorem imageMappings_disjoint {loadBase : UInt64} (hBase : ValidLoadBase loadBase) :
     (imageMappings loadBase).Pairwise Mapping.Disjoint := by
   unfold imageMappings
@@ -64,26 +56,33 @@ theorem imageMappings_disjoint {loadBase : UInt64} (hBase : ValidLoadBase loadBa
 
 /-! ## The decoder -/
 
-namespace X86
-
-/-- The strict decoder accepts every instruction of the carved code, so
-`codeTable` is the real sweep, not its fallback. -/
-theorem decodeImage_ok : decodeImage.toOption = some codeTable := by
+theorem sweepImage_ok : sweepImage.toOption = some listing := by
   set_option maxRecDepth 100000 in decide +kernel
 
-/-- The decoder agrees with llvm-objdump (`Disasm.lean`) on every
-instruction's address, length, mnemonic and operands. -/
-theorem codeTable_eq_objdump : codeTable.map Print.entry = Disasm.listing := by
+def Decoded.text (e : Decoded) : UInt64 × Nat × String :=
+  (e.address, e.length, Print.instruction (e.address + e.length.toUInt64) e.instruction)
+
+/-- The generic decoder agrees with llvm-objdump (`Disasm.lean`), an
+independent disassembler, on every instruction's address, length, mnemonic
+and operands. -/
+theorem listing_eq_objdump : listing.map Decoded.text = Disasm.listing := by
   set_option maxRecDepth 100000 in decide +kernel
 
-/-- Every relative branch lands on a decoded instruction. -/
+def decodesAt (d : Decoded) : Bool :=
+  match decodeWith codeByte d.address with
+  | .ok (i, length) => i == d.instruction && length == d.length
+  | .error _ => false
+
+/-- Fetching from the image byte by byte, as the machine does, gives the
+same instructions as the sweep. -/
+theorem decodeWith_codeByte : listing.all decodesAt := by
+  set_option maxRecDepth 100000 in decide +kernel
+
 theorem branch_targets :
-    codeTable.all (fun e => match e.instruction with
+    listing.all (fun e => match e.instruction with
       | .jumpIf _ offset | .jump offset =>
-        (instructionAt ((e.address.toNat + e.length + offset) % 2 ^ 64).toNat.toUInt64).isSome
+        (instructionAt (e.address + e.length.toUInt64 + offset)).isSome
       | _ => true) := by
   set_option maxRecDepth 100000 in decide +kernel
-
-end X86
 
 end ValidateFeePayer

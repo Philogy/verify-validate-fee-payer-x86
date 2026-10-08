@@ -1,19 +1,18 @@
 /-!
-IEEE 754 binary64 arithmetic as SSE2 performs it, on raw bits, for the
-operations the carved code uses: `addsd`/`subsd`/`subpd`, `mulsd`, `ucomisd`
-and `cvttsd2si`.
+IEEE 754 binary64 arithmetic as SSE2 performs it, on raw bits:
+`addsd`/`subsd`/`subpd`, `mulsd`, `ucomisd` and `cvttsd2si`.
 
 Only the default floating-point control setting (x86: `MXCSR`) is modelled:
 round to nearest even, all exceptions masked, no flush-to-zero, no
 denormals-are-zero. The machine stops with `unsupported` on any other
 setting rather than compute something else. Under that setting an operation
-never traps; it returns a value and the exception flags it raises, which the
-machine ORs into the float control word.
+never traps; it returns a value and the exception flags it raises. The
+machine does not record those flags (see `State.floatControl`).
 
 Arithmetic is exact: every finite double is an integer multiple of `2^-1074`
 (`scaled`), so a sum or product is an exact integer times a power of two,
 and `round` rounds that once. Rules taken from the Intel SDM, vol. 1 §4.8–4.9
-and §11.5, which the per-instruction oracle should confirm:
+and §11.5, which the hardware comparison (`x86-state.md`) should confirm:
 
 - NaN operand: the result is the first NaN operand (destination first),
   quieted; `invalid` only if some operand is a signalling NaN.
@@ -25,7 +24,7 @@ and §11.5, which the per-instruction oracle should confirm:
 - An exact zero sum is `+0`, except `(-0) + (-0) = -0`.
 -/
 
-namespace ValidateFeePayer.F64
+namespace X86.F64
 
 /-- The floating-point exception flags an operation raises, as bits 0–5 of
 the float control word (x86: `MXCSR` bits `IE DE ZE OE UE PE`; divide-by-zero,
@@ -164,4 +163,4 @@ def truncateToInt64 (a : UInt64) : UInt64 × Exceptions :=
   if t < -(2 : Int) ^ 63 || t ≥ 2 ^ 63 then (integerIndefinite, { invalid := true })
   else ((t % 2 ^ 64).toNat.toUInt64, { inexact := n.tmod (2 ^ 1074) != 0 })
 
-end ValidateFeePayer.F64
+end X86.F64

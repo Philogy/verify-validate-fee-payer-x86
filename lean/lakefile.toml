@@ -1,5 +1,8 @@
 name = "ValidateFeePayer"
-defaultTargets = ["ValidateFeePayer"]
+defaultTargets = ["X86", "ValidateFeePayer"]
+
+[[lean_lib]]
+name = "X86"
 
 [[lean_lib]]
 name = "ValidateFeePayer"

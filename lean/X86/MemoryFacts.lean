@@ -1,14 +1,11 @@
-import ValidateFeePayer.Memory
+import X86.Memory
+import Std.Tactic.BVDecide
 
-/-!
-Basic facts about `Memory`: a store that succeeds can be read back.
+-- No well-formedness is needed: `byte` reads from, and `setByte` writes to,
+-- the first mapping containing an address, so they agree even if mappings
+-- overlap.
 
-The lemma needs no well-formedness: `byte` reads from, and `setByte` writes
-to, the *first* mapping containing an address, so they agree even if
-mappings overlap.
--/
-
-namespace ValidateFeePayer
+namespace X86
 
 theorem ByteArray.size_set' (bs : ByteArray) (i : Nat) (v : UInt8) (h : i < bs.size) :
     (bs.set i v h).size = bs.size := by
@@ -44,7 +41,6 @@ end Mapping
 
 namespace Memory
 
-/-- Some mapping contains `x`. -/
 def Mapped (ms : List Mapping) (x : UInt64) : Prop := ∃ mp ∈ ms, mp.Contains x
 
 theorem mapped_of_go {acc : Access} {x : UInt64} {ms : List Mapping} {b : UInt8}
@@ -97,7 +93,6 @@ theorem go_setByte_ne {acc : Access} {a x : UInt64} {v : UInt8} {ms : List Mappi
       · simp [hx]
     · simp only [hc, ↓reduceDIte, byte.go, ih]
 
-/-- The mappings after storing `bs` at `a + k`, `a + k + 1`, …, as `write` does. -/
 def stores (a : UInt64) (bs : List UInt8) (k : Nat) (ms : List Mapping) : List Mapping :=
   (bs.zipIdx k).foldl (fun ms (b, i) => setByte (a + i.toUInt64) b ms) ms
 
@@ -105,7 +100,6 @@ theorem stores_cons {a : UInt64} {b : UInt8} {bs : List UInt8} {k : Nat} {ms : L
     stores a (b :: bs) k ms = stores a bs (k + 1) (setByte (a + k.toUInt64) b ms) := by
   simp [stores, List.zipIdx_cons]
 
-/-- Addresses `a + i` for distinct small `i` are distinct. -/
 theorem add_ne {a : UInt64} {i j : Nat} (hi : i < 2 ^ 64) (hj : j < 2 ^ 64) (h : i ≠ j) :
     a + i.toUInt64 ≠ a + j.toUInt64 := by
   intro e
@@ -174,59 +168,47 @@ theorem ok_of_mapM_ok {α β ε : Type} {f : α → Except ε β} :
         · exact ⟨b, hy⟩
         · exact ok_of_mapM_ok hl x hx
 
-theorem length_leBytes (n v : Nat) : (leBytes n v).length = n := by simp [leBytes]
-
-theorem ofLEBytes_leBytes : ∀ (n v : Nat), ofLEBytes (leBytes n v) = v % 2 ^ (8 * n)
-  | 0, v => by simp [leBytes, ofLEBytes]; exact (Nat.mod_one v).symm
-  | n + 1, v => by
-    have hcons : leBytes (n + 1) v = (v.toUInt8) :: leBytes n (v >>> 8) := by
-      simp only [leBytes, List.range_succ_eq_map, List.map_cons, List.map_map]
-      congr 1
-      apply List.map_congr_left; intro i _
-      simp only [Function.comp, ← Nat.shiftRight_add]; congr 2; omega
-    rw [hcons]
-    simp only [ofLEBytes, List.foldr_cons] at *
-    have ih := ofLEBytes_leBytes n (v >>> 8)
-    simp only [ofLEBytes] at ih
-    rw [ih, Nat.shiftRight_eq_div_pow]
-    simp only [Nat.toUInt8, UInt8.toNat_ofNat']
-    rw [show 8 * (n + 1) = 8 + 8 * n by omega, Nat.pow_add, Nat.mod_mul]
-
-/-- A store that succeeds can be read back. -/
-theorem read_write_same {m m' : Memory} {w : Width} {a : UInt64} {v : BitVec (8 * w.size)}
-    (h : m.write w a v = .ok m') : m'.read w a = .ok v := by
-  simp only [write, bind, Except.bind] at h
+theorem bytes_writeBytes {m m' : Memory} {a : UInt64} {bs : List UInt8}
+    (h : m.writeBytes a bs = .ok m') (hlen : bs.length ≤ 2 ^ 64) :
+    m'.bytes .read a bs.length = .ok bs := by
+  simp only [writeBytes, bind, Except.bind] at h
   split at h
   · cases h
-  rename_i bs hbs
+  rename_i checked hchecked
   cases h
-  have hw : w.size ≤ 16 := by cases w <;> decide
-  -- Every address written is mapped.
-  have hmapped : ∀ i < w.size, Mapped m.mappings (a + (0 + i).toUInt64) := by
+  have hmapped : ∀ i < bs.length, Mapped m.mappings (a + (0 + i).toUInt64) := by
     intro i hi
-    obtain ⟨b, hb⟩ := ok_of_mapM_ok hbs i (by simp [hi])
+    obtain ⟨b, hb⟩ := ok_of_mapM_ok hchecked i (by simp [hi])
     exact mapped_of_go (by simpa [byte] using hb)
-  let bs := leBytes w.size v.toNat
-  have hlen : bs.length = w.size := length_leBytes ..
-  simp only [read, bytes, byte, bind, Except.bind]
+  simp only [bytes, byte]
   rw [mapM_ok (g := fun j => bs.getD j 0)]
-  · simp only [pure, Except.pure, Except.ok.injEq]
-    have : (List.range w.size).map (fun j => bs.getD j 0) = bs := by
-      apply List.ext_getElem
-      · simp [bs, length_leBytes]
-      · intro i h₁ h₂
-        simp only [List.getElem_map, List.getElem_range]
-        rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h₂, Option.getD_some]
-    rw [this, ofLEBytes_leBytes, Nat.mod_eq_of_lt v.isLt]
-    simp
+  · congr 1
+    apply List.ext_getElem
+    · simp
+    · intro i h₁ h₂
+      simp only [List.getElem_map, List.getElem_range]
+      rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h₂, Option.getD_some]
   · intro j hj
-    have hj : j < w.size := by simpa using hj
-    have := go_stores (a := a) (bs := bs) (k := 0) (ms := m.mappings)
-      (by rw [hlen]; omega) (by rw [hlen]; exact hmapped) j (by rw [hlen]; exact hj)
+    have hj : j < bs.length := by simpa using hj
+    have := go_stores (a := a) (bs := bs) (k := 0) (ms := m.mappings) (by omega) hmapped j hj
     simp only [Nat.zero_add] at this
-    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by rw [hlen]; exact hj), Option.getD_some]
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj, Option.getD_some]
     exact this
+
+theorem length_littleEndianBytes (n : Nat) (v : UInt64) : (littleEndianBytes n v).length = n := by
+  induction n generalizing v <;> simp_all [littleEndianBytes]
+
+theorem ofLittleEndian_littleEndianBytes (w : Width) (v : UInt64) :
+    ofLittleEndian (littleEndianBytes w.size v) = v &&& w.mask := by
+  cases w <;> simp [Width.size, Width.mask, littleEndianBytes, ofLittleEndian] <;> bv_decide
+
+theorem read_write_same {m m' : Memory} {w : Width} {a : UInt64} {v : UInt64}
+    (h : m.write w a v = .ok m') : m'.read w a = .ok (v &&& w.mask) := by
+  have hlen := length_littleEndianBytes w.size v
+  have := bytes_writeBytes h (by rw [hlen]; cases w <;> decide)
+  rw [hlen] at this
+  simp [read, this, bind, Except.bind, pure, Except.pure, ofLittleEndian_littleEndianBytes]
 
 end Memory
 
-end ValidateFeePayer
+end X86
