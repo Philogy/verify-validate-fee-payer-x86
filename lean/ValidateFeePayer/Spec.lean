@@ -60,8 +60,13 @@ structure MutRefs where
 
 abbrev SpecM := StateT MutRefs (Except Panic)
 
+def UInt64.MIN : UInt64 := 0
+def UInt64.MAX : UInt64 := 0xffffffffffffffff
+theorem UInt64.MIN_is_min : ∀ (x : UInt64), UInt64.MIN ≤ x := by grind [MIN]
+theorem UInt64.MAX_is_max : ∀ (x : UInt64), x ≤ UInt64.MAX := by grind [MAX]
+
 /-- `+= 1` on a `Saturating<usize>`. -/
-def saturatingIncrement (c : UInt64) : UInt64 := if c = 0xffffffffffffffff then c else c + 1
+def saturatingIncrement (c : UInt64) : UInt64 := if c = UInt64.MAX then c else c + 1
 
 /-! ## `solana-rent` 4.5.0 -/
 
@@ -75,13 +80,14 @@ def currentMaxLamportsPerByte : UInt64 := 879598564933
 /-- Rust's `u64 as f64`: rounded to nearest, ties to even. -/
 def u64ToF64 (v : UInt64) : UInt64 := (F64.ofScaled v.toNat 0 false).1
 
+
 /-- Rust's `f64 as u64`: truncated toward zero and saturating, with NaN as 0. -/
 def f64ToU64 (x : UInt64) : UInt64 :=
   if F64.isNaN x then 0
-  else if F64.isInfinite x then (if F64.sign x then 0 else 0xffffffffffffffff)
+  else if F64.isInfinite x then (if F64.sign x then UInt64.MIN else UInt64.MAX)
   else
     let t := (F64.scaled x).toNat / 2 ^ 1074
-    if t ≥ 2 ^ 64 then 0xffffffffffffffff else t.toUInt64
+    if t ≥ UInt64.size then UInt64.MAX else t.toUInt64
 
 def minimumBalanceUnchecked (rent : Rent) (dataLength : UInt64) : UInt64 :=
   let bytes := accountStorageOverhead + dataLength
