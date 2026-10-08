@@ -84,19 +84,20 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   `Loader` (the image mapped at `loadBase`), `Code` (a linear sweep with the
   generic decoder, used only by checks and proofs), `Checks` (kernel-checked
   facts: regions disjoint, sweep equals llvm-objdump's disassembly, decoding
-  from memory equals the sweep), `Spec` (the Rust functions as pure Lean,
-  `Option` = panic), `Contract` (`Encodes` predicates, `Pre`, `Post`),
-  `Correctness` (the theorem; its proof is the package's only `sorry`),
-  `Tests` (machine against `Spec` on concrete inputs).
+  from memory equals the sweep), `Spec` (the Rust functions as Lean in
+  `SpecM`: the `&mut` arguments as state, a panic as a `Panic` error),
+  `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
+  theorem; its proof is the package's only `sorry`), `Tests` (machine
+  against `Spec` on concrete inputs).
 
 The theorem: from any state satisfying `Pre` (arguments where SysV puts
 them, each pointing at an encoding of a Lean value, enough free stack,
 disjoint objects), `run` with 240 steps of fuel ends in `panicked` exactly
-when `Spec.validateFeePayer` returns `none` (`lamports_per_byte` above the
+when `Spec.validateFeePayer` throws a `Panic` (`lamports_per_byte` above the
 cap for its exemption threshold), and otherwise in `returned` with the
-result, account and metrics encoded, callee-saved registers restored and
-every byte outside the result, the lamports, three counters and 96 bytes of
-stack unchanged.
+result and the final `MutRefs` (account and metrics) encoded, callee-saved
+registers restored and every byte outside the result, the lamports, three
+counters and 96 bytes of stack unchanged.
 
 `check_static_account_rent_state_transition` is carved and called through
 its GOT slot like any other code, so it needs no contract. Only

@@ -91,16 +91,16 @@ where
 
 def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read w a).toOption
 
-def Case.expected (c : Case) : Option (Except Spec.TransactionError Unit × Spec.Account × Spec.ErrorMetrics) :=
-  Spec.validateFeePayer c.account 7 ⟨c.counters, c.counters, c.counters⟩
-    ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax
+def Case.expected (c : Case) : Except Spec.Panic (Except Spec.TransactionError Unit × Spec.MutRefs) :=
+  (Spec.validateFeePayer 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax).run
+    ⟨c.account, ⟨c.counters, c.counters, c.counters⟩⟩
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
   let call := c.call
   match c.expected, c.run with
-  | none, .panicked _ => true
-  | some (r, account, metrics), .returned s =>
+  | .error _, .panicked _ => true
+  | .ok (r, ⟨account, metrics⟩), .returned s =>
     let counter (offset : Nat) := read s .bytes8 (off call.errorMetrics offset)
     read s .bytes4 call.result == some (resultTag r).toUInt64 &&
     (match r with
