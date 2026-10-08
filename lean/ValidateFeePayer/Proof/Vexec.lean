@@ -19,12 +19,4 @@ attribute [vexec] execute arithmetic shift Exec.push Exec.pop readSource readOpe
   Nat.toUInt64_eq UInt64.reduceOfNat UInt64.reduceAdd UInt64.reduceSub UInt64.reduceMul
   UInt64.add_assoc
 
-syntax "vstep" (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
-
-macro_rules
-  | `(tactic| vstep) => `(tactic| vstep [])
-  | `(tactic| vstep [$ls,*]) =>
-    `(tactic| (refine Finishes.step' (by assumption) (by assumption) rfl ?_
-               simp only [decode_table, vexec, $ls,*]))
-
 end ValidateFeePayer.Proof
