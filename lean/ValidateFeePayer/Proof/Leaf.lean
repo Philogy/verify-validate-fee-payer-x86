@@ -259,4 +259,51 @@ macro_rules
       Spec.accountStorageOverhead, Spec.nonceStateSize, foldAdd, foldMul, UInt64.reduceOfNat, Nat.toUInt64_eq]
     all_goals first | vpost $e | vframe $e | trivial))
 
+/-- Every path from the entry state of `e`: `hthr` fixes the exemption
+threshold `threshold`, and `minimumBalance_eq` is its `minimumBalance`
+equation. -/
+syntax "vpaths" term "," term "," term "," term "," term : tactic
+macro_rules
+  | `(tactic| vpaths $e, $account, $hthr, $threshold, $minimumBalance_eq) => `(tactic| (
+    have hx := ($e).codeExits
+    have hc := ($e).code
+    have hd := ($e).data
+    have hw := ($e).stackFree
+    have hwr := ($e).resultWritable
+    have hwm1 := ($e).accountNotFoundWritable
+    have hwm2 := ($e).insufficientFundsWritable
+    have hwm3 := ($e).invalidAccountForFeeWritable
+    have hwl := ($e).lamportsWritable
+    have hSt := ($e).stackBound
+    have hR := ($e).resultBound
+    have hA := ($e).accountBound
+    have hArc := ($e).arcBound
+    have hM := ($e).metricsBound
+    have hRnt := ($e).rentBound
+    have s01 := ($e).result_account
+    have s02 := ($e).result_arcInner
+    have s04 := ($e).result_metrics
+    have s05 := ($e).result_rent
+    have s06 := ($e).result_stack
+    have s12 := ($e).account_arcInner
+    have s14 := ($e).account_metrics
+    have s15 := ($e).account_rent
+    have s16 := ($e).account_stack
+    have s24 := ($e).arcInner_metrics
+    have s25 := ($e).arcInner_rent
+    have s26 := ($e).arcInner_stack
+    have s45 := ($e).metrics_rent
+    have s46 := ($e).metrics_stack
+    have s56 := ($e).rent_stack
+    have hs36 := ($e).nonceData_stack
+    have hDat80 := ($e).nonceDataBound
+    have hthrM := ($e).readThreshold
+    rw [$hthr:term, $threshold:term] at hthrM
+    simp only [entryState]
+    vwalk [($e).readReturn, ($e).readRelax, ($e).readArc, ($e).readLamports, ($e).readOwnerLow,
+      ($e).readOwnerHigh, ($e).readData, ($e).readLength, ($e).readVersions, ($e).readState,
+      ($e).readLamportsPerByte, hthrM, ($e).readAccountNotFound, ($e).readInvalidAccountForFee,
+      ($e).readInsufficientFunds]
+    without_info all_goals vleaf $e, $account, $minimumBalance_eq))
+
 end ValidateFeePayer.Proof
