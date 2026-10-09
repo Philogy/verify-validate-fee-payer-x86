@@ -89,6 +89,13 @@ def f64ToU64 (x : UInt64) : UInt64 :=
     let t := (F64.scaled x).toNat / 2 ^ 1074
     if t ≥ UInt64.size then UInt64.MAX else t.toUInt64
 
+/-- `exemption_threshold` is a deprecated field ("empty space"), kept only for
+the 17-byte `Rent` layout: SIMD-0194 (feature `rent6iVy6PDoViPBeJ6k5EJQrkj62h7DPyLbWGHwjrC`)
+folded it into `lamports_per_byte` (3480 × 2.0 → 6960 × 1.0; Agave
+`runtime/src/rent_collector.rs:49`, `bank.rs:6337`, `bank.rs:6412`). Per SIMD-0607 it
+is 1.0 on mainnet-beta since epoch 943 and was 2.0 before, so in production
+only the integer paths run; the `f64` path needs a non-standard genesis, the
+`[0; 8]` snapshot default, or a malformed sysvar. -/
 def minimumBalanceUnchecked (rent : Rent) (dataLength : UInt64) : UInt64 :=
   let bytes := accountStorageOverhead + dataLength
   if rent.exemptionThreshold = simd0194ExemptionThreshold then bytes * rent.lamportsPerByte
