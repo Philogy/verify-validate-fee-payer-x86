@@ -204,14 +204,14 @@ def outcome (v : Vector) : String × Option String :=
   let s := v.state
   let (kind, after, completed, why) := match step exits s with
     | .running s' => ("ok", s', true, none)
-    | .stopped (.pageFault (.unmapped a _)) s' => (s!"pagefault unmapped {hex a.toNat}", s', false, none)
-    | .stopped (.pageFault (.denied a _)) s' => (s!"pagefault denied {hex a.toNat}", s', false, none)
-    | .stopped (.misaligned _) s' => ("gp", s', false, none)
-    | .stopped (.undefinedFlagRead f) s' => (s!"undefined-flag-read {repr f}", s', false, none)
-    | .stopped (.unsupported w) s' => (s!"unsupported {w}", s', false, none)
-    | .undecodable why s' => ("ill", s', false, some (reprStr why))
+    | .faulted (.pageFault (.unmapped a _)) s' => (s!"pagefault unmapped {hex a.toNat}", s', false, none)
+    | .faulted (.pageFault (.denied a _)) s' => (s!"pagefault denied {hex a.toNat}", s', false, none)
+    | .faulted (.misaligned _) s' => ("gp", s', false, none)
+    | .faulted (.undefinedFlagRead f) s' => (s!"undefined-flag-read {repr f}", s', false, none)
+    | .faulted (.unsupported w) s' => (s!"unsupported {w}", s', false, none)
+    | .faulted (.undecodable why) s' => ("ill", s', false, some (reprStr why))
     | .returned s' | .panicked s' => ("exit", s', false, none)
-    | .badJump t s' => (s!"badjump {hex t.toNat}", s', false, none)
+    | .badJump s' => (s!"badjump {hex s'.instructionPointer.toNat}", s', false, none)
   let floatControl := if completed then after.floatControl ||| stickyExceptions s else after.floatControl
   (" ".intercalate ((bytesHex v.bytes ++ " |") :: kind :: diff s after completed floatControl), why)
 
