@@ -15,14 +15,14 @@ namespace ValidateFeePayer
 open X86 ValidateFeePayer.Proof
 
 theorem entryState_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
-    s = entryState c.loadBase (s.stackPointer - 96) c.account.account c.result c.errorMetrics c.rent c.fee
-      (s.register .accumulator) (s.register .data) (s.register .base) (s.register .framePointer)
+    s = entryState c.loadBase (s.rsp - 96) c.account.account c.result c.errorMetrics c.rent c.fee
+      (s.register .rax) (s.register .rdx) (s.register .rbx) (s.register .rbp)
       (s.register .r10) (s.register .r11) (s.register .r12) (s.register .r13) (s.register .r14)
-      (s.register .r15) s.vectorRegisters[0] s.vectorRegisters[1] s.vectorRegisters[2] s.vectorRegisters[3]
-      s.vectorRegisters[4] s.vectorRegisters[5] s.vectorRegisters[6] s.vectorRegisters[7]
-      s.vectorRegisters[8] s.vectorRegisters[9] s.vectorRegisters[10] s.vectorRegisters[11]
-      s.vectorRegisters[12] s.vectorRegisters[13] s.vectorRegisters[14] s.vectorRegisters[15]
-      s.floatControl s.memory := by
+      (s.register .r15) s.xmm[0] s.xmm[1] s.xmm[2] s.xmm[3]
+      s.xmm[4] s.xmm[5] s.xmm[6] s.xmm[7]
+      s.xmm[8] s.xmm[9] s.xmm[10] s.xmm[11]
+      s.xmm[12] s.xmm[13] s.xmm[14] s.xmm[15]
+      s.mxcsr s.memory := by
   refine (entry_state pre).trans ?_
   simp only [entryState, UInt64.sub_add_cancel]
   rw [← vector16_eta]
@@ -67,7 +67,7 @@ theorem post_of_call {c : Call} {account metrics rent relax s}
   have hmet : (args s).errorMetrics = c.errorMetrics := by rw [← pre.errorMetrics, args_enter]
   have hsp := h.stackPopped
   have hcs := h.calleeSavedKept
-  have hfc := h.floatControlKept
+  have hfc := h.mxcsrKept
   rw [enter_stackPointer] at hsp
   rw [enter_floatControl] at hfc
   simp only [enter_register] at hcs
@@ -112,7 +112,7 @@ theorem pre_of_called {loadBase returnAddress : UInt64} {s : State} {heap : Acco
       refine ⟨?_, ?_, ?_⟩
       · rw [enter_memory, enter_stackPointer]; exact hx.holds called.abi.returnAddress
       · rw [enter_stackPointer]; exact called.abi.stackAligned
-      · rw [enter_flags]; exact called.abi.flags
+      · rw [enter_rflags]; exact called.abi.rflags
     footprint := by
       show Footprint loadBase (enter loadBase s) heap account.data.length
       refine ⟨?_, ?_, ?_⟩

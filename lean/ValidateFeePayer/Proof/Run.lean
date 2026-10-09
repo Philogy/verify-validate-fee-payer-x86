@@ -26,11 +26,11 @@ theorem Finishes.run_eq {exits : Exits} {n fuel : Nat} {s : State} {P : Outcome 
   rw [show fuel = n + (fuel - n) by omega, hr]; exact hP
 
 theorem Finishes.returned {exits : Exits} {s : State} {P : Outcome → Prop}
-    (h : s.instructionPointer = exits.returnAddress) (hP : P (.returned s)) : Finishes exits 1 s P :=
+    (h : s.rip = exits.returnAddress) (hP : P (.returned s)) : Finishes exits 1 s P :=
   ⟨_, hP, fun k => by rw [Nat.add_comm]; simp [run, step, h]⟩
 
 theorem Finishes.panicked {exits : Exits} {s : State} {P : Outcome → Prop}
-    (hr : s.instructionPointer ≠ exits.returnAddress) (h : s.instructionPointer = exits.panicAt)
+    (hr : s.rip ≠ exits.returnAddress) (h : s.rip = exits.panicAt)
     (hP : P (.panicked s)) : Finishes exits 1 s P :=
   ⟨_, hP, fun k => by rw [h] at hr; rw [Nat.add_comm]; simp [run, step, h, hr]⟩
 
@@ -45,9 +45,9 @@ structure CodeExits (lb : UInt64) (exits : Exits) : Prop where
   notPanic : ∀ x b, codeByte x = .ok b → lb + x ≠ exits.panicAt
 
 theorem step_code {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {i : Instruction} {n : Nat}
-    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.instructionPointer = lb + A)
+    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.rip = lb + A)
     (hdec : decodeWith codeByte A = .ok (i, n)) :
-    step exits s = match (execute i).run { s with instructionPointer := lb + A + n.toUInt64 } with
+    step exits s = match (execute i).run { s with rip := lb + A + n.toUInt64 } with
       | .ok ((), s') => .running s'
       | .error why => .faulted why s := by
   have hf := decodeWith_fetched hdec
@@ -65,9 +65,9 @@ theorem step_code {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {i : In
 
 theorem Finishes.exec {lb : UInt64} {exits : Exits} {s s' : State} {A : UInt64} {i : Instruction}
     {len n : Nat} {P : Outcome → Prop}
-    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.instructionPointer = lb + A)
+    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.rip = lb + A)
     (hdec : decodeWith codeByte A = .ok (i, len))
-    (hexec : (execute i).run { s with instructionPointer := lb + A + len.toUInt64 } = .ok ((), s'))
+    (hexec : (execute i).run { s with rip := lb + A + len.toUInt64 } = .ok ((), s'))
     (h : Finishes exits n s' P) : Finishes exits (n + 1) s P :=
   Finishes.running (by rw [step_code hx hc hip hdec, hexec]) h
 
@@ -91,9 +91,9 @@ theorem execThen_ok {s : State} {k : State → Prop} : ExecThen (.ok ((), s)) k 
 /-- One instruction: it decodes, executes, and the run finishes from there. -/
 theorem Finishes.walk {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {n : Nat}
     {P : Outcome → Prop}
-    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.instructionPointer = lb + A)
+    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.rip = lb + A)
     (h : DecodeThen (decodeWith codeByte A) fun i len =>
-      ExecThen ((execute i).run { s with instructionPointer := lb + A + len.toUInt64 }) fun s' =>
+      ExecThen ((execute i).run { s with rip := lb + A + len.toUInt64 }) fun s' =>
         Finishes exits n s' P) : Finishes exits (n + 1) s P := by
   obtain ⟨i, len, hdec, s', hexec, h⟩ := h
   exact Finishes.exec hx hc hip hdec hexec h

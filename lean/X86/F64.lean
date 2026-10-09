@@ -7,7 +7,7 @@ round to nearest even, all exceptions masked, no flush-to-zero, no
 denormals-are-zero. The machine stops with `unsupported` on any other
 setting rather than compute something else. Under that setting an operation
 never traps; it returns a value and the exception flags it raises. The
-machine does not record those flags (see `State.floatControl`).
+machine does not record those flags (see `State.mxcsr`).
 
 Arithmetic is exact: every finite double is an integer multiple of `2^-1074`
 (`scaled`), so a sum or product is an exact integer times a power of two,

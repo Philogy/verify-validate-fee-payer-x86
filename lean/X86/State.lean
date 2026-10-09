@@ -20,21 +20,21 @@ def Flags.get (f : Flags) : Flag → Option Bool
   | .carry => f.carry | .parity => f.parity | .auxiliaryCarry => f.auxiliaryCarry
   | .zero => f.zero | .sign => f.sign | .overflow => f.overflow
 
-def defaultFloatControl : UInt32 := 0x1f80
+def defaultMxcsr : UInt32 := 0x1f80
 
 structure State where
-  instructionPointer : UInt64
+  rip : UInt64
   registers : Vector UInt64 16
-  flags : Flags
-  vectorRegisters : Vector (BitVec 128) 16
+  rflags : Flags
+  xmm : Vector (BitVec 128) 16
   -- Only the control bits are modelled. The sticky exception bits (0–5) are
   -- not: no supported instruction reads them, so they cannot affect a run.
-  floatControl : UInt32
+  mxcsr : UInt32
   memory : Memory
 
 def State.register (s : State) (r : Register) : UInt64 := s.registers[r.index]
 
-def State.stackPointer (s : State) : UInt64 := s.register .stackPointer
+def State.rsp (s : State) : UInt64 := s.register .rsp
 
 abbrev Exec := StateT State (Except Fault)
 
@@ -58,7 +58,7 @@ def liftPageFault (x : Except PageFault α) : Exec α :=
   | .error f => throw (.pageFault f)
 
 def effectiveAddress : Address → Exec UInt64
-  | .relativeToNextInstruction d => do return (← get).instructionPointer + d
+  | .relativeToNextInstruction d => do return (← get).rip + d
   | .baseIndex base index d => do
     let b ← match base with | some r => readRegister r | none => pure 0
     let i ← match index with
@@ -88,11 +88,11 @@ def readSource (size : OperandSize) : Source → Exec UInt64
   | .immediate v => pure (v &&& size.mask)
 
 def readFlag (f : Flag) : Exec Bool := do
-  match (← get).flags.get f with
+  match (← get).rflags.get f with
   | some b => pure b
   | none => throw (.undefinedFlagRead f)
 
-def writeFlags (f : Flags) : Exec Unit := modify fun s => { s with flags := f }
+def writeFlags (f : Flags) : Exec Unit := modify fun s => { s with rflags := f }
 
 def holds : Condition → Exec Bool
   | .overflow => readFlag .overflow
@@ -112,10 +112,10 @@ def holds : Condition → Exec Bool
   | .lessOrEqual => return (← readFlag .zero) || (← readFlag .sign) != (← readFlag .overflow)
   | .greater => return !(← readFlag .zero) && (← readFlag .sign) == (← readFlag .overflow)
 
-def readVector (v : VectorRegister) : Exec (BitVec 128) := do return (← get).vectorRegisters[v]
+def readVector (v : VectorRegister) : Exec (BitVec 128) := do return (← get).xmm[v]
 
 def writeVector (v : VectorRegister) (x : BitVec 128) : Exec Unit :=
-  modify fun s => { s with vectorRegisters := s.vectorRegisters.set v x }
+  modify fun s => { s with xmm := s.xmm.set v x }
 
 def vectorAddress (aligned : Bool) (a : Address) : Exec UInt64 := do
   let address ← effectiveAddress a
@@ -138,14 +138,14 @@ def readVector64 : VectorOrMemory → Exec UInt64
   | .memory a => do load .bits64 (← effectiveAddress a)
 
 def push (v : UInt64) : Exec Unit := do
-  let sp := (← readRegister .stackPointer) - 8
+  let sp := (← readRegister .rsp) - 8
   store .bits64 sp v
-  writeRegister64 .stackPointer sp
+  writeRegister64 .rsp sp
 
 def pop : Exec UInt64 := do
-  let sp ← readRegister .stackPointer
+  let sp ← readRegister .rsp
   let v ← load .bits64 sp
-  writeRegister64 .stackPointer (sp + 8)
+  writeRegister64 .rsp (sp + 8)
   return v
 
 end Exec

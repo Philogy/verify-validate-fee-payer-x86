@@ -55,7 +55,7 @@ end
 attribute [vexec] execute arithmetic shift Exec.push Exec.pop readSource readOperand writeOperand
   readRegister writeRegister writeRegister64 store Exec.load effectiveAddress readFlag
   writeFlags holds Flags.get jumpBy jumpTo readVector writeVector vectorAddress readVector128
-  writeVector128 readVector64 requireDefaultFloatControl OperandSize.mask
+  writeVector128 readVector64 requireDefaultMxcsr OperandSize.mask
   Nat.toUInt64_eq UInt64.reduceOfNat
   UInt64.add_assoc
 

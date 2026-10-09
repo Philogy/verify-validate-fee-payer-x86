@@ -30,12 +30,12 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   feeArg : c.fee = fee
   returnAddress : c.returnAddress = ra
   memory : s.memory = m
-  floatControl : s.floatControl = fc
-  stackPointer : s.stackPointer = S + 96
+  mxcsr : s.mxcsr = fc
+  rsp : s.rsp = S + 96
   -- Only the low 16 bits of `rdx` are the `u16`.
   payerIndex : r2 &&& 0xffff = c.payerIndex.toUInt64
-  base : s.register .base = r3
-  framePointer : s.register .framePointer = r5
+  rbx : s.register .rbx = r3
+  rbp : s.register .rbp = r5
   r12 : s.register .r12 = r12
   r13 : s.register .r13 = r13
   r14 : s.register .r14 = r14
@@ -119,15 +119,15 @@ def ownerHigh (x : Spec.Account) : BitVec 128 :=
 theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMetrics} {rent : Spec.Rent}
     {relax : Bool} {s : State} (pre : Pre c account metrics rent relax s)
     (notPanic : c.returnAddress ≠ panicAddress c.loadBase) :
-    Entry c account metrics rent relax s c.loadBase (s.stackPointer - 96) c.account.account
+    Entry c account metrics rent relax s c.loadBase (s.rsp - 96) c.account.account
       c.account.arcInner c.account.data c.result c.errorMetrics c.rent c.fee c.returnAddress
-      (s.register .data) (s.register .base) (s.register .framePointer) (s.register .r12) (s.register .r13)
-      (s.register .r14) (s.register .r15) (ownerLow account) (ownerHigh account) s.floatControl s.memory := by
+      (s.register .rdx) (s.register .rbx) (s.register .rbp) (s.register .r12) (s.register .r13)
+      (s.register .r14) (s.register .r15) (ownerLow account) (ownerHigh account) s.mxcsr s.memory := by
   have sep := separation_of_pre pre
   obtain ⟨harc, hlam, ho1, ho2, hdat, hlen, hdata⟩ := Spec.Account.reads pre.accountEncoded
   obtain ⟨hlpb, hthr⟩ := pre.rentEncoded
   obtain ⟨hc1, hc2, hc3⟩ := pre.metricsEncoded
-  have hsp : s.stackPointer - 96 + 96 = s.stackPointer := UInt64.sub_add_cancel _ _
+  have hsp : s.rsp - 96 + 96 = s.rsp := UInt64.sub_add_cancel _ _
   have hn : account.data.length < 2 ^ 64 := by
     have := sep.result_data; have := sep.data; have := sep.result; unfold Separate at *; omega
   have h80 : account.data.length.toUInt64 = 80 → account.data.length = 80 := by
@@ -140,8 +140,8 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
     UInt64.add_zero] at hlpb hthr hc1 hc2 hc3
   refine
     { loadBase := rfl, accountPtr := rfl, arcInnerPtr := rfl, dataPtr := rfl, resultPtr := rfl,
-      metricsPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl, floatControl := rfl,
-      stackPointer := hsp.symm, payerIndex := pre.payerIndexRegister, base := rfl, framePointer := rfl,
+      metricsPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl, mxcsr := rfl,
+      rsp := hsp.symm, payerIndex := pre.payerIndexRegister, rbx := rfl, rbp := rfl,
       r12 := rfl, r13 := rfl, r14 := rfl, r15 := rfl,
       notPanic := fun h => notPanic (by rw [h]; rfl),
       codeExits := codeExits_of_pre pre, code := codeAt_of_pre pre, data := dataAt_of_pre pre,
@@ -168,7 +168,7 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       stackFree := ?_, resultWritable := ?_, lamportsWritable := ?_, accountNotFoundWritable := ?_,
       insufficientFundsWritable := ?_, invalidAccountForFeeWritable := ?_,
       readReturn := ?_, readRelax := ?_ }
-  · have := pre.footprint.writable ⟨s.stackPointer - stackUse.toUInt64, stackUse⟩ (by simp [writes])
+  · have := pre.footprint.writable ⟨s.rsp - stackUse.toUInt64, stackUse⟩ (by simp [writes])
     simpa [Abi.Block.Writable, stackUse] using this
   · have := pre.footprint.writable ⟨(args s).result, Image.Layout.result.size⟩ (by simp [writes])
     simpa [Abi.Block.Writable, pre.result, Image.Layout.result.size] using this
@@ -189,7 +189,7 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
   · rw [hsp]; exact pre.abi.returnAddress
   · have := pre.encoded.relax
     simp only [BoolEncodes, Memory.Holds, args, Abi.ValidateFeePayerEntry.of, Abi.SysV.stackArgument] at this
-    rw [show s.stackPointer - 96 + 104 = s.stackPointer + 8 by
+    rw [show s.rsp - 96 + 104 = s.rsp + 8 by
       rw [show (104 : UInt64) = 96 + 8 from rfl, ← UInt64.add_assoc, hsp]]
     simpa using this
 

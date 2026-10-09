@@ -74,11 +74,11 @@ structure Vector where
 
 def initialState (bytes : List UInt8) (at_ : UInt64) : State :=
   let code := bytes.take (pageSize - at_.toNat)
-  { instructionPointer := codePage + at_
+  { rip := codePage + at_
     registers := Vector.ofFn fun i => defaultRegister i.val
-    flags := ⟨some false, some false, some false, some false, some false, some false⟩
-    vectorRegisters := Vector.ofFn fun i => defaultVector i.val
-    floatControl := defaultFloatControl
+    rflags := ⟨some false, some false, some false, some false, some false, some false⟩
+    xmm := Vector.ofFn fun i => defaultVector i.val
+    mxcsr := defaultMxcsr
     memory := poke ⟨pages.map fun (b, p) => page b p⟩ (codePage + at_) code }
 
 def flagsOf (letters : String) : List Flag :=
@@ -96,13 +96,13 @@ def applyField (s : State) (key value : String) : Except String State := do
     return { s with registers := s.registers.set! i num.toUInt64 }
   if key.startsWith "xmm" then
     let some i := (key.drop 3).toNat? | throw s!"bad register {key}"
-    return { s with vectorRegisters := s.vectorRegisters.set! i (BitVec.ofNat 128 num) }
+    return { s with xmm := s.xmm.set! i (BitVec.ofNat 128 num) }
   match key with
-  | "at" => return { s with instructionPointer := codePage + num.toUInt64 }
+  | "at" => return { s with rip := codePage + num.toUInt64 }
   | "flags" =>
     let set := flagsOf value
-    return { s with flags := flagOrder.foldl (fun fs f => setFlag fs f (some (set.contains f))) s.flags }
-  | "mxcsr" => return { s with floatControl := num.toUInt32 }
+    return { s with rflags := flagOrder.foldl (fun fs f => setFlag fs f (some (set.contains f))) s.rflags }
+  | "mxcsr" => return { s with mxcsr := num.toUInt32 }
   | "known" => return s
   | "mem" =>
     let [address, bytes] := value.splitOn ":" | throw s!"bad mem {value}"
@@ -171,18 +171,18 @@ def memoryDiff (before after : Memory) : List String := Id.run do
   return out.toList
 
 /-- The fields of `after` that differ from `before`, in the oracle's order. -/
-def diff (before after : State) (completed : Bool) (floatControl : UInt32) : List String :=
-  let rip := if completed || after.instructionPointer != before.instructionPointer
-    then [s!"rip={hex after.instructionPointer.toNat}"] else []
+def diff (before after : State) (completed : Bool) (mxcsr : UInt32) : List String :=
+  let rip := if completed || after.rip != before.rip
+    then [s!"rip={hex after.rip.toNat}"] else []
   let registers := (List.range 16).filterMap fun i =>
     let v := after.registers[i]!
     if v != before.registers[i]! then some s!"{registerName i}={hex v.toNat}" else none
-  let flags := if renderFlags after.flags != renderFlags before.flags
-    then [s!"flags={renderFlags after.flags}"] else []
+  let flags := if renderFlags after.rflags != renderFlags before.rflags
+    then [s!"flags={renderFlags after.rflags}"] else []
   let vectors := (List.range 16).filterMap fun i =>
-    let v := after.vectorRegisters[i]!
-    if v != before.vectorRegisters[i]! then some s!"xmm{i}=0x{hexDigitsPadded 32 v.toNat}" else none
-  let mxcsr := if floatControl != before.floatControl then [s!"mxcsr={hex floatControl.toNat}"] else []
+    let v := after.xmm[i]!
+    if v != before.xmm[i]! then some s!"xmm{i}=0x{hexDigitsPadded 32 v.toNat}" else none
+  let mxcsr := if mxcsr != before.mxcsr then [s!"mxcsr={hex mxcsr.toNat}"] else []
   rip ++ registers ++ flags ++ vectors ++ mxcsr ++ memoryDiff before.memory after.memory
 
 open Exec in
@@ -199,9 +199,9 @@ def floatExceptions : Instruction → Exec F64.Exceptions
   | _ => pure {}
 
 def stickyExceptions (s : State) : UInt32 :=
-  match decode s.memory s.instructionPointer with
+  match decode s.memory s.rip with
   | .ok (i, length) =>
-    match (floatExceptions i).run' { s with instructionPointer := s.instructionPointer + length.toUInt64 } with
+    match (floatExceptions i).run' { s with rip := s.rip + length.toUInt64 } with
     | .ok e => e.bits
     | .error _ => 0
   | .error _ => 0
@@ -219,8 +219,8 @@ def outcome (v : Vector) : String × Option String :=
     | .faulted (.unsupported w) s' => (s!"unsupported {w}", s', false, none)
     | .faulted (.undecodable why) s' => ("ill", s', false, some (reprStr why))
     | .returned s' | .panicked s' => ("exit", s', false, none)
-    | .badJump s' => (s!"badjump {hex s'.instructionPointer.toNat}", s', false, none)
-  let floatControl := if completed then after.floatControl ||| stickyExceptions s else after.floatControl
-  (" ".intercalate ((bytesHex v.bytes ++ " |") :: kind :: diff s after completed floatControl), why)
+    | .badJump s' => (s!"badjump {hex s'.rip.toNat}", s', false, none)
+  let mxcsr := if completed then after.mxcsr ||| stickyExceptions s else after.mxcsr
+  (" ".intercalate ((bytesHex v.bytes ++ " |") :: kind :: diff s after completed mxcsr), why)
 
 end X86Test

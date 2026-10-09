@@ -210,10 +210,10 @@ def oneByte (p : Prefixes) (opcode : UInt8) : Decoder Instruction := do
         else .arithmetic op size (o.reg rex size) (.operand (o.rm rex size))
     | 4 =>
       byteForm p; accumulatorForm p
-      return .arithmetic op .bits8 (.register .accumulator) (.immediate (← immediate .bits8))
+      return .arithmetic op .bits8 (.register .rax) (.immediate (← immediate .bits8))
     | _ =>
       accumulatorForm p
-      return .arithmetic op size (.register .accumulator) (.immediate (← immediate size))
+      return .arithmetic op size (.register .rax) (.immediate (← immediate size))
   if 0x50 ≤ opcode && opcode ≤ 0x5f then
     fixed64 p; noModRM p
     let r := registerNumbered ((opcode &&& 7) + extension rex.extendsBase)
@@ -286,10 +286,10 @@ def oneByte (p : Prefixes) (opcode : UInt8) : Decoder Instruction := do
   | 0x99 => accumulatorForm p; return .signExtendIntoData size
   | 0xa8 =>
     byteForm p; accumulatorForm p
-    return .arithmetic .testBits .bits8 (.register .accumulator) (.immediate (← immediate .bits8))
+    return .arithmetic .testBits .bits8 (.register .rax) (.immediate (← immediate .bits8))
   | 0xa9 =>
     accumulatorForm p
-    return .arithmetic .testBits size (.register .accumulator) (.immediate (← immediate size))
+    return .arithmetic .testBits size (.register .rax) (.immediate (← immediate size))
   | 0xc0 | 0xc1 | 0xd0 | 0xd1 | 0xd2 | 0xd3 =>
     let byteSized := opcode &&& 1 = 0
     if byteSized then byteForm p

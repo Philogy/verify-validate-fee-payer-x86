@@ -13,53 +13,53 @@ open X86
 variable {α : Type} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 x : α}
 
 
-@[vexec] theorem register_accumulator {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .accumulator = a0 := rfl
+@[vexec] theorem register_rax {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rax = a0 := rfl
 
-@[vexec] theorem set_accumulator {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.accumulator.index : Nat) x h = #v[x, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rax {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rax.index : Nat) x h = #v[x, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_counter {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .counter = a1 := rfl
+@[vexec] theorem register_rcx {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rcx = a1 := rfl
 
-@[vexec] theorem set_counter {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.counter.index : Nat) x h = #v[a0, x, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rcx {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rcx.index : Nat) x h = #v[a0, x, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_data {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .data = a2 := rfl
+@[vexec] theorem register_rdx {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rdx = a2 := rfl
 
-@[vexec] theorem set_data {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.data.index : Nat) x h = #v[a0, a1, x, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rdx {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rdx.index : Nat) x h = #v[a0, a1, x, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_base {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .base = a3 := rfl
+@[vexec] theorem register_rbx {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rbx = a3 := rfl
 
-@[vexec] theorem set_base {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.base.index : Nat) x h = #v[a0, a1, a2, x, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rbx {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rbx.index : Nat) x h = #v[a0, a1, a2, x, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_stackPointer {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .stackPointer = a4 := rfl
+@[vexec] theorem register_rsp {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rsp = a4 := rfl
 
-@[vexec] theorem set_stackPointer {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.stackPointer.index : Nat) x h = #v[a0, a1, a2, a3, x, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rsp {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rsp.index : Nat) x h = #v[a0, a1, a2, a3, x, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_framePointer {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .framePointer = a5 := rfl
+@[vexec] theorem register_rbp {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rbp = a5 := rfl
 
-@[vexec] theorem set_framePointer {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.framePointer.index : Nat) x h = #v[a0, a1, a2, a3, a4, x, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rbp {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rbp.index : Nat) x h = #v[a0, a1, a2, a3, a4, x, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_sourceIndex {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .sourceIndex = a6 := rfl
+@[vexec] theorem register_rsi {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rsi = a6 := rfl
 
-@[vexec] theorem set_sourceIndex {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.sourceIndex.index : Nat) x h = #v[a0, a1, a2, a3, a4, a5, x, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rsi {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rsi.index : Nat) x h = #v[a0, a1, a2, a3, a4, a5, x, a7, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
-@[vexec] theorem register_destinationIndex {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
-    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .destinationIndex = a7 := rfl
+@[vexec] theorem register_rdi {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
+    (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .rdi = a7 := rfl
 
-@[vexec] theorem set_destinationIndex {h} :
-    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.destinationIndex.index : Nat) x h = #v[a0, a1, a2, a3, a4, a5, a6, x, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
+@[vexec] theorem set_rdi {h} :
+    (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16).set (Register.rdi.index : Nat) x h = #v[a0, a1, a2, a3, a4, a5, a6, x, a8, a9, a10, a11, a12, a13, a14, a15] := rfl
 
 @[vexec] theorem register_r8 {ip f vr fc m} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 : UInt64} :
     (State.mk ip #v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] f vr fc m).register .r8 = a8 := rfl

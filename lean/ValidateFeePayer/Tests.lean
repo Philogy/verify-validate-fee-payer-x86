@@ -73,15 +73,15 @@ def Case.caller (c : Case) : State :=
       [(rent.lamports_per_byte, u64 c.lamportsPerByte),
        (rent.exemption_threshold, u64 c.threshold)]]
   let registers := (Vector.replicate 16 (0x1234567890abcdef : UInt64))
-    |>.set Register.destinationIndex.index resultPtr
-    |>.set Register.sourceIndex.index accountPtr
-    |>.set Register.data.index (0x1234567890ab0000 ||| payerIndex.toUInt64)
-    |>.set Register.counter.index metricsPtr
+    |>.set Register.rdi.index resultPtr
+    |>.set Register.rsi.index accountPtr
+    |>.set Register.rdx.index (0x1234567890ab0000 ||| payerIndex.toUInt64)
+    |>.set Register.rcx.index metricsPtr
     |>.set Register.r8.index rentPtr
     |>.set Register.r9.index c.fee
-    |>.set Register.stackPointer.index sp
-  { instructionPointer := 0, registers, flags := .undefined,
-    vectorRegisters := Vector.replicate 16 0, floatControl := defaultFloatControl,
+    |>.set Register.rsp.index sp
+  { rip := 0, registers, rflags := .undefined,
+    xmm := Vector.replicate 16 0, mxcsr := defaultMxcsr,
     memory := ⟨stack :: objects⟩ }
 
 def Case.state (c : Case) : State := enter c.loadBase c.caller
@@ -122,7 +122,7 @@ def Case.agrees (c : Case) : Bool :=
     counter transaction_error_metrics.account_not_found == some metrics.accountNotFound &&
     counter transaction_error_metrics.invalid_account_for_fee == some metrics.invalidAccountForFee &&
     counter transaction_error_metrics.insufficient_funds == some metrics.insufficientFunds &&
-    s.register .accumulator == resultPtr && s.stackPointer == c.state.stackPointer + 8 &&
+    s.register .rax == resultPtr && s.rsp == c.state.rsp + 8 &&
     SysV.calleeSaved.all fun r => s.register r == c.state.register r
   match c.expected, c.run with
   | (.error (.panic _), _), .panicked _ => true
@@ -133,7 +133,7 @@ def Case.agrees (c : Case) : Bool :=
 def Case.outcome (c : Case) : String :=
   match c.run with
   | .running _ => "running" | .returned _ => "returned" | .panicked _ => "panicked"
-  | .badJump s => s!"badJump {s.instructionPointer}" | .faulted why _ => s!"faulted {repr why}"
+  | .badJump s => s!"badJump {s.rip}" | .faulted why _ => s!"faulted {repr why}"
 
 def nonceData : List UInt8 := u32 1 ++ u32 1 ++ List.replicate 72 0
 def minBalance (lpb : Nat) (threshold : Float) : UInt64 := (Float.ofNat (208 * lpb) * threshold).toUInt64
@@ -187,12 +187,12 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
   X86.run { c.exits with returnAddress := exit } fuel c.state
 
 #guard match runWithReturnExit (returnsTo 0x400000) 0x500000 with
-  | .badJump s => s.instructionPointer == 0x400000 | _ => false
+  | .badJump s => s.rip == 0x400000 | _ => false
 #guard
   let lb : UInt64 := 0x555555554000
   let data := (((imageMappings lb).find? (!·.permissions.execute)).map (·.base)).getD 0
   match runWithReturnExit (returnsTo data) 0x400000 with
-  | .badJump s => s.instructionPointer == data | _ => false
+  | .badJump s => s.rip == data | _ => false
 
 /-! What was not carved is unmapped, though the code takes its address. -/
 #guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (Image.panic_msg.at 0x555555554000)) with
@@ -218,7 +218,7 @@ example : Called example1.loadBase example1.returnAddress example1.caller where
   abi := {
     returnAddress := by unfold Memory.Holds; decide +kernel
     stackAligned := by decide +kernel
-    flags := by decide +kernel }
+    rflags := by decide +kernel }
   returnOutsideImage := by decide +kernel
   returnNotPanic := by decide +kernel
 

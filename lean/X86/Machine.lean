@@ -60,7 +60,7 @@ def shift (op : ShiftOp) (size : OperandSize) (destination : RegisterOrMemory) (
   let raw : UInt64 ← match count with
     | .one => pure 1
     | .immediate n => pure n.toUInt64
-    | .counter => (· &&& 0xff) <$> readRegister .counter
+    | .counter => (· &&& 0xff) <$> readRegister .rcx
   let c := raw &&& (if size = .bits64 then 63 else 31)
   let a ← readOperand size destination
   if c = 0 then
@@ -99,18 +99,18 @@ def multiplySignedOverflows (size : OperandSize) (a b : UInt64) : Bool :=
     let p := size.signExtend a * size.signExtend b
     size.signExtend p != p
 
-def requireDefaultFloatControl : Exec Unit := do
-  unless (← get).floatControl &&& ~~~0x3f == defaultFloatControl do
+def requireDefaultMxcsr : Exec Unit := do
+  unless (← get).mxcsr &&& ~~~0x3f == defaultMxcsr do
     throw (.unsupported "MXCSR control bits")
 
 def DoubleOp.eval : DoubleOp → UInt64 → UInt64 → UInt64 × F64.Exceptions
   | .add => F64.add | .subtract => F64.sub | .multiply => F64.mul
 
 def jumpBy (offset : UInt64) : Exec Unit :=
-  modify fun s => { s with instructionPointer := s.instructionPointer + offset }
+  modify fun s => { s with rip := s.rip + offset }
 
 def jumpTo (target : UInt64) : Exec Unit :=
-  modify fun s => { s with instructionPointer := target }
+  modify fun s => { s with rip := target }
 
 def lane32 (v : BitVec 128) (i : Nat) : BitVec 32 := v.extractLsb' (32 * i) 32
 
@@ -128,13 +128,13 @@ def execute (i : Instruction) : Exec Unit := do
   | .increment size destination =>
     let a ← readOperand size destination
     let r := (a + 1) &&& size.mask
-    let carry := (← get).flags.carry
+    let carry := (← get).rflags.carry
     writeFlags (resultFlags size r carry (r == size.signBit) (carryOutOfBit3 a 1 r))
     writeOperand size destination r
   | .decrement size destination =>
     let a ← readOperand size destination
     let r := (a - 1) &&& size.mask
-    let carry := (← get).flags.carry
+    let carry := (← get).rflags.carry
     writeFlags (resultFlags size r carry (a == size.signBit) (carryOutOfBit3 a 1 r))
     writeOperand size destination r
   | .negate size destination =>
@@ -164,10 +164,10 @@ def execute (i : Instruction) : Exec Unit := do
     if ← holds condition then writeRegister size destination v
     else writeRegister size destination (← readOperand size (.register destination))
   | .signExtendAccumulator size =>
-    writeRegister size .accumulator (size.half.signExtend (← readOperand size.half (.register .accumulator)))
+    writeRegister size .rax (size.half.signExtend (← readOperand size.half (.register .rax)))
   | .signExtendIntoData size =>
-    let a ← readOperand size (.register .accumulator)
-    writeRegister size .data (if size.isNegative a then size.mask else 0)
+    let a ← readOperand size (.register .rax)
+    writeRegister size .rdx (if size.isNegative a then size.mask else 0)
   | .push source => push (← readSource .bits64 source)
   | .pop destination =>
     -- The stack pointer moves before the store, so a destination addressed
@@ -178,11 +178,11 @@ def execute (i : Instruction) : Exec Unit := do
   | .jump offset => jumpBy offset
   | .jumpIndirect target => jumpTo (← readOperand .bits64 target)
   | .callRelative offset =>
-    push (← get).instructionPointer
+    push (← get).rip
     jumpBy offset
   | .call t =>
     let target ← readOperand .bits64 t
-    push (← get).instructionPointer
+    push (← get).rip
     jumpTo target
   | .returnToCaller => jumpTo (← pop)
   | .noOperation _ => pure ()
@@ -219,23 +219,23 @@ def execute (i : Instruction) : Exec Unit := do
     let b ← readVector128 true s
     writeVector d (ofHalves (highHalf a) (highHalf b))
   | .packedDouble op d s =>
-    requireDefaultFloatControl
+    requireDefaultMxcsr
     let a ← readVector d
     let b ← readVector128 true s
     writeVector d (ofHalves (op.eval (lowHalf a) (lowHalf b)).1 (op.eval (highHalf a) (highHalf b)).1)
   | .scalarDouble op d s =>
-    requireDefaultFloatControl
+    requireDefaultMxcsr
     let a ← readVector d
     let b ← readVector64 s
     writeVector d (ofHalves (op.eval (lowHalf a) b).1 (highHalf a))
   | .compareDoubles d s =>
-    requireDefaultFloatControl
+    requireDefaultMxcsr
     let a ← readVector d
     let b ← readVector64 s
     let ((zero, parity, carry), _) := F64.compareUnordered (lowHalf a) b
     writeFlags { zero, parity, carry, overflow := false, sign := false, auxiliaryCarry := false }
   | .truncateDoubleToInt64 destination s =>
-    requireDefaultFloatControl
+    requireDefaultMxcsr
     writeRegister64 destination (F64.truncateToInt64 (← readVector64 s)).1
 
 /-- Where control may leave the executable code on purpose. Everything the
@@ -258,13 +258,13 @@ inductive Outcome where
 -- The exits are checked before fetching: the caller's return address and the
 -- panic entry are typically not mapped executable in the model at all.
 def step (exits : Exits) (s : State) : Outcome := Id.run do
-  let ip := s.instructionPointer
+  let ip := s.rip
   if ip = exits.returnAddress then return .returned s
   if ip = exits.panicAt then return .panicked s
   let .ok _ := s.memory.byte .fetch ip | return .badJump s
   let executed := do
     let (i, length) ← decode s.memory ip
-    (execute i).run { s with instructionPointer := ip + length.toUInt64 }
+    (execute i).run { s with rip := ip + length.toUInt64 }
   match executed with
   | .ok ((), s') => .running s'
   | .error why => .faulted why s

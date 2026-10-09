@@ -16,19 +16,19 @@ model, `F64`, does not cover them yet).
 namespace X86
 
 inductive Register where
-  | accumulator | counter | data | base | stackPointer | framePointer | sourceIndex | destinationIndex
+  | rax | rcx | rdx | rbx | rsp | rbp | rsi | rdi
   | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
   deriving DecidableEq, Repr, Inhabited
 
 namespace Register
 
 def all : List Register :=
-  [accumulator, counter, data, base, stackPointer, framePointer, sourceIndex, destinationIndex,
+  [rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi,
    r8, r9, r10, r11, r12, r13, r14, r15]
 
 def index : Register → Fin 16
-  | accumulator => 0 | counter => 1 | data => 2 | base => 3
-  | stackPointer => 4 | framePointer => 5 | sourceIndex => 6 | destinationIndex => 7
+  | rax => 0 | rcx => 1 | rdx => 2 | rbx => 3
+  | rsp => 4 | rbp => 5 | rsi => 6 | rdi => 7
   | r8 => 8 | r9 => 9 | r10 => 10 | r11 => 11 | r12 => 12 | r13 => 13 | r14 => 14 | r15 => 15
 
 def ofIndex (i : Fin 16) : Register := all[i]'(by simp [all])

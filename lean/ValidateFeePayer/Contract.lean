@@ -75,7 +75,7 @@ def objects (loadBase : UInt64) (s : X86.State) (heap : AccountHeap) (dataLength
    ⟨a.errorMetrics, transaction_error_metrics.size⟩,
    ⟨a.rent, rent.size⟩,
    -- The code's frame, the return address and the stack argument's slot.
-   ⟨s.stackPointer - stackUse.toUInt64, stackUse + 16⟩,
+   ⟨s.rsp - stackUse.toUInt64, stackUse + 16⟩,
    reservedSpan loadBase]
 
 /-- The bytes the code may change: the result, the account's lamports, the
@@ -87,7 +87,7 @@ def writes (s : X86.State) : List Abi.Block :=
    ⟨off a.errorMetrics transaction_error_metrics.account_not_found, 8⟩,
    ⟨off a.errorMetrics transaction_error_metrics.invalid_account_for_fee, 8⟩,
    ⟨off a.errorMetrics transaction_error_metrics.insufficient_funds, 8⟩,
-   ⟨s.stackPointer - stackUse.toUInt64, stackUse⟩]
+   ⟨s.rsp - stackUse.toUInt64, stackUse⟩]
 
 structure Footprint (loadBase : UInt64) (s : X86.State) (heap : AccountHeap) (dataLength : Nat) : Prop where
   -- `&mut` arguments do not alias in Rust; this is that, plus no overlap

@@ -50,16 +50,16 @@ def behaviour (dir : System.FilePath) : IO UInt32 := do
       | .ok v =>
         let (got, why) := outcome v
         if let some reason := v.known then
-          if agrees v.state.flags got want then
+          if agrees v.state.rflags got want then
             failures := failures + 1
             IO.println s!"KNOWN {file.fileName}: marked known={reason} but the model now agrees: {line}"
           else
             known := known.push s!"{reason}: {v.asm}\n    cpu:   {want}\n    model: {got}"
-        else if !agrees v.state.flags got want then
+        else if !agrees v.state.rflags got want then
           failures := failures + 1
           IO.println s!"MISMATCH {file.fileName}: {v.asm}\n  vector: {line}\n  cpu:    {want}\n  model:  {got}"
           if let some why := why then IO.println s!"  model rejected: {why}"
-        let address := v.state.instructionPointer
+        let address := v.state.rip
         match printInstruction v.bytes address with
         | .ok text =>
           if v.asm != "-" && text != v.asm then
@@ -102,7 +102,7 @@ def same (dir other : System.FilePath) : IO UInt32 := do
       continue
     for ((line, a), b) in (inputs.zip mine).zip theirs do
       let .ok v := parseVector line | continue
-      unless sameModuloUndefined v.state.flags (outcome v).1 a b do
+      unless sameModuloUndefined v.state.rflags (outcome v).1 a b do
         differences := differences + 1
         IO.println s!"DIFFERENT {file.fileName}: {v.asm}\n  here:  {a}\n  other: {b}"
   IO.println s!"{differences} outcomes differ beyond flags the model leaves undefined"
@@ -160,7 +160,7 @@ def model (file : System.FilePath) : IO UInt32 := do
     | .error e => IO.eprintln s!"{e}: {line}"; return 1
     | .ok v =>
       let (got, why) := outcome v
-      let asm := match printInstruction v.bytes v.state.instructionPointer with
+      let asm := match printInstruction v.bytes v.state.rip with
         | .ok text => if text == v.asm then "" else s!"   # prints '{text}'"
         | .error _ => ""
       IO.println (got ++ asm ++ (why.map ("   # " ++ ·)).getD "")

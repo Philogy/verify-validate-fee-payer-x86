@@ -36,7 +36,7 @@ the image's mappings come first, and control is at the entry. -/
 structure Entered (loadBase returnAddress : UInt64) (s : State) : Prop where
   validBase : ValidLoadBase loadBase
   image : ∃ rest, s.memory = load loadBase rest ∧ SpanFree loadBase rest
-  atEntry : s.instructionPointer = entryAddress loadBase
+  atEntry : s.rip = entryAddress loadBase
   returnOutsideImage : ∀ mp ∈ imageMappings loadBase, ¬ mp.Contains returnAddress
   returnNotPanic : returnAddress ≠ panicAddress loadBase
 
@@ -51,7 +51,7 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   integerThreshold : IntegerThreshold rent
 
 def calleeSaved : List Register :=
-  [.base, .framePointer, .r12, .r13, .r14, .r15]
+  [.rbx, .rbp, .r12, .r13, .r14, .r15]
 
 /-- The bytes a call may change, as `writes`. -/
 def Call.Written (c : Call) (sp a : UInt64) : Prop :=
@@ -64,17 +64,17 @@ def Call.Written (c : Call) (sp a : UInt64) : Prop :=
   inside (sp - stackUse.toUInt64) stackUse
 
 def Call.Frame (c : Call) (s s' : State) : Prop :=
-  ∀ access a, ¬ c.Written s.stackPointer a → s'.memory.byte access a = s.memory.byte access a
+  ∀ access a, ¬ c.Written s.rsp a → s'.memory.byte access a = s.memory.byte access a
 
 structure CallPost (c : Call) (s : State) (metrics : Spec.ErrorMetrics)
     (result : Except Spec.TransactionError Spec.Account) (s' : State) : Prop where
   resultEncoded : ResultEncodes s'.memory c.result (result.map fun _ => ())
   accountEncoded : ∀ account, result = .ok account → account.Encodes s'.memory c.account
   metricsEncoded : metrics.Encodes s'.memory c.errorMetrics
-  returnsResultPointer : s'.register .accumulator = c.result
-  stackPopped : s'.stackPointer = s.stackPointer + 8
+  returnsResultPointer : s'.register .rax = c.result
+  stackPopped : s'.rsp = s.rsp + 8
   calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r
-  floatControlKept : s'.floatControl &&& ~~~0x3f = s.floatControl &&& ~~~0x3f
+  mxcsrKept : s'.mxcsr &&& ~~~0x3f = s.mxcsr &&& ~~~0x3f
   frame : c.Frame s s'
 
 namespace Pre
@@ -91,12 +91,12 @@ theorem accountAt_eq : accountAt s c.heap = c.account := by
 theorem errorMetrics : (args s).errorMetrics = c.errorMetrics := by rw [← pre.ofState]; rfl
 theorem rentPtr : (args s).rent = c.rent := by rw [← pre.ofState]; rfl
 
-theorem resultRegister : s.register .destinationIndex = c.result := pre.result
-theorem accountRegister : s.register .sourceIndex = c.account.account := pre.accountPtr
-theorem metricsRegister : s.register .counter = c.errorMetrics := pre.errorMetrics
+theorem resultRegister : s.register .rdi = c.result := pre.result
+theorem accountRegister : s.register .rsi = c.account.account := pre.accountPtr
+theorem metricsRegister : s.register .rcx = c.errorMetrics := pre.errorMetrics
 theorem rentRegister : s.register .r8 = c.rent := pre.rentPtr
 theorem feeRegister : s.register .r9 = c.fee := pre.encoded.fee
-theorem payerIndexRegister : s.register .data &&& 0xffff = c.payerIndex.toUInt64 := pre.encoded.payerIndex
+theorem payerIndexRegister : s.register .rdx &&& 0xffff = c.payerIndex.toUInt64 := pre.encoded.payerIndex
 
 theorem accountEncoded : account.Encodes s.memory c.account := pre.accountAt_eq ▸ pre.encoded.account
 theorem metricsEncoded : metrics.Encodes s.memory c.errorMetrics := pre.errorMetrics ▸ pre.encoded.metrics

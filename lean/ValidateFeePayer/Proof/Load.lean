@@ -110,13 +110,13 @@ section Enter
 variable {lb : UInt64} {s : State}
 
 theorem enter_memory : (enter lb s).memory = load lb s.memory := by delta enter; exact Eq.refl _
-theorem enter_instructionPointer : (enter lb s).instructionPointer = entryAddress lb := by delta enter; exact Eq.refl _
+theorem enter_instructionPointer : (enter lb s).rip = entryAddress lb := by delta enter; exact Eq.refl _
 theorem enter_registers : (enter lb s).registers = s.registers := by delta enter; exact Eq.refl _
 theorem enter_register (r : Register) : (enter lb s).register r = s.register r := by
   unfold State.register; rw [enter_registers]
-theorem enter_stackPointer : (enter lb s).stackPointer = s.stackPointer := enter_register _
-theorem enter_flags : (enter lb s).flags = s.flags := by delta enter; exact Eq.refl _
-theorem enter_floatControl : (enter lb s).floatControl = s.floatControl := by delta enter; exact Eq.refl _
+theorem enter_stackPointer : (enter lb s).rsp = s.rsp := enter_register _
+theorem enter_rflags : (enter lb s).rflags = s.rflags := by delta enter; exact Eq.refl _
+theorem enter_floatControl : (enter lb s).mxcsr = s.mxcsr := by delta enter; exact Eq.refl _
 
 theorem args_enter : args (enter lb s) = args s := by
   simp only [args, Abi.ValidateFeePayerEntry.of, Abi.SysV.indirectResult, Abi.SysV.argument,

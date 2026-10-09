@@ -187,7 +187,7 @@ macro_rules
     unfold Call.Frame
     intro access a ha
     rw [← ($e).memory]
-    simp only [Call.Written, ($e).resultPtr, ($e).accountPtr, ($e).metricsPtr, ($e).stackPointer, off_eq,
+    simp only [Call.Written, ($e).resultPtr, ($e).accountPtr, ($e).metricsPtr, ($e).rsp, off_eq,
       Image.Layout.result.size, Image.Layout.account_shared_data.lamports,
       Image.Layout.transaction_error_metrics.account_not_found,
       Image.Layout.transaction_error_metrics.invalid_account_for_fee,
@@ -226,11 +226,11 @@ macro_rules
         ($e).readInsufficientFunds, and_true, saturating_eq]
     case rax => simp only [vexec, ($e).resultPtr]
     case sp =>
-      rw [($e).stackPointer]; simp only [State.stackPointer, vexec, UInt64.add_assoc, foldAdd]
+      rw [($e).rsp]; simp only [State.rsp, vexec, UInt64.add_assoc, foldAdd]
     case cs =>
       simp only [calleeSaved, List.mem_cons, List.not_mem_nil, forall_eq_or_imp, or_false, forall_eq, vexec,
-        ($e).base, ($e).framePointer, ($e).r12, ($e).r13, ($e).r14, ($e).r15, and_self]
-    case fc => simp only [($e).floatControl]
+        ($e).rbx, ($e).rbp, ($e).r12, ($e).r13, ($e).r14, ($e).r15, and_self]
+    case fc => simp only [($e).mxcsr]
     case frame => vframe $e))
 
 /-- Close a path: it returned or panicked, the path conditions decide the

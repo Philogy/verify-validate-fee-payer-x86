@@ -45,7 +45,7 @@ at its entry. -/
 -- Irreducible: unfolding it would unfold the whole image wherever a proof
 -- compares an entry state with the caller's.
 @[irreducible] def enter (loadBase : UInt64) (s : X86.State) : X86.State :=
-  { s with instructionPointer := entryAddress loadBase, memory := load loadBase s.memory }
+  { s with rip := entryAddress loadBase, memory := load loadBase s.memory }
 
 /-- Running the code: it ends when control reaches the caller's return
 address or the (uncarved) panic entry. -/

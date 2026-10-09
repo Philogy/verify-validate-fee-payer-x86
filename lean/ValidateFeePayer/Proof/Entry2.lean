@@ -41,20 +41,20 @@ values; the others stay as `s.register …`, and memory and the vector/float
 state stay as they are. -/
 theorem entry_state {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     s = State.mk (c.loadBase + 0x27f3560)
-      #v[s.register .accumulator, c.errorMetrics, s.register .data, s.register .base,
-         s.stackPointer, s.register .framePointer, c.account.account, c.result,
+      #v[s.register .rax, c.errorMetrics, s.register .rdx, s.register .rbx,
+         s.rsp, s.register .rbp, c.account.account, c.result,
          c.rent, c.fee, s.register .r10, s.register .r11, s.register .r12, s.register .r13,
          s.register .r14, s.register .r15]
-      .undefined s.vectorRegisters s.floatControl s.memory := by
+      .undefined s.xmm s.mxcsr s.memory := by
   obtain ⟨ip, regs, flags, vr, fc, m⟩ := s
   have hip := pre.entered.atEntry
-  have hflags := pre.abi.flags
+  have hflags := pre.abi.rflags
   have h1 := pre.metricsRegister
   have h6 := pre.accountRegister
   have h7 := pre.resultRegister
   have h8 := pre.rentRegister
   have h9 := pre.feeRegister
-  simp only [State.register, State.stackPointer, Register.index] at *
+  simp only [State.register, State.rsp, Register.index] at *
   rw [entryAddress_eq] at hip
   subst hip hflags
   rw [← h1, ← h6, ← h7, ← h8, ← h9]

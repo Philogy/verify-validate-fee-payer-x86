@@ -168,7 +168,7 @@ structure Separation (c : Call) (S : UInt64) (n : Nat) : Prop where
   rent_stack : Separate c.rent 24 S 112
 
 theorem separation_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
-    Separation c (s.stackPointer - 96) account.data.length := by
+    Separation c (s.rsp - 96) account.data.length := by
   have hdis := pre.footprint.separate
   have hnw := pre.footprint.noWrap
   simp only [objects, Abi.Block.Separate, List.pairwise_cons, List.mem_cons, forall_eq_or_imp] at hdis hnw

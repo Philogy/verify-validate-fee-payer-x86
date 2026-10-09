@@ -91,9 +91,9 @@ def mnemonic : Instruction → String
   | .truncateDoubleToInt64 .. => "cvttsd2si"
 
 def register64 : Register → String
-  | .accumulator => "rax" | .counter => "rcx" | .data => "rdx" | .base => "rbx"
-  | .stackPointer => "rsp" | .framePointer => "rbp" | .sourceIndex => "rsi"
-  | .destinationIndex => "rdi"
+  | .rax => "rax" | .rcx => "rcx" | .rdx => "rdx" | .rbx => "rbx"
+  | .rsp => "rsp" | .rbp => "rbp" | .rsi => "rsi"
+  | .rdi => "rdi"
   | r => "r" ++ toString r.index.val
 
 def register (size : OperandSize) (r : Register) : String :=
