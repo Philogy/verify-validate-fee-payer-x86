@@ -156,12 +156,13 @@ elab "apart" : tactic => do
     replace e := congrArg UInt64.toNat e
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat,
       Width.size, Nat.reducePow, Nat.reduceMod] at e hi hj)))
-  let mut separations := #[]
+  withMainContext do
+  let mut separations : Array Term := #[]
   for d in ← getLCtx do
     if d.isImplementationDetail then continue
-    let h := mkIdent d.userName
     let ty ← instantiateMVars d.type
-    if ty.isAppOf ``Separate then separations := separations.push h
+    -- By the free variable, not the name: `have :=` leaves several `this`.
+    if ty.isAppOf ``Separate then separations := separations.push (← Term.exprToSyntax d.toExpr)
     else if ty.isArrow then
       let conclusion := ty.bindingBody!
       unless conclusion.isAppOf ``Separate || conclusion.isAppOf ``LE.le do continue
@@ -186,6 +187,13 @@ attribute [vexec] beq_iff_eq reduceCtorEq Bool.or_eq_true Bool.and_eq_true or_fa
   not_false_eq_true not_true_eq_false decide_eq_true_eq decide_not Bool.not_eq_true' bne_iff_ne ne_eq
   Bool.not_eq_eq_eq_not Bool.not_true Bool.not_false Bool.and_true Bool.true_and Bool.or_false Bool.false_or
   dite_eq_ite
+attribute [vexec] UInt64.zero_add UInt64.zero_shiftLeft
+
+/-- The scale of an indexed address is a `Fin 4` shift count. Not `Fin.val_one`
+in general: the register lemmas match `Fin 16` indices as they are. -/
+@[vexec] theorem scale_one (x : UInt64) : x <<< UInt64.ofNat ((1 : Fin 4) : Nat) = x <<< 1 := rfl
+@[vexec] theorem scale_two (x : UInt64) : x <<< UInt64.ofNat ((2 : Fin 4) : Nat) = x <<< 2 := rfl
+@[vexec] theorem scale_three (x : UInt64) : x <<< UInt64.ofNat ((3 : Fin 4) : Nat) = x <<< 3 := rfl
 attribute [vexec] UInt64.add_zero UInt64.and_self Width.mask VectorMove.aligned BitVec.xor_zero
   BitVec.zero_xor beq_eq_false_iff_ne
 
@@ -256,7 +264,42 @@ simproc decideEq ((_ : UInt64) = _) := fun e => do
   let some (y, _) ← getOfNatValue? b ``UInt64 | return .continue
   Simp.evalPropStep e (UInt64.ofNat x == UInt64.ofNat y)
 
-attribute [vexec] decideEq
+/-- Decide `a == b` on `UInt64` literals. -/
+simproc decideBEq ((_ : UInt64) == _) := fun e => do
+  let_expr BEq.beq _ _ a b := e | return .continue
+  let some (x, _) ← getOfNatValue? a ``UInt64 | return .continue
+  let some (y, _) ← getOfNatValue? b ``UInt64 | return .continue
+  let r := toExpr (UInt64.ofNat x == UInt64.ofNat y)
+  return .done { expr := r, proof? := some (← mkExpectedTypeHint (← mkEqRefl r) (← mkEq e r)) }
+
+@[vexec] theorem ite_true_false {c : Prop} {hc : Decidable c} : (if c then True else False) = c := by
+  by_cases c <;> simp_all
+@[vexec] theorem ite_false_true {c : Prop} {hc : Decidable c} : (if c then False else True) = ¬c := by
+  by_cases c <;> simp_all
+
+theorem decide_inst {p : Prop} (h h' : Decidable p) : @decide p h = @decide p h' := by
+  cases h <;> cases h' <;> simp_all
+
+/-- Re-synthesize the instance of `decide p` when `p` was rewritten
+definitionally (the register lemmas are `rfl`) and the instance still has
+the old type: no `decide` lemma matches such a term. -/
+simproc fixDecide (@decide _ _) := fun e => do
+  let_expr Decidable.decide p inst := e | return .continue
+  let_expr Decidable q := (← instantiateMVars (← inferType inst)) | return .continue
+  if q == p then return .continue
+  let .some inst' ← trySynthInstance (mkApp (mkConst ``Decidable) p) | return .continue
+  return .visit { expr := mkApp2 (mkConst ``Decidable.decide) p inst',
+                  proof? := some (mkApp3 (mkConst ``decide_inst) p inst inst') }
+
+/-- `x * c` as `c * x` for a literal `c`, so the code's `imul` and the spec's
+products of the same factors are one term. -/
+simproc literalFirst ((_ * _ : UInt64)) := fun e => do
+  let_expr HMul.hMul _ _ _ _ a b := e | return .continue
+  let some _ ← getOfNatValue? b ``UInt64 | return .continue
+  if (← getOfNatValue? a ``UInt64).isSome then return .continue
+  return .done { expr := ← mkAppM ``HMul.hMul #[b, a], proof? := some (← mkAppM ``UInt64.mul_comm #[a, b]) }
+
+attribute [vexec] decideEq decideBEq literalFirst fixDecide Bool.ite_eq_true_distrib Bool.ite_eq_false_distrib
 
 /-! ## Vector registers -/
 
@@ -351,35 +394,273 @@ macro_rules
     simp only [decode_table, decodeThen_ok]
     simp (disch := walk_disch) only [execThen_ok, vexec, ↓reduceIte, ↓reduceDIte, $ls,*]))
 
+/-- A conditional jump over one instruction: on the fall-through path, that
+instruction leads to the jump target, so both paths continue from the target
+in one state whose fields are `if`s on the condition. -/
+theorem Finishes.skip {lb : UInt64} {exits : Exits} {regs : Vector UInt64 16} {f : Flags}
+    {vr : Vector (BitVec 128) 16} {fc : UInt32} {m : Memory} {c : Prop} [Decidable c] {A B : UInt64}
+    {n : Nat} {P : Outcome → Prop} (hx : CodeExits lb exits) (hc : CodeAt lb m)
+    (h : DecodeThen (decodeWith codeByte B) fun i len =>
+      ExecThen ((execute i).run (State.mk (lb + B + len.toUInt64) regs f vr fc m)) fun s' =>
+        Finishes exits n (if c then State.mk (lb + A) regs f vr fc m else s') P) :
+    Finishes exits (n + 1) (State.mk (if c then lb + A else lb + B) regs f vr fc m) P := by
+  obtain ⟨i, len, hdec, s', hexec, h⟩ := h
+  by_cases hcond : c
+  · simp only [hcond, ↓reduceIte] at h ⊢
+    exact h.mono (Nat.le_succ n)
+  · simp only [hcond, ↓reduceIte] at h ⊢
+    exact Finishes.exec hx hc rfl hdec hexec h
+
+/-! Values merged by `vskip` meet masks and comparisons. -/
+
+section
+variable {c : Prop} {hc : Decidable c} {a b k : UInt64}
+@[vexec] theorem ite_and : (if c then a else b) &&& k = if c then a &&& k else b &&& k := by split <;> rfl
+@[vexec] theorem ite_or : (if c then a else b) ||| k = if c then a ||| k else b ||| k := by split <;> rfl
+@[vexec] theorem ite_beq : ((if c then a else b) == k) = if c then a == k else b == k := by split <;> rfl
+@[vexec] theorem ite_shiftRight : (if c then a else b) >>> k = if c then a >>> k else b >>> k := by
+  split <;> rfl
+end
+
+@[vexec] theorem lowByte_of_merge (x y : UInt64) : (x &&& ~~~255 ||| y) &&& 255 = y &&& 255 := by bv_decide
+@[vexec] theorem lowWord_of_merge (x y : UInt64) :
+    (x &&& ~~~4294967295 ||| y) &&& 4294967295 = y &&& 4294967295 := by bv_decide
+@[vexec] theorem and_mask_mask (x : UInt64) : x &&& 4294967295 &&& 4294967295 = x &&& 4294967295 := by
+  bv_decide
+/-- `cmp r32, c` sets the zero flag on the low 32 bits of `x - c`. -/
+@[vexec] theorem add_literal_and_mask_eq_zero (x c : UInt64) :
+    ((x &&& 4294967295) + c &&& 4294967295 = 0) = (x &&& 4294967295 = (0 - c) &&& 4294967295) := by
+  apply propext; bv_decide
+/-- The owner check reads the two halves of the owner and the system program
+id, which is zero. -/
+@[vexec] theorem zero_xor128 (x : BitVec 128) : 0 ^^^ x = x := by bv_decide
+@[vexec] theorem xor_zero128 (x : BitVec 128) : x ^^^ 0 = x := by bv_decide
+@[vexec] theorem and_self128 (x : BitVec 128) : x &&& x = x := by bv_decide
+
+/-- Four bytes fit in the low 32 bits. -/
+@[vexec] theorem ofLittleEndian_take4_and_mask (l : List UInt8) :
+    ofLittleEndian (l.take 4) &&& 4294967295 = ofLittleEndian (l.take 4) := by
+  match l with
+  | [] => rfl
+  | [a] => simp only [List.take, ofLittleEndian]; bv_decide
+  | [a, b] => simp only [List.take, ofLittleEndian]; bv_decide
+  | [a, b, c] => simp only [List.take, ofLittleEndian]; bv_decide
+  | a :: b :: c :: d :: _ => simp only [List.take, ofLittleEndian]; bv_decide
+
+@[vexec] theorem take4_add_literal_and_mask_eq_zero (l : List UInt8) (c : UInt64) :
+    (ofLittleEndian (l.take 4) + c &&& 4294967295 = 0) = (ofLittleEndian (l.take 4) = (0 - c) &&& 4294967295) := by
+  rw [← ofLittleEndian_take4_and_mask l, add_literal_and_mask_eq_zero, ofLittleEndian_take4_and_mask]
+
+/-! `setcc` leaves a condition as `if c then 1 else 0`; `or` and `test` of
+such bytes are the conditions' disjunction and negation. -/
+
+section
+variable {c d : Prop} {hc : Decidable c} {hd : Decidable d}
+@[vexec high] theorem setcc_or :
+    (if c then (1 : UInt64) else 0) ||| (if d then 1 else 0) = if c ∨ d then 1 else 0 := by
+  by_cases c <;> by_cases d <;> simp_all
+@[vexec high] theorem setcc_eq_zero : ((if c then (1 : UInt64) else 0) = 0) = ¬c := by
+  by_cases c <;> simp_all
+@[vexec high] theorem setcc_beq_zero : ((if c then (1 : UInt64) else 0) == 0) = !decide c := by
+  by_cases c <;> simp_all
+end
+
+@[vexec] theorem lowByte_cleared (x : UInt64) : x &&& ~~~255 &&& 255 = 0 := by bv_decide
+/-- `mov ecx, 2; sbb rcx, 0`: the callee's code for the pre-execution rent
+state, 1 for rent-paying and 2 for rent-exempt. -/
+@[vexec] theorem two_sub_setcc {c : Prop} {hc : Decidable c} :
+    (2 : UInt64) - (if c then 1 else 0) = if c then 1 else 2 := by by_cases c <;> simp_all
+@[vexec] theorem rentState_eq_one {c : Prop} {hc : Decidable c} : ((if c then (1 : UInt64) else 2) = 1) = c := by
+  by_cases c <;> simp_all
+
+@[vexec] theorem zero_or (x : UInt64) : 0 ||| x = x := by bv_decide
+@[vexec] theorem or_zero (x : UInt64) : x ||| 0 = x := by bv_decide
+@[vexec] theorem lt_zero (x : UInt64) : (x < 0) = False := by
+  apply propext; simp only [iff_false, UInt64.lt_iff_toNat_lt, UInt64.toNat_zero]; omega
+
+@[vexec] theorem zero_and (x : UInt64) : 0 &&& x = 0 := by bv_decide
+
+/-- One step of the fall-through instruction of a jump over it (`Finishes.skip`). -/
+elab "vskip" : tactic => do
+  evalTactic (← `(tactic| (
+    apply Finishes.skip
+    case hx => assumption
+    case hc => (try dsimp only); first | with_reducible assumption | (apply CodeAt.evolved ‹CodeAt _ _›; evolved)
+    simp only [decode_table, decodeThen_ok]
+    simp (disch := walk_disch) only [execThen_ok, vexec, ↓reduceIte, ↓reduceDIte])))
+  let t ← instantiateMVars (← getMainTarget)
+  let_expr Finishes _ _ s _ := t | throwError "vskip: not a Finishes goal"
+  let_expr X86.State.mk ip _ _ _ _ _ := s | throwError "vskip: the paths did not merge"
+  if ip.isAppOf ``ite then throwError "vskip: the paths did not merge"
+
+/-- `decide` with whatever instance `simp` left after rewriting the
+proposition: the standard lemmas expect the synthesized one. -/
+theorem decide_eq_true' {p : Prop} {h : Decidable p} : (@decide p h = true) = p := by
+  cases h <;> simp_all
+theorem decide_eq_false' {p : Prop} {h : Decidable p} : (@decide p h = false) = ¬p := by
+  cases h <;> simp_all
+
+/-- `a - b` on `UInt64` either does not wrap or wraps once. -/
+theorem sub_toNat_cases (a b : UInt64) :
+    (a - b).toNat + b.toNat = a.toNat ∨ (a - b).toNat + b.toNat = a.toNat + 18446744073709551616 := by
+  have := a.toNat_lt; have := b.toNat_lt
+  rw [UInt64.toNat_sub]
+  omega
+
+/-- The `UInt64` subtractions in `e`. -/
+partial def nestedSubtractions (e : Expr) (acc : Array Expr := #[]) : Array Expr :=
+  let acc := if e.isAppOfArity ``HSub.hSub 6 && e.appFn!.appFn!.appFn!.appFn!.appArg!.isConstOf ``UInt64
+      && !e.hasLooseBVars && !acc.contains e then acc.push e else acc
+  match e with
+  | .app f a => nestedSubtractions a (nestedSubtractions f acc)
+  | .lam _ t b _ | .forallE _ t b _ => nestedSubtractions b (nestedSubtractions t acc)
+  | .mdata _ b => nestedSubtractions b acc
+  | _ => acc
+
+/-- Replace each `a - b` by a variable known to satisfy `sub_toNat_cases`:
+`toNat_sub` would turn it into a `%` of a truncated subtraction, which `omega`
+often cannot see through. Innermost first, so nested subtractions become
+subtractions of variables. -/
+elab "name_subtractions" : tactic => do
+  let mut skip : Array Expr := #[]
+  for _ in [0:32] do
+    let some e ← withMainContext do
+        let subs := nestedSubtractions (← instantiateMVars (← getMainTarget))
+        return subs.find? fun e =>
+          !skip.contains e && (nestedSubtractions e.appFn!.appArg!).isEmpty &&
+            (nestedSubtractions e.appArg!).isEmpty
+      | return
+    skip := skip.push e
+    withMainContext do
+      let pf ← mkAppM ``sub_toNat_cases #[e.appFn!.appArg!, e.appArg!]
+      let g ← (← getMainGoal).assert `wrap (← inferType pf) pf
+      -- A subtraction inside a stale instance cannot be abstracted; it stays.
+      try
+        let (_, g) ← g.generalize #[{ expr := e, xName? := `x }] (transparency := .reducible)
+        replaceMainGoal [g]
+      catch _ => pure ()
+
+/-- The `UInt64.toNat` applications in `e`. -/
+partial def toNatAtoms (e : Expr) (acc : Array Expr := #[]) : Array Expr :=
+  let acc := if e.isAppOfArity ``UInt64.toNat 1 && !e.hasLooseBVars && !acc.contains e then acc.push e else acc
+  match e with
+  | .app f a => toNatAtoms a (toNatAtoms f acc)
+  | .lam _ t b _ | .forallE _ t b _ => toNatAtoms b (toNatAtoms t acc)
+  | .mdata _ b => toNatAtoms b acc
+  | _ => acc
+
+/-- `x.toNat < 2 ^ 64` for every `x.toNat` in the goal, which `omega` does
+not know by itself. -/
+elab "toNat_bounds" : tactic => withMainContext do
+  for e in toNatAtoms (← instantiateMVars (← getMainTarget)) do
+    let pf ← mkAppM ``UInt64.toNat_lt #[e.appArg!]
+    replaceMainGoal [← (← getMainGoal).assert `bound (← inferType pf) pf]
+
+/-- What `uomega` rewrites: `UInt64` facts as facts about `toNat`. -/
+macro "uomega" : tactic => `(tactic| (
+  try simp only [fixDecide, decide_eq_false', decide_eq_true', decide_eq_false_iff_not, decide_eq_true_eq, not_and, Classical.not_not, Bool.not_eq_true,
+    Bool.not_eq_false, beq_iff_eq, bne_iff_ne, beq_eq_false_iff_ne, Bool.not_eq_true', Bool.and_eq_true,
+    Bool.or_eq_true, ite_true_false, ite_false_true, decide_not, Bool.not_not, two_sub_setcc, rentState_eq_one,
+    ne_eq, Nat.toUInt64_eq, literalFirst]
+  name_subtractions
+  try simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le, ← UInt64.toNat_inj,
+    UInt64.toNat_add, UInt64.toNat_ofNat, UInt64.toNat_zero, Nat.reducePow, Nat.reduceMod,
+    UInt64.toNat_ofNat']
+  all_goals (toNat_bounds; (try simp only [UInt64.size, Nat.reducePow]); intros; omega)))
+
+/-- A proof of `¬ e` from the path conditions (hypotheses named `path`), if
+`contradiction` or `uomega` finds one. -/
+def refute? (e : Expr) : TacticM (Option Expr) := do
+  let g ← mkFreshExprMVar (← mkArrow e (mkConst ``False))
+  let paths := (← getLCtx).foldl (init := #[]) fun acc d =>
+    if d.userName == `path && !d.isImplementationDetail then acc.push d.fvarId else acc
+  let (_, g') ← g.mvarId!.revert paths (preserveOrder := true)
+  let saved ← saveState
+  for tac in [← `(tactic| (intros; contradiction)), ← `(tactic| uomega)] do
+    setGoals [g']
+    let ok ← tryCatchRuntimeEx (do withoutRecover (evalTactic tac); pure (← getGoals).isEmpty) fun ex => do
+      trace[debug] "refute {e}: {tac} failed: {ex.toMessageData}\n{g'}"
+      pure false
+    -- On success keep the metavariable context the proof lives in; only the
+    -- goal list goes back.
+    if ok then
+      setGoals saved.tactic.goals
+      return some (← instantiateMVars g)
+    saved.restore
+  saved.restore
+  return none
+
+/-- Continue on the path where `path : h` holds, with `h` already proved. -/
+def takePath (h prf : Expr) : TacticM Unit := do
+  let (_, g) ← (← (← getMainGoal).assert `path h prf).intro1P
+  setGoals [g]
+  evalTactic (← `(tactic| try simp only [$(mkIdent `path):ident, ↓reduceIte, not_false_eq_true]))
+
+/-- Put the new path condition in normal form and use it to rewrite the
+state, so later conditions on the same values are decided by `simp`. -/
+def normalizePath : TacticM Unit := do
+  evalTactic (← `(tactic| try simp only [Bool.not_eq_false, beq_iff_eq, ne_eq, Classical.not_not,
+    Bool.not_eq_true, beq_eq_false_iff_ne, ite_true_false, ite_false_true, fixDecide, decide_eq_false', decide_eq_true',
+    decide_eq_false_iff_not, decide_eq_true_eq] at $(mkIdent `path):ident))
+  evalTactic (← `(tactic| try simp only [$(mkIdent `path):ident]))
+
 /-- Split on the condition of the conditional jump that `vstep` left in the
-instruction pointer. -/
-elab "vsplit" : tactic => do
+instruction pointer, unless the path so far decides it. -/
+elab "vsplit" : tactic => withMainContext do
   let t ← instantiateMVars (← getMainTarget)
   let_expr Finishes _ _ s _ := t | throwError "vsplit: not a Finishes goal"
   let_expr X86.State.mk ip _ _ _ _ _ := s | throwError "vsplit: state not explicit"
   let_expr ite _ c _ _ _ := ip | throwError "vsplit: no branch"
-  evalTactic (← `(tactic| by_cases hpath : $(← Term.exprToSyntax c) <;>
-    simp only [hpath, ↓reduceIte, not_false_eq_true] <;>
-    try simp only [Bool.not_eq_false, beq_iff_eq, ne_eq, Classical.not_not, Bool.not_eq_true,
-      beq_eq_false_iff_ne] at hpath))
+  if let some prf ← refute? c then
+    takePath (mkNot c) prf; normalizePath
+  else if let some prf ← refute? (mkNot c) then
+    takePath c (← mkAppM ``Classical.byContradiction #[prf]); normalizePath
+  else
+    let path := mkIdent `path
+    evalTactic (← `(tactic| by_cases $path:ident : $(← Term.exprToSyntax c) <;>
+      simp only [$path:ident, ↓reduceIte, not_false_eq_true]))
+    let gs ← getGoals
+    let mut out := []
+    for g in gs do
+      setGoals [g]; normalizePath; out := out ++ (← getGoals)
+    setGoals out
 
-syntax "vwalk" (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
+/-- Whether the goal's state is at `lb + a` with `a` inside the carved code,
+so that `vwalk` should step it; exits and other targets are left to the caller. -/
+def inCode (g : MVarId) : MetaM Bool := do
+  let t ← instantiateMVars (← g.getType)
+  let_expr Finishes _ _ s _ := t | return false
+  let_expr X86.State.mk ip _ _ _ _ _ := s | return false
+  if ip.isAppOf ``ite then return true
+  let_expr HAdd.hAdd _ _ _ _ _ a := ip | return false
+  let some (a, _) ← getOfNatValue? a ``UInt64 | return false
+  return 0x27f3560 ≤ a && a < 0x27f3930
+
+syntax "vwalk" (num)? (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
 
 /-- `vstep` and `vsplit` until no goal moves. A loop rather than `repeat'`,
 whose recursion is as deep as the code is long. -/
 elab_rules : tactic
-  | `(tactic| vwalk $[[$ls,*]]?) => do
+  | `(tactic| vwalk $[$n]? $[[$ls,*]]?) => do
     let ls := ls.getD ⟨#[]⟩
-    let step ← `(tactic| first | vstep [$ls,*] | vsplit)
+    let mut fuel := (n.map (·.getNat)).getD 100000
+    let step ← `(tactic| first | vstep [$ls,*] | vskip | vsplit)
     let mut todo := ← getGoals
     let mut done : Array MVarId := #[]
-    while !todo.isEmpty do
+    while !todo.isEmpty && fuel > 0 do
+      fuel := fuel - 1
       let g := todo.head!
       todo := todo.tail
       if ← g.isAssigned then continue
+      unless ← inCode g do done := done.push g; continue
       setGoals [g]
-      if ← tryTactic (evalTactic step) then todo := (← getGoals) ++ todo
+      let saved ← saveState
+      let moved ← tryCatchRuntimeEx (do evalTactic step; pure true) fun e => do
+        saved.restore
+        if e.isRuntime then logWarning m!"vwalk: {e.toMessageData}\n{g}"
+        pure false
+      if moved then todo := (← getGoals) ++ todo
       else done := done.push g
-    setGoals done.toList
+    setGoals (done.toList ++ todo)
 
 end ValidateFeePayer.Proof

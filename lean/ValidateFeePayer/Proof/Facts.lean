@@ -119,12 +119,10 @@ theorem separation_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c
     Separation c (s.stackPointer - 96) account.data.length := by
   have hdis := pre.disjoint
   have hnw := pre.noWrap
-  simp only [IntervalsDisjoint, Call.footprint, interval, List.pairwise_append, List.pairwise_cons,
-    List.mem_cons, List.mem_map, List.not_mem_nil, forall_eq_or_imp, forall_eq, List.cons_append,
-    List.nil_append, forall_exists_index, and_imp, result.size, account_shared_data.size,
-    account_shared_data.arc_inner.data_len, transaction_error_metrics.size, Image.Layout.rent.size, stackUse,
-    List.Pairwise.nil, true_and, and_true, false_or, or_false, imp_false, Nat.toUInt64_eq,
-    UInt64.reduceOfNat, Nat.reduceAdd] at hdis hnw
+  simp only [IntervalsDisjoint, Call.footprint, interval, List.pairwise_cons, List.mem_cons, List.mem_map,
+    forall_eq_or_imp, List.cons_append, List.nil_append, forall_exists_index, and_imp, result.size,
+    account_shared_data.size, account_shared_data.arc_inner.data_len, transaction_error_metrics.size,
+    Image.Layout.rent.size, stackUse, Nat.toUInt64_eq, UInt64.reduceOfNat, Nat.reduceAdd] at hdis hnw
   obtain ⟨⟨h01, h02, h03, h04, h05, h06, -⟩, ⟨h12, h13, h14, h15, h16, -⟩, ⟨h23, h24, h25, h26, -⟩,
     ⟨h34, h35, h36, -⟩, ⟨h45, h46, -⟩, ⟨h56, -⟩, -⟩ := hdis
   obtain ⟨n0, n1, n2, n3, n4, n5, n6, -⟩ := hnw
