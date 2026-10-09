@@ -86,25 +86,29 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   llvm-objdump on the image), `Spec` (the
   Rust function in Lean), `Reference` (the rent check as Agave writes it,
   proved equal to `Spec`'s), `SpecTests` (Agave's unit tests on both),
-  `Contract` (`Called`, `Footprint`, `Encoded`, `Post`, `Frame`), `Correctness` (the theorem; the proof is in
+  `Contract` (`invoke`, `Called`, `Footprint`, `Encoded`, `Behaves`, `Post`, `Frame`), `Correctness` (the theorem; the proof is in
   `Proof/`), `Tests` (machine against `Spec` on concrete inputs).
   `Proof/DecodeTable.lean` is written by
   `lake env lean --run scripts/DecodeTable.lean`.
 - `X86Test/`: the hardware comparison (`tests/x86/README.md`).
 
-The theorem's hypotheses come in three layers: `Called` (the image loaded
-with nothing else mapped in the binary's span, the instruction pointer at
-the entry, a return address outside the carved code and other than the panic
-entry), `Footprint` (the objects the code touches pairwise disjoint and not
-wrapping, the bytes it writes writable, 96 bytes of free stack) and
-`Encoded` (each argument location holding an encoding of a Lean value), plus
-`SysV.Entry` and an exemption threshold of `1.0` or `2.0`. From such a state `run` with at least 240 steps of fuel ends in
-`panicked` exactly when `Spec.validateFeePayer` throws a `Panic`, and
-otherwise in `returned` with the result, the metrics and, on success, the
-account encoded, and callee-saved registers and MXCSR control bits kept.
-Either way every byte outside the result, the lamports, three counters and
-96 bytes of stack is unchanged. It depends on `propext`, `Classical.choice`
-and `Quot.sound` only.
+The theorem is about `invoke`: from a caller's state, map the image in at
+the load base, jump to the entry and run 240 steps (the most any path takes;
+`validateFeePayer_more_fuel` shows more changes nothing). Its hypotheses
+are about that caller's state, in three layers: `Called` (a SysV call, with
+nothing mapped in the binary's span and a return address outside the carved
+code and other than the panic entry), `Footprint` (the objects the code
+touches pairwise disjoint and not wrapping, the bytes it writes writable, 96
+bytes of free stack) and `Encoded` (each argument location holding an
+encoding of a Lean value), plus an exemption threshold of `1.0` or `2.0`.
+Its conclusion, `Behaves`, is about the outcome of the run: it is
+`panicked` only when `Spec.validateFeePayer` throws a `Panic`, and otherwise
+`returned` with what the spec returns: the result, the metrics and, on
+success, the account encoded, and callee-saved registers and MXCSR control
+bits kept. Any other outcome (a fault, a bad jump) contradicts it. Either way
+every byte outside the result, the lamports, three counters and 96 bytes of
+stack is unchanged. It depends on `propext`, `Classical.choice` and
+`Quot.sound` only.
 
 The threshold is `1.0` on mainnet since SIMD-0194 and `2.0` before; other
 values take the `f64` path in `Rent::minimum_balance`, which the proof does
