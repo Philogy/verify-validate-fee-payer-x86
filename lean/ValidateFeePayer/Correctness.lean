@@ -17,10 +17,10 @@ the updated account encoded in memory and nothing else changed. It never faults,
 outside the code, or reads an undefined flag. -/
 theorem validateFeePayer_correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics)
     (rent : Spec.Rent) (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
-    match Spec.validateFeePayer account c.payerIndex rent c.fee relax with
-    | .error (.panic _) => ∃ s', run c.exits fuel s = .panicked s'
-    | .error (.tx e) => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics (.error e) s'
-    | .ok account' => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics (.ok account') s' :=
+    match (Spec.validateFeePayer account c.payerIndex rent c.fee relax).run.run metrics with
+    | (.error (.panic _), _) => ∃ s', run c.exits fuel s = .panicked s'
+    | (.error (.tx e), metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.error e) s'
+    | (.ok account', metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.ok account') s' :=
   correct c account metrics rent relax s pre
 
 end ValidateFeePayer

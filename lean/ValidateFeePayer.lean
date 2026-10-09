@@ -4,8 +4,6 @@ import ValidateFeePayer.Loader
 import ValidateFeePayer.Code
 import ValidateFeePayer.Checks
 import ValidateFeePayer.Spec
-import ValidateFeePayer.Spec.RustShaped
-import ValidateFeePayer.Equivalence
 import ValidateFeePayer.Contract
 import ValidateFeePayer.Correctness
 import ValidateFeePayer.Tests
