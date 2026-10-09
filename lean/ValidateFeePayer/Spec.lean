@@ -16,8 +16,6 @@ checks); the Rust source uses `checked_sub` where it needs checking.
 
 namespace ValidateFeePayer.Spec
 
-open X86
-
 abbrev Pubkey := Vector UInt8 32
 
 /-- `solana_sdk_ids::system_program::ID`. -/
@@ -81,14 +79,14 @@ def simd0194MaxLamportsPerByte : UInt64 := 1759197129867
 def currentMaxLamportsPerByte : UInt64 := 879598564933
 
 /-- Rust's `u64 as f64`: rounded to nearest, ties to even. -/
-def u64ToF64 (v : UInt64) : UInt64 := (F64.ofScaled v.toNat 0 false).1
+def u64ToF64 (v : UInt64) : UInt64 := (X86.F64.ofScaled v.toNat 0 false).1
 
 /-- Rust's `f64 as u64`: truncated toward zero and saturating, with NaN as 0. -/
 def f64ToU64 (x : UInt64) : UInt64 :=
-  if F64.isNaN x then 0
-  else if F64.isInfinite x then (if F64.sign x then 0 else 0xffffffffffffffff)
+  if X86.F64.isNaN x then 0
+  else if X86.F64.isInfinite x then (if X86.F64.sign x then 0 else 0xffffffffffffffff)
   else
-    let t := (F64.scaled x).toNat / 2 ^ 1074
+    let t := (X86.F64.scaled x).toNat / 2 ^ 1074
     if t ≥ UInt64.size then 0xffffffffffffffff else t.toUInt64
 
 /-- `Rent::minimum_balance`: `try_minimum_balance` and its `expect`.
@@ -111,7 +109,7 @@ def minimumBalance (rent : Rent) (dataLength : UInt64) : Except Panic UInt64 := 
   else if rent.exemptionThreshold = currentExemptionThreshold then
     guard (rent.lamportsPerByte ≤ currentMaxLamportsPerByte)
     return 2 * bytes * rent.lamportsPerByte
-  return f64ToU64 (F64.mul (u64ToF64 (bytes * rent.lamportsPerByte)) rent.exemptionThreshold).1
+  return f64ToU64 (X86.F64.mul (u64ToF64 (bytes * rent.lamportsPerByte)) rent.exemptionThreshold).1
 
 /-! ## `solana-nonce-account` 5.0.0 -/
 
@@ -126,8 +124,8 @@ def systemAccountKind (account : Account) : Option SystemAccountKind := do
   guard (account.owner = systemProgramId)
   if account.data = [] then return .system
   guard (account.data.length = nonceStateSize)
-  let versionsTag := ofLittleEndian (account.data.take 4)
-  let stateTag := ofLittleEndian ((account.data.drop 4).take 4)
+  let versionsTag := X86.ofLittleEndian (account.data.take 4)
+  let stateTag := X86.ofLittleEndian ((account.data.drop 4).take 4)
   guard ((versionsTag = 0 ∨ versionsTag = 1) ∧ stateTag = 1)
   return .nonce
 
