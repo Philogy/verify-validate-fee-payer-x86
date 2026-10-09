@@ -651,7 +651,7 @@ def sse(g):
     ops = ["pand", "pandn", "por", "pxor", "andpd", "andnpd", "orpd", "xorpd", "andps", "andnps", "orps", "xorps",
            "ptest", "punpckldq", "punpcklqdq", "unpcklpd", "unpckhpd"]
     for op in ops:
-        for src in ["xmm", "xmm", "xmm", "m", "m", "misaligned"]:
+        for src in ["xmm", "xmm", "xmm", "m", "m", "rip", "misaligned"]:
             d = g.rng.randrange(16)
             lo, hi = g.rng.getrandbits(64), g.rng.getrandbits(64)
             fields = [(f"xmm{d}", xmm_value(g.rng.getrandbits(64), g.rng.getrandbits(64))), used_fl()]
@@ -667,7 +667,7 @@ def sse(g):
             else:
                 used = set()
                 target = DATA_PAGE + g.rng.randrange(0, 255) * 16 + (8 if src == "misaligned" else 0)
-                m, f, _, rip = g.memory(128, used, target=target)
+                m, f, _, rip = g.memory(128, used, target=target, shape="rip" if src == "rip" else None)
                 fields += f + [("mem", f"{hexn(target)}:{le(lo, 8)}{le(hi, 8)}")]
                 text = f"{op} xmm{d}, {m}"
             g.add("sse", Vector(text, fields, rip_target=rip))
