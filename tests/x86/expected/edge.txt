@@ -1,0 +1,117 @@
+4510e5 | ok rip=0x40000803 flags=CPA-S-
+4518e5 | ok rip=0x40000803 r13=0x6f2c4e3ad25ff9ff flags=CPA-S-
+4518e5 | ok rip=0x40000803 r13=0xe60e056e3fb48cfe flags=C-A-S-
+4010fe | ok rip=0x40000803
+4018fe | ok rip=0x40000803 rsi=0x86c37cc6768074ff
+4018fe | ok rip=0x40000803 rsi=0xf1bd563e0db9c7fe flags=C-A-S-
+4010f3 | ok rip=0x40000803 flags=CPA-S-
+4018f3 | ok rip=0x40000803 rbx=0x1ac99f14e3517aff flags=CPA-S-
+4018f3 | ok rip=0x40000803 rbx=0x1624d57f640d89fe flags=C-A-S-
+10c2 | ok rip=0x40000802 flags=CPA-S-
+18c2 | ok rip=0x40000802 rdx=0x35779c0d238c8bff flags=CPA-S-
+18c2 | ok rip=0x40000802 rdx=0x101d370bd7ab3efe flags=C-A-S-
+4410d4 | ok rip=0x40000803 flags=C-A---
+4418d4 | ok rip=0x40000803 rsp=0x61fdcdd041b6b3ff flags=CPA-S-
+4418d4 | ok rip=0x40000803 rsp=0x8427a110622b7dfe flags=C-A-S-
+4110e5 | ok rip=0x40000803 flags=C-A-S-
+4118e5 | ok rip=0x40000803 r13=0x354f4af7bfdcaeff flags=CPA-S-
+4118e5 | ok rip=0x40000803 r13=0xea4ea35e1f3d1ff flags=CPA-S-
+664411cd | ok rip=0x40000804 flags=C-A---
+664419cd | ok rip=0x40000804 rbp=0x334a5759105bffff flags=CPA-S-
+664419cd | ok rip=0x40000804 rbp=0xfe0f08eff4b9ffff flags=CPA-S-
+664511e9 | ok rip=0x40000804 flags=C-A-S-
+664519e9 | ok rip=0x40000804 r9=0x94c0827ed9ffff flags=CPA-S-
+664519e9 | ok rip=0x40000804 r9=0xb125c8fc310affff flags=CPA-S-
+664111fa | ok rip=0x40000804 flags=CPAZ--
+664119fa | ok rip=0x40000804 r10=0xb4b36b7c0632ffff flags=CPA-S-
+664119fa | ok rip=0x40000804 r10=0xf00d9d084ae4ffff flags=CPA-S-
+664111ea | ok rip=0x40000804 flags=CPA-S-
+664119ea | ok rip=0x40000804 r10=0x2b548d7f6783ffff flags=CPA-S-
+664119ea | ok rip=0x40000804 r10=0x17d6d0365e3cfffe flags=C-A-S-
+664411ec | ok rip=0x40000804 flags=CPAZ--
+664419ec | ok rip=0x40000804 rsp=0x3adece006a5dffff flags=CPA-S-
+664419ec | ok rip=0x40000804 rsp=0xf915cdd5c0c9fffe flags=C-A-S-
+664111c3 | ok rip=0x40000804 flags=C-A---
+664119c3 | ok rip=0x40000804 r11=0xabd7aa63f5d9ffff flags=CPA-S-
+664119c3 | ok rip=0x40000804 r11=0x6fb0c0483d41fffe flags=C-A-S-
+4111c1 | ok rip=0x40000803 r9=0xbe flags=CPA---
+4119c1 | ok rip=0x40000803 r9=0xffffffff flags=CPA-S-
+4119c1 | ok rip=0x40000803 r9=0xffffffff flags=CPA-S-
+4411fd | ok rip=0x40000803 rbp=0xb56dd05c flags=CPA-S-
+4419fd | ok rip=0x40000803 rbp=0xffffffff flags=CPA-S-
+4419fd | ok rip=0x40000803 rbp=0xffffffff flags=CPA-S-
+4411e4 | ok rip=0x40000803 rsp=0x1 flags=C-A---
+4419e4 | ok rip=0x40000803 rsp=0xffffffff flags=CPA-S-
+4419e4 | ok rip=0x40000803 rsp=0xffffffff flags=CPA-S-
+11cd | ok rip=0x40000802 rbp=0x73 flags=C-A---
+19cd | ok rip=0x40000802 rbp=0xffffffff flags=CPA-S-
+19cd | ok rip=0x40000802 rbp=0xffffffff flags=CPA-S-
+4511de | ok rip=0x40000803 r14=0x80 flags=C-A---
+4519de | ok rip=0x40000803 r14=0xffffffff flags=CPA-S-
+4519de | ok rip=0x40000803 r14=0xfffffffe flags=C-A-S-
+4411c6 | ok rip=0x40000803 rsi=0x9b flags=C-A---
+4419c6 | ok rip=0x40000803 rsi=0xffffffff flags=CPA-S-
+4419c6 | ok rip=0x40000803 rsi=0xfffffffe
+4c11f0 | ok rip=0x40000803 flags=C-A-S-
+4c19f0 | ok rip=0x40000803 rax=0xffffffffffffffff flags=CPA-S-
+4c19f0 | ok rip=0x40000803 rax=0xfffffffffffffffe flags=C-A-S-
+4d11de | ok rip=0x40000803 flags=CPA-S-
+4d19de | ok rip=0x40000803 r14=0xffffffffffffffff flags=CPA-S-
+4d19de | ok rip=0x40000803 r14=0xffffffffffffffff flags=CPA-S-
+4c11e8 | ok rip=0x40000803 flags=C-A-S-
+4c19e8 | ok rip=0x40000803 rax=0xffffffffffffffff flags=CPA-S-
+4c19e8 | ok rip=0x40000803 rax=0xfffffffffffffffe flags=C-A-S-
+4911d4 | ok rip=0x40000803 flags=C-A---
+4919d4 | ok rip=0x40000803 r12=0xffffffffffffffff flags=CPA-S-
+4919d4 | ok rip=0x40000803 r12=0xffffffffffffffff flags=CPA-S-
+4911d4 | ok rip=0x40000803 flags=CPA-S-
+4919d4 | ok rip=0x40000803 r12=0xffffffffffffffff flags=CPA-S-
+4919d4 | ok rip=0x40000803 r12=0xffffffffffffffff flags=CPA-S-
+4811c5 | ok rip=0x40000803 flags=CPA---
+4819c5 | ok rip=0x40000803 rbp=0xffffffffffffffff flags=CPA-S-
+4819c5 | ok rip=0x40000803 rbp=0xfffffffffffffffe flags=C-A-S-
+4883d900 | ok rip=0x40000804 rcx=0xffffffffffffffff flags=CPA-S-
+4883d900 | ok rip=0x40000804 flags=-P-Z--
+4883d900 | ok rip=0x40000804 rcx=0x0 flags=-P-Z--
+4883d900 | ok rip=0x40000804 flags=------
+4883d900 | ok rip=0x40000804 rcx=0x7e flags=-P----
+4883d900 | ok rip=0x40000804 flags=------
+4883d900 | ok rip=0x40000804 rcx=0x7f flags=--A---
+4883d900 | ok rip=0x40000804 flags=------
+4883d900 | ok rip=0x40000804 rcx=0xfffffffffffffffe flags=----S-
+4883d900 | ok rip=0x40000804 flags=-P--S-
+66410f3817e7 | ok rip=0x40000806 flags=C-----
+660f3817242550080050 | ok rip=0x4000080a flags=C-----
+66450f3817de | ok rip=0x40000806 flags=------
+66440f38171c25a0080050 | ok rip=0x4000080b flags=------
+66410f3817ff | ok rip=0x40000806 flags=C-----
+66430f38173c69 | ok rip=0x40000807 flags=C-----
+66440f3817e2 | ok rip=0x40000806 flags=C-----
+66470f38172459 | ok rip=0x40000807 flags=C-----
+660f3817c6 | ok rip=0x40000805 flags=C-----
+66410f381782e5e96820 | ok rip=0x4000080a flags=C-----
+66410f3817d5 | ok rip=0x40000806 flags=C-----
+66420f381794b97896d9d9 | ok rip=0x4000080b flags=C-----
+66440f3817cc | ok rip=0x40000806
+66450f381709 | ok rip=0x40000806 flags=C-----
+66440f3817ed | ok rip=0x40000806 flags=C-----
+66450f38176c246d | ok rip=0x40000808 flags=C-----
+66450f3817d4 | ok rip=0x40000806 flags=C-----
+66440f381715f6faff0f | ok rip=0x4000080a flags=C-----
+66450f3817e6 | ok rip=0x40000806 flags=------
+66450f3817a5e05ee4d9 | ok rip=0x4000080a flags=------
+66450f3817f1 | ok rip=0x40000806 flags=C-----
+66450f3817b4c4a7c0b27f | ok rip=0x4000080b flags=C-----
+660f3817ec | ok rip=0x40000805 flags=C-----
+66420f38172cd5388bf6ff | ok rip=0x4000080b flags=C-----
+660f3817d2 | ok rip=0x40000805 flags=C--Z--
+660f3817d2 | ok rip=0x40000805 flags=C-----
+660f3817d2 | ok rip=0x40000805 flags=C-----
+660f3817d2 | ok rip=0x40000805 flags=C-----
+ff1424 | ok rip=0x1bf97a90f853 rsp=0x600007f8 mem=0x600007f8:0308004000000000
+ff542408 | ok rip=0x3479a0fdba6 rsp=0x600007f8 mem=0x600007f8:040800400000
+ff542410 | ok rip=0x30c52eb1b685 rsp=0x600007f8 mem=0x600007f8:040800400000
+ff13 | pagefault unmapped 0x50002100
+ff13 | pagefault unmapped 0x500027f8
+ff13 | pagefault denied 0x500017f8
+ffd0 | pagefault unmapped 0x500027f8
