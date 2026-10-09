@@ -1,0 +1,68 @@
+name: x86 model against the CPU
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  x86:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CPU
+        run: lscpu | grep -E 'Model name|Vendor ID|Flags' | cut -c1-200
+
+      - name: Tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q llvm
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/cache@v4
+        with:
+          path: lean/.lake
+          key: lake-${{ hashFiles('lean/lean-toolchain', 'lean/lakefile.toml', 'lean/X86/**', 'lean/X86Test/**', 'lean/X86Test.lean', 'lean/ValidateFeePayer/Code.lean', 'lean/ValidateFeePayer/Image.lean', 'lean/ValidateFeePayer/Region.lean') }}
+
+      - name: Build the Lean runner
+        working-directory: lean
+        run: lake build x86-test
+
+      - name: Vectors are reproducible
+        working-directory: tests/x86
+        run: python3 gen.py && git diff --exit-code vectors
+
+      - name: Run the vectors on this CPU
+        working-directory: tests/x86
+        run: |
+          gcc -O2 -Wall -Werror -o oracle oracle.c
+          mkdir -p expected
+          for f in vectors/*.txt; do ./oracle < "$f" > "expected/$(basename "$f")"; done
+
+      - name: Model against the CPU
+        working-directory: tests/x86
+        run: ../../lean/.lake/build/bin/x86-test behaviour .
+
+      # Undefined flags can differ between CPUs, so a different runner may
+      # not reproduce the committed outcomes.
+      - name: CPU outcomes match the committed ones
+        if: always()
+        run: |
+          git add -N tests/x86/expected
+          git diff --stat --exit-code tests/x86/expected || echo "::warning::CPU outcomes differ from the committed ones"
+
+      - name: Decoder against llvm-objdump
+        if: always()
+        working-directory: tests/x86
+        run: |
+          llvm-objdump --version | head -2
+          OBJDUMP=llvm-objdump python3 decode.py > decode.txt
+          ../../lean/.lake/build/bin/x86-test decode decode.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: outcomes
+          path: |
+            tests/x86/expected
+            tests/x86/decode.txt

@@ -162,11 +162,10 @@ its cap.
 
 ## TODO
 
-- **Prove `validateFeePayer_correct`.**
-- **Hardware comparison.** A CI job that runs each supported instruction
-  form, including the `F64` operations, on random states on a real CPU and
-  compares with one `step` (see `x86-state.md`). Until then `F64` is only
-  compared with the host's `Float` in `Tests.lean`.
+- **Hardware comparison.** Done for one step per vector: `tests/x86/`
+  (README there) runs every supported form on a real CPU in CI and compares
+  with `step`, and compares the decoder with llvm-objdump. Open: `sar`'s
+  carry for counts at least the operand width (see the known differences).
 - **Re-pin to the git-enabled build (deferred to the end).** A CI release
   build embeds the commit hash, which moves both functions by `0x6a0`.
   Rebuild with git, regenerate the carve, run `./disasm-to-lean.py`, and

@@ -1,0 +1,198 @@
+jo 0x40000845 | 7043 | flags=SO
+jo 0xffffffffd76c1b57 | 0f8051136c97 | flags=SO
+jo 0x4000087f | 707d | flags=PZSO
+jo 0xfffffffff6fc613d | 0f803759fcb6 | flags=PZSO
+jo 0x40000802 | 7000 | flags=ZO
+jo 0xffffffffe6c00d7d | 0f807705c0a6 | flags=ZO
+jo 0x40000870 | 706e | flags=CZ
+jo 0x8946c793 | 0f808dbf4649 | flags=CZ
+jo 0x400007b7 | 70b5 | flags=O
+jo 0xfffffffff102fd15 | 0f800ff502b1 | flags=O
+jno 0x40000878 | 7176 | flags=O
+jno 0xb6aeb0e2 | 0f81dca8ae76 | flags=O
+jno 0x40000874 | 7172 | flags=Z
+jno 0xffffffffe1e2561f | 0f81194ee2a1 | flags=Z
+jno 0x400007bc | 71ba | flags=C
+jno 0xa492d3ce | 0f81c8cb9264 | flags=C
+jno 0x400007a7 | 71a5 | flags=ZS
+jno 0xfe618d3 | 0f81cd10e6cf | flags=ZS
+jno 0x40000820 | 711e | flags=CPS
+jno 0x902bc8ca | 0f81c4c02b50 | flags=CPS
+jb 0x40000817 | 7215 | flags=-
+jb 0x92b2df09 | 0f8203d7b252 | flags=-
+jb 0x4000083d | 723b | flags=ZS
+jb 0x11e96eae | 0f82a866e9d1 | flags=ZS
+jb 0x4000078e | 728c | flags=O
+jb 0xac3d2d92 | 0f828c253d6c | flags=O
+jb 0x4000083e | 723c | flags=CZSO
+jb 0xffffffffda34bcfd | 0f82f7b4349a | flags=CZSO
+jb 0x40000862 | 7260 | flags=S
+jb 0xfffffffffe4b38c6 | 0f82c0304bbe | flags=S
+jae 0x400007d9 | 73d7 | flags=CPAZSO
+jae 0xdf2fccd | 0f83c7f4f2cd | flags=CPAZSO
+jae 0x400007f2 | 73f0 | flags=AZO
+jae 0xa20ab94b | 0f8345b10a62 | flags=AZO
+jae 0x400007cf | 73cd | flags=S
+jae 0x255499b1 | 0f83ab9154e5 | flags=S
+jae 0x400007cc | 73ca | flags=-
+jae 0x756f5cc0 | 0f83ba546f35 | flags=-
+jae 0x400007df | 73dd | flags=C
+jae 0x749a8511 | 0f830b7d9a34 | flags=C
+je 0x40000837 | 7435 | flags=P
+je 0x98416e62 | 0f845c664158 | flags=P
+je 0x400007de | 74dc | flags=ZO
+je 0x3c03d67 | 0f846135c0c3 | flags=ZO
+je 0x40000866 | 7464 | flags=O
+je 0x61d8b786 | 0f8480afd821 | flags=O
+je 0x400007df | 74dd | flags=CPAZSO
+je 0x2de7dcd9 | 0f84d3d4e7ed | flags=CPAZSO
+je 0x400007a4 | 74a2 | flags=SO
+je 0x215bec5d | 0f8457e45be1 | flags=SO
+jne 0x4000080e | 750c | flags=-
+jne 0xecdb0f4 | 0f85eea8cdce | flags=-
+jne 0x40000846 | 7544 | flags=ZSO
+jne 0x82484c40 | 0f853a444842 | flags=ZSO
+jne 0x40000845 | 7543 | flags=CA
+jne 0x86f73b1a | 0f851433f746 | flags=CA
+jne 0x40000806 | 7504 | flags=CPAZSO
+jne 0x3cc32c96 | 0f859024c3fc | flags=CPAZSO
+jne 0x4000083f | 753d | flags=S
+jne 0xffffffffd8f4bdd1 | 0f85cbb5f498 | flags=S
+jbe 0x400007cf | 76cd | flags=CSO
+jbe 0x78b003a0 | 0f869afbaf38 | flags=CSO
+jbe 0x4000081b | 7619 | flags=P
+jbe 0x5f8e8f7b | 0f8675878e1f | flags=P
+jbe 0x4000080a | 7608 | flags=ZS
+jbe 0xffffffffe40b3293 | 0f868d2a0ba4 | flags=ZS
+jbe 0x40000831 | 762f | flags=O
+jbe 0x12b0d8af | 0f86a9d0b0d2 | flags=O
+jbe 0x400007fd | 76fb | flags=CZ
+jbe 0xffffffffd0def775 | 0f866fefde90 | flags=CZ
+ja 0x40000856 | 7754 | flags=AZS
+ja 0xb348763a | 0f87346e4873 | flags=AZS
+ja 0x40000844 | 7742 | flags=P
+ja 0x150b26bf | 0f87b91e0bd5 | flags=P
+ja 0x40000867 | 7765 | flags=PO
+ja 0x22cbd907 | 0f8701d1cbe2 | flags=PO
+ja 0x400007dd | 77db | flags=ZS
+ja 0xffffffffc4892d65 | 0f875f258984 | flags=ZS
+ja 0x400007f6 | 77f4 | flags=CPAS
+ja 0x7ef21143 | 0f873d09f23e | flags=CPAS
+js 0x40000810 | 780e | flags=Z
+js 0x18b7f405 | 0f88ffebb7d8 | flags=Z
+js 0x400007da | 78d8 | flags=PZO
+js 0xffffffffca2ffd9b | 0f8895f52f8a | flags=PZO
+js 0x4000083d | 783b | flags=-
+js 0xfffffffffd9cfcbf | 0f88b9f49cbd | flags=-
+js 0x400007a5 | 78a3 | flags=CPSO
+js 0x655f5d53 | 0f884d555f25 | flags=CPSO
+js 0x40000857 | 7855 | flags=CPAZSO
+js 0x91ce6037 | 0f883158ce51 | flags=CPAZSO
+jns 0x400007b2 | 79b0 | flags=P
+jns 0xfffffffff23db47d | 0f8977ac3db2 | flags=P
+jns 0x400007f2 | 79f0 | flags=PA
+jns 0xe773e12 | 0f890c3677ce | flags=PA
+jns 0x400007d5 | 79d3 | flags=ZO
+jns 0x6490f159 | 0f8953e99024 | flags=ZO
+jns 0x40000805 | 7903 | flags=CPAZSO
+jns 0x6e71e9c0 | 0f89bae1712e | flags=CPAZSO
+jns 0x40000809 | 7907 | flags=PZSO
+jns 0x1425301f | 0f89192825d4 | flags=PZSO
+jp 0x40000785 | 7a83 | flags=SO
+jp 0xffffffffcaf808f6 | 0f8af000f88a | flags=SO
+jp 0x40000858 | 7a56 | flags=ZS
+jp 0xa7ab27d7 | 0f8ad11fab67 | flags=ZS
+jp 0x400007c8 | 7ac6 | flags=-
+jp 0xb8ffc03c | 0f8a36b8ff78 | flags=-
+jp 0x40000876 | 7a74 | flags=Z
+jp 0x74b8d790 | 0f8a8acfb834 | flags=Z
+jp 0x4000081a | 7a18 | flags=CSO
+jp 0xffffffffd00fb8d3 | 0f8acdb00f90 | flags=CSO
+jnp 0x400007b4 | 7bb2 | flags=P
+jnp 0x80f950b2 | 0f8bac48f940 | flags=P
+jnp 0x40000861 | 7b5f | flags=-
+jnp 0x31ec2b8e | 0f8b8823ecf1 | flags=-
+jnp 0x40000793 | 7b91 | flags=C
+jnp 0xb909e26 | 0f8b209690cb | flags=C
+jnp 0x40000840 | 7b3e | flags=S
+jnp 0x4b44f144 | 0f8b3ee9440b | flags=S
+jnp 0x4000084d | 7b4b | flags=CPAZO
+jnp 0xfffffffffdfb118d | 0f8b8709fbbd | flags=CPAZO
+jl 0x40000782 | 7c80 | flags=-
+jl 0x4d3b1ad4 | 0f8cce123b0d | flags=-
+jl 0x400007b4 | 7cb2 | flags=O
+jl 0xa6f24bdf | 0f8cd943f266 | flags=O
+jl 0x4000078c | 7c8a | flags=CZ
+jl 0xffffffffef47accc | 0f8cc6a447af | flags=CZ
+jl 0x4000079d | 7c9b | flags=P
+jl 0x3401d6bd | 0f8cb7ce01f4 | flags=P
+jl 0x400007e7 | 7ce5 | flags=CPZ
+jl 0xfffffffffc6f81b5 | 0f8caf796fbc | flags=CPZ
+jge 0x40000852 | 7d50 | flags=AZSO
+jge 0xfffffffff45dd031 | 0f8d2bc85db4 | flags=AZSO
+jge 0x400007cf | 7dcd | flags=ZS
+jge 0x2a4c2eae | 0f8da8264cea | flags=ZS
+jge 0x4000078d | 7d8b | flags=S
+jge 0x439d8cac | 0f8da6849d03 | flags=S
+jge 0x40000806 | 7d04 | flags=CPAZSO
+jge 0x6f19023c | 0f8d36fa182f | flags=CPAZSO
+jge 0x400007c7 | 7dc5 | flags=CPAZSO
+jge 0x82439cca | 0f8dc4944342 | flags=CPAZSO
+jle 0x40000783 | 7e81 | flags=SO
+jle 0x2bc1bdb9 | 0f8eb3b5c1eb | flags=SO
+jle 0x400007ec | 7eea | flags=CPAZO
+jle 0x5d787752 | 0f8e4c6f781d | flags=CPAZO
+jle 0x400007f7 | 7ef5 | flags=O
+jle 0xb40c1532 | 0f8e2c0d0c74 | flags=O
+jle 0x40000877 | 7e75 | flags=CZ
+jle 0x9f56a683 | 0f8e7d9e565f | flags=CZ
+jle 0x40000802 | 7e00 | flags=CASO
+jle 0x2d71f160 | 0f8e5ae971ed | flags=CASO
+jg 0x40000860 | 7f5e | flags=Z
+jg 0x2827e994 | 0f8f8ee127e8 | flags=Z
+jg 0x40000786 | 7f84 | flags=ZO
+jg 0xe03911d | 0f8f178903ce | flags=ZO
+jg 0x40000880 | 7f7e | flags=S
+jg 0x2918e924 | 0f8f1ee118e9 | flags=S
+jg 0x40000832 | 7f30 | flags=C
+jg 0x1e43f53c | 0f8f36ed43de | flags=C
+jg 0x40000860 | 7f5e | flags=ZS
+jg 0xffffffffce8a00d3 | 0f8fcdf8898e | flags=ZS
+jmp 0x400007c0 | ebbe | 
+jmp 0xffffffffdfdf5493 | e98e4cdf9f | 
+call 0xffffffffdfdf5493 | e88e4cdf9f | 
+jmp 0x40000809 | eb07 | 
+jmp 0xb3b048d2 | e9cd40b073 | 
+call 0xb3b048d2 | e8cd40b073 | 
+jmp 0x40000821 | eb1f | 
+jmp 0x80303c01 | e9fc333040 | 
+call 0x80303c01 | e8fc333040 | 
+jmp 0x400007ef | ebed | 
+jmp 0xaa16d27f | e97aca166a | 
+call 0xaa16d27f | e87aca166a | 
+jmp r15 | 41ffe7 | r15=0x26ce193b39b7
+jmp qword ptr [2*rsi + 0xd92e6] | ff2475e6920d00 | rsi=0x27f93be6 mem=0x50000ab2:f49535988bb5ffff
+jmp qword ptr [rip + 0xfffffad] | ff25adffff0f | mem=0x500007b3:98df02b4bd240000
+jmp qword ptr [r8 - 0xb2707] | 42ff2405f9d8f4ff | r8=0x500b368a mem=0x50000f83:f84c9ab397540000
+jmp rbp | ffe5 | rbp=0xd3f88ac5
+jmp r13 | 41ffe5 | r13=0x70cfa8dd3814
+call qword ptr [rsi] | ff16 | rsi=0x50000fc5 mem=0x50000fc5:a3f2b9ab13390000
+call qword ptr [rbp + 8*rcx] | ff54cd00 | rcx=0x2f rbp=0x50000978 mem=0x50000af0:8fcc78630b660000
+call qword ptr [r14 - 0x65243a89] | 41ff9677c5db9a | r14=0xb52447f9 mem=0x50000d70:69b0cbeeede8ffff
+call qword ptr [rcx - 0x18588a9e] | ff916275a7e7 | rcx=0x68588ffe mem=0x50000560:7fab84a8a8240000
+call rbx | ffd3 | rbx=0x1d04dc843fe6
+call qword ptr [r8 + 0xb433] | 42ff140533b40000 | r8=0x4fff5813 mem=0x50000c46:ae5212c683270000
+jmp qword ptr [rbp] | ff6500 | rbp=0x5000096c mem=0x5000096c:fac82e220febffff
+jmp qword ptr [r9 + 2*r12] | 43ff2461 | r12=0xa r9=0x50000f28 mem=0x50000f3c:064715b8c94e0000
+jmp qword ptr [8*rdx + 0x4e479] | ff24d579e40400 | rdx=0x9ff64f6 mem=0x50000c29:44e71e37bc740000
+jmp qword ptr [rip + 0x1000001b] | ff251b000010 | mem=0x50000821:b74d60e42e180000
+jmp qword ptr [0x50000aa2] | ff2425a20a0050 | mem=0x50000aa2:22a4ab2c63510000
+call qword ptr [r15 - 0x1e] | 41ff57e2 | r15=0x50000e13 mem=0x50000df5:a0ba7692760f0000
+call qword ptr [r11 + r14 - 0x47] | 43ff5433b9 | r14=0xb8db4289e44f5132 r11=0x4724bd766bb0afb1 mem=0x5000009c:9273b554359effff
+call qword ptr [2*r8 + 0x3b531] | 42ff144531b50300 | r8=0x27fe2ac4 mem=0x50000ab9:99b35bcd2cd2ffff
+call qword ptr [rip + 0xffffbc3] | ff15c3fbff0f | mem=0x500003c9:277435c815b6ffff
+call qword ptr [0x5000031d] | ff14251d030050 | mem=0x5000031d:761314245de3ffff
+ret | c3 | rsp=0x60000a71 mem=0x60000a71:59bc310a01e9ffff
+ret | c3 | rsp=0x6000079f mem=0x6000079f:ccc4346004320000
+ret | c3 | rsp=0x60000f59 mem=0x60000f59:e2359f8e8b4c0000
+ret | c3 | rsp=0x60000025 mem=0x60000025:5f4b2f91c55b0000
