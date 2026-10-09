@@ -39,7 +39,7 @@ theorem entryAddress_eq (lb : UInt64) : entryAddress lb = lb + 0x27f3560 := rfl
 /-- The entry state in explicit form. The argument registers hold their known
 values; the others stay as `s.register …`, and memory and the vector/float
 state stay as they are. -/
-theorem entry_state {c : Call} {refs rent relax s} (pre : Pre c refs rent relax s) :
+theorem entry_state {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     s = State.mk (c.loadBase + 0x27f3560)
       #v[s.register .accumulator, c.errorMetrics, s.register .data, s.register .base,
          s.stackPointer, s.register .framePointer, c.account.account, c.result,
