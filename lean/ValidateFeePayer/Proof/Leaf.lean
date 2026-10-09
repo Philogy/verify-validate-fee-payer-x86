@@ -198,7 +198,7 @@ macro_rules
       replace eq := congrArg UInt64.toNat eq
       simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat, OperandSize.byteCount,
         Nat.reducePow, Nat.reduceMod, UInt64.toNat_sub] at eq hj ha
-      omega)]))
+      omega_conjunct ha)]))
 
 /-- The final state of a returning path meets `Post`. -/
 syntax "vpost" term : tactic

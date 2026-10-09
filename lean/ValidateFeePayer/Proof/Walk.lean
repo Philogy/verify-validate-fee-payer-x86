@@ -325,6 +325,29 @@ elab "apart" : tactic => do
     if ← tryTactic (evalTactic (← `(tactic| (have h' := $h; unfold Separate at h'; omega)))) then return
   throwError "apart: no hypothesis separates the addresses"
 
+/-- The conjuncts of `h : t`, as proofs. -/
+partial def conjuncts (h t : Expr) : MetaM (Array Expr) := do
+  match_expr t with
+  | And p q => return (← conjuncts (← mkAppM ``And.left #[h]) p) ++ (← conjuncts (← mkAppM ``And.right #[h]) q)
+  | _ => return #[h]
+
+/-- `omega` with one conjunct of `h` at a time instead of all of `h`: each
+conjunct is a disjunction, and `omega` splits on all of them together.
+Falls back to plain `omega`. -/
+elab "omega_conjunct " h:ident : tactic => do
+  let g ← getMainGoal
+  let parts ← g.withContext do
+    let d ← getLocalDeclFromUserName h.getId
+    conjuncts d.toExpr (← instantiateMVars d.type)
+  for p in parts do
+    let saved ← saveState
+    let ok ← g.withContext do
+      let p ← Term.exprToSyntax p
+      tryTactic (evalTactic (← `(tactic| (have hp := $p; clear $h:ident; omega))))
+    if ok then return
+    saved.restore
+  evalTactic (← `(tactic| omega))
+
 /-! ## Stepping -/
 
 attribute [vexec] beq_iff_eq reduceCtorEq Bool.or_eq_true Bool.and_eq_true or_false false_or or_self
