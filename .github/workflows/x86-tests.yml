@@ -30,7 +30,17 @@ jobs:
 
       - name: Vectors are reproducible
         working-directory: tests/x86
-        run: python3 gen.py && git diff --exit-code vectors
+        run: python3 gen.py && git diff --exit-code vectors && test -z "$(git status --porcelain vectors)"
+
+      # Before the CPU overwrites expected/, which the fixtures are drawn from.
+      - name: The runner rejects planted defects
+        working-directory: tests/x86
+        run: |
+          python3 selftest/make.py && git diff --exit-code selftest && test -z "$(git status --porcelain selftest)"
+          ../../lean/.lake/build/bin/x86-test selftest selftest
+
+      - name: Carved bytes are the disassembled bytes
+        run: python3 check-carved.py
 
       - name: Run the vectors on this CPU
         working-directory: tests/x86
@@ -49,7 +59,7 @@ jobs:
         run: |
           mkdir -p /tmp/committed
           for f in tests/x86/expected/*.txt; do git show "HEAD:$f" > "/tmp/committed/$(basename "$f")"; done
-          cd tests/x86 && ../../lean/.lake/build/bin/x86-test same . /tmp/committed || echo "::warning::CPU outcomes differ from the committed ones"
+          cd tests/x86 && ../../lean/.lake/build/bin/x86-test same . /tmp/committed
 
       - name: Decoder against llvm-objdump
         if: always()
