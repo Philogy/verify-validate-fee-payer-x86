@@ -123,8 +123,92 @@ def addressBase (a : Expr) : MetaM Expr := do
   | HAdd.hAdd _ _ _ _ x c => if (← getOfNatValue? c ``UInt64).isSome then return x else return a
   | _ => return a
 
-/-- Prove `Apart a n b n'` by `omega` on the addresses as `Nat`s, using at
-most one `Separate` hypothesis. Hypotheses that hold on one path only, such
+theorem Separate.symm {a b : UInt64} {n n' : Nat} (h : Separate a n b n') : Separate b n' a n := by
+  unfold Separate at *; omega
+
+theorem apart_of_separate {a b x y c1 c2 : UInt64} {n n' N N' : Nat} (ha : a = x + c1) (hb : b = y + c2)
+    (hs : Separate x N y N') (hx : x.toNat + N ≤ 2 ^ 64) (hy : y.toNat + N' ≤ 2 ^ 64)
+    (h1 : c1.toNat + n ≤ N) (h2 : c2.toNat + n' ≤ N') : Apart a n b n' := by
+  subst ha hb
+  intro i hi j hj e
+  replace e := congrArg UInt64.toNat e
+  simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat'] at e
+  unfold Separate at hs
+  omega
+
+theorem apart_same {a b x c1 c2 : UInt64} {n n' : Nat} (ha : a = x + c1) (hb : b = x + c2)
+    (h : c1.toNat + n ≤ c2.toNat ∧ c2.toNat + n' ≤ c1.toNat + 2 ^ 64 ∨
+      c2.toNat + n' ≤ c1.toNat ∧ c1.toNat + n ≤ c2.toNat + 2 ^ 64) : Apart a n b n' := by
+  subst ha hb
+  intro i hi j hj e
+  replace e := congrArg UInt64.toNat e
+  simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat'] at e
+  have := x.toNat_lt; have := c1.toNat_lt; have := c2.toNat_lt
+  omega
+
+/-- `a` as `x + c` with `c` a literal, and a proof of `a = x + c`. -/
+def withOffset (a : Expr) : MetaM (Expr × Expr × Expr) := do
+  match_expr a with
+  | HAdd.hAdd _ _ _ _ x c =>
+    if (← getOfNatValue? c ``UInt64).isSome then return (x, c, ← mkEqRefl a)
+  | _ => pure ()
+  let zero := toExpr (0 : UInt64)
+  return (a, zero, ← mkEqSymm (mkApp (mkConst ``UInt64.add_zero) a))
+
+/-- A proof of `p` by `decide`, if it holds. -/
+def decideProof? (p : Expr) : MetaM (Option Expr) := do
+  let d ← mkDecide p
+  let r ← withAtLeastTransparency .default <| whnf d
+  unless r.isConstOf ``true do return none
+  return some (mkApp3 (mkConst ``of_decide_eq_true) p d.appArg! (← mkEqRefl (mkConst ``true)))
+
+/-- `Apart a n b n'` without `omega`, when both addresses are an object plus a
+literal offset: from the offsets alone within one object, or from the
+objects' `Separate` and bounds hypotheses. -/
+def apartByOffsets? (a n b n' : Expr) : TacticM (Option Expr) := withMainContext do
+  let (x, c1, ha) ← withOffset a
+  let (y, c2, hb) ← withOffset b
+  let toNat (e : Expr) := mkApp (mkConst ``UInt64.toNat) e
+  let add (u v : Expr) := mkNatAdd u v
+  let le (u v : Expr) := mkNatLE u v
+  let pow64 := mkNatLit (2 ^ 64)
+  if x == y then
+    let p := mkOr (mkAnd (le (add (toNat c1) n) (toNat c2)) (le (add (toNat c2) n') (add (toNat c1) pow64)))
+      (mkAnd (le (add (toNat c2) n') (toNat c1)) (le (add (toNat c1) n) (add (toNat c2) pow64)))
+    let some h ← decideProof? p | return none
+    return some (← mkAppM ``apart_same #[ha, hb, h])
+  let lctx ← getLCtx
+  let bound? (z N : Expr) : MetaM (Option Expr) := do
+    for d in lctx do
+      if d.isImplementationDetail then continue
+      let_expr LE.le _ _ l r := d.type | continue
+      let_expr HAdd.hAdd _ _ _ _ zt N' := l | continue
+      let_expr UInt64.toNat z' := zt | continue
+      unless z' == z && N' == N do continue
+      if (← getNatValue? r) == some (2 ^ 64) || (r.isAppOf ``HPow.hPow) then return some d.toExpr
+    return none
+  for d in lctx do
+    if d.isImplementationDetail then continue
+    let_expr Separate p N q N' := d.type | continue
+    let hs ← if p == x && q == y then pure d.toExpr
+      else if p == y && q == x then mkAppM ``Separate.symm #[d.toExpr] else continue
+    let (N, N') := if p == x then (N, N') else (N', N)
+    let some hx ← bound? x N | return none
+    let some hy ← bound? y N' | return none
+    -- Within the object: by `decide` on literals, or the whole object at offset 0.
+    let within (c m M : Expr) : MetaM (Option Expr) := do
+      if let some h ← decideProof? (le (add (toNat c) m) M) then return some h
+      if m == M && (← getUInt64Value? c) == some 0 then
+        return some (← mkAppM ``Nat.le_of_eq #[← mkAppM ``Nat.zero_add #[m]])
+      return none
+    let some h1 ← within c1 n N | return none
+    let some h2 ← within c2 n' N' | return none
+    return some (← mkAppM ``apart_of_separate #[ha, hb, hs, hx, hy, h1, h2])
+  return none
+
+/-- Prove `Apart a n b n'` by `apartByOffsets?`, else by `omega` on the
+addresses as `Nat`s, using at most one `Separate` hypothesis. `omega` reads
+the whole context, which during a walk costs ~45ms a call. Hypotheses that hold on one path only, such
 as the account data's bounds when it is long enough to be read, are
 `p → _`; they are used when `p` is in context. -/
 elab "apart" : tactic => do
@@ -134,6 +218,14 @@ elab "apart" : tactic => do
       let_expr Apart a _ b _ := t | return none
       return some (← addressBase a, ← addressBase b)
     | throwError "apart: not an Apart goal"
+  let fast? ← withMainContext do
+    let t ← whnfR (← getMainTarget)
+    let_expr Apart a n b n' := t | return none
+    apartByOffsets? a n b n'
+  if let some pf := fast? then
+    let g ← getMainGoal
+    if ← isDefEq (← inferType pf) (← g.getType) then
+      g.assign pf; replaceMainGoal []; return
   let direct ← withMainContext do
     for d in ← getLCtx do
       if d.isImplementationDetail then continue
