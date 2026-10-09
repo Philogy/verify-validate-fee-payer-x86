@@ -122,10 +122,16 @@ theorem Evolved.trans {m m' m'' : Memory} (h : Evolved m m') (h' : Evolved m' m'
 base, possibly for a larger range. -/
 macro "writable" : tactic => `(tactic| (
   repeat' apply WritableAt.wr
+  -- Reducible unification only: matching `S + 80` against `met + ?k` at
+  -- default transparency unfolds `UInt64` addition.
   first
-    | assumption
-    | (apply WritableAt.le (by assumption); decide)
-    | (apply WritableAt.sub (by assumption); decide)))
+    | with_reducible assumption
+    | (with_reducible refine WritableAt.le (n := ?n) ?h ?hn
+       case h => with_reducible assumption
+       case hn => decide)
+    | (with_reducible refine WritableAt.sub (n := ?n) ?h ?hk
+       case h => with_reducible assumption
+       case hk => decide)))
 
 /-- `Evolved base chain`. -/
 macro "evolved" : tactic => `(tactic| (
@@ -163,6 +169,7 @@ attribute [vexec] beq_iff_eq reduceCtorEq Bool.or_eq_true Bool.and_eq_true or_fa
   not_false_eq_true not_true_eq_false decide_eq_true_eq decide_not Bool.not_eq_true' bne_iff_ne ne_eq
   Bool.not_eq_eq_eq_not Bool.not_true Bool.not_false Bool.and_true Bool.true_and Bool.or_false Bool.false_or
   dite_eq_ite
+attribute [vexec] UInt64.add_zero
 attribute [vexec] Nat.reducePow Nat.reduceMod Nat.reduceSub read_wr_lowByte read_wr_other read128_wr_other bytes_wr_other write_eq_wr
 attribute [vexec high] read_wr_same
 
