@@ -12,19 +12,16 @@ namespace ValidateFeePayer.Proof
 
 open X86 Memory Lean Elab Tactic Meta
 
-def WritableAt (m : Memory) (a : UInt64) (n : Nat) : Prop :=
-  ∀ i < n, ∃ b, m.byte .write (a + i.toUInt64) = .ok b
-
-theorem WritableAt.wr {m : Memory} {a b v : UInt64} {n : Nat} {w : Width} (h : WritableAt m a n) :
-    WritableAt (wr m w b v) a n :=
+theorem _root_.X86.Memory.Writable.wr {m : Memory} {a b v : UInt64} {n : Nat} {w : Width} (h : Writable m a n) :
+    Writable (wr m w b v) a n :=
   fun i hi => go_stores_ok (h i hi)
 
-theorem WritableAt.le {m : Memory} {a : UInt64} {n n' : Nat} (h : WritableAt m a n) (hn : n' ≤ n) :
-    WritableAt m a n' :=
+theorem _root_.X86.Memory.Writable.le {m : Memory} {a : UInt64} {n n' : Nat} (h : Writable m a n) (hn : n' ≤ n) :
+    Writable m a n' :=
   fun i hi => h i (by omega)
 
-theorem WritableAt.sub {m : Memory} {a k : UInt64} {n n' : Nat} (h : WritableAt m a n)
-    (hk : k.toNat + n' ≤ n) : WritableAt m (a + k) n' := by
+theorem _root_.X86.Memory.Writable.sub {m : Memory} {a k : UInt64} {n n' : Nat} (h : Writable m a n)
+    (hk : k.toNat + n' ≤ n) : Writable m (a + k) n' := by
   intro i hi
   obtain ⟨b, hb⟩ := h (k.toNat + i) (by omega)
   refine ⟨b, ?_⟩
@@ -37,12 +34,7 @@ theorem WritableAt.sub {m : Memory} {a k : UInt64} {n n' : Nat} (h : WritableAt 
     omega
   rw [e]; exact hb
 
-theorem WritableAt.of_writable {m : Memory} {a : UInt64} {n : Nat} (h : m.Writable a n) :
-    WritableAt m a n := by
-  obtain ⟨bs, hbs⟩ := h
-  exact fun i hi => byte_of_bytes hbs i hi
-
-theorem write_eq_wr {m : Memory} {w : Width} {a v : UInt64} (h : WritableAt m a w.size) :
+theorem write_eq_wr {m : Memory} {w : Width} {a v : UInt64} (h : Writable m a w.size) :
     m.write w a v = .ok (wr m w a v) :=
   writeBytes_ok (by rw [length_littleEndianBytes_size]; exact h)
 
@@ -66,11 +58,11 @@ theorem bytes_wr_other {m : Memory} {w : Width} {a b v : UInt64} {n : Nat} (h : 
     (wr m w a v).bytes .read b n = m.bytes .read b n :=
   bytes_congr fun i hi => byte_wr_other fun j hj => h j hj i hi
 
-theorem read_wr_same {m : Memory} {w : Width} {a v : UInt64} (h : WritableAt m a w.size) :
+theorem read_wr_same {m : Memory} {w : Width} {a v : UInt64} (h : Writable m a w.size) :
     (wr m w a v).read w a = .ok (v &&& w.mask) :=
   read_write_same (write_eq_wr h)
 
-theorem read_wr_lowByte {m : Memory} {a v : UInt64} (h : WritableAt m a Width.bytes4.size) :
+theorem read_wr_lowByte {m : Memory} {a v : UInt64} (h : Writable m a Width.bytes4.size) :
     (wr m .bytes4 a v).read .bytes1 a = .ok (v &&& 0xff) :=
   read_low_byte (write_eq_wr h)
 
@@ -80,7 +72,7 @@ def Evolved (m m' : Memory) : Prop := ∃ ws, Stored m m' ws
 theorem Evolved.refl (m : Memory) : Evolved m m := ⟨[], Stored.refl m []⟩
 
 theorem Evolved.wr {m m' : Memory} {w : Width} {a v : UInt64} (h : Evolved m m')
-    (hw : WritableAt m' a w.size) : Evolved m (wr m' w a v) := by
+    (hw : Writable m' a w.size) : Evolved m (wr m' w a v) := by
   obtain ⟨ws, h⟩ := h
   exact ⟨_, h.write (write_eq_wr hw)⟩
 
@@ -100,18 +92,18 @@ theorem DataAt.evolved {lb : UInt64} {m m' : Memory} (hd : DataAt lb m) (h : Evo
 
 /-! ## Dischargers -/
 
-/-- `WritableAt` of a `wr` chain, from a `WritableAt` hypothesis about its
+/-- `Writable` of a `wr` chain, from a `Writable` hypothesis about its
 base, possibly for a larger range. -/
 macro "writable" : tactic => `(tactic| (
-  repeat' apply WritableAt.wr
+  repeat' apply X86.Memory.Writable.wr
   -- Reducible unification only: matching `S + 80` against `met + ?k` at
   -- default transparency unfolds `UInt64` addition.
   first
     | with_reducible assumption
-    | (with_reducible refine WritableAt.le (n := ?n) ?h ?hn
+    | (with_reducible refine X86.Memory.Writable.le (n := ?n) ?h ?hn
        case h => with_reducible assumption
        case hn => decide)
-    | (with_reducible refine WritableAt.sub (n := ?n) ?h ?hk
+    | (with_reducible refine X86.Memory.Writable.sub (n := ?n) ?h ?hk
        case h => with_reducible assumption
        case hk => decide)))
 

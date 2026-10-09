@@ -44,12 +44,12 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   codeExits : CodeExits lb c.exits
   code : CodeAt lb m
   data : DataAt lb m
-  stackFree : WritableAt m S 96
-  resultWritable : WritableAt m res 12
-  accountNotFoundWritable : WritableAt m (met + 32) 8
-  insufficientFundsWritable : WritableAt m (met + 80) 8
-  invalidAccountForFeeWritable : WritableAt m (met + 88) 8
-  lamportsWritable : WritableAt m (acct + 8) 8
+  stackFree : Memory.Writable m S 96
+  resultWritable : Memory.Writable m res 12
+  accountNotFoundWritable : Memory.Writable m (met + 32) 8
+  insufficientFundsWritable : Memory.Writable m (met + 80) 8
+  invalidAccountForFeeWritable : Memory.Writable m (met + 88) 8
+  lamportsWritable : Memory.Writable m (acct + 8) 8
   readReturn : m.read .bytes8 (S + 96) = .ok ra
   readRelax : m.read .bytes1 (S + 104) = .ok (if relax then 1 else 0)
   readArc : m.read .bytes8 acct = .ok arc
@@ -168,16 +168,16 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       stackFree := ?_, resultWritable := ?_, lamportsWritable := ?_, accountNotFoundWritable := ?_,
       insufficientFundsWritable := ?_, invalidAccountForFeeWritable := ?_,
       readReturn := ?_, readRelax := ?_ }
-  · have := WritableAt.of_writable pre.stackFree
+  · have := pre.stackFree
     simpa [stackUse] using this
-  · simpa [Image.Layout.result.size] using WritableAt.of_writable pre.resultWritable
+  · simpa [Image.Layout.result.size] using pre.resultWritable
   · simpa [off_eq, Image.Layout.transaction_error_metrics.account_not_found] using
-      WritableAt.of_writable pre.accountNotFoundWritable
+      pre.accountNotFoundWritable
   · simpa [off_eq, Image.Layout.transaction_error_metrics.insufficient_funds] using
-      WritableAt.of_writable pre.insufficientFundsWritable
+      pre.insufficientFundsWritable
   · simpa [off_eq, Image.Layout.transaction_error_metrics.invalid_account_for_fee] using
-      WritableAt.of_writable pre.invalidAccountForFeeWritable
-  · simpa [off_eq, Image.Layout.account_shared_data.lamports] using WritableAt.of_writable pre.lamportsWritable
+      pre.invalidAccountForFeeWritable
+  · simpa [off_eq, Image.Layout.account_shared_data.lamports] using pre.lamportsWritable
   · rw [hsp]; exact pre.returnAddress
   · have := pre.relaxArgument
     simp only [BoolEncodes, Memory.Holds] at this

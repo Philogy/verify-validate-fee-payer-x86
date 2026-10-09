@@ -1,4 +1,5 @@
 import ValidateFeePayer.Contract
+import X86.MemoryFacts
 
 /-!
 Runs of the machine on concrete inputs, checked at build time. Each case
@@ -193,9 +194,8 @@ deriving instance DecidableEq for Except
 
 theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write a n).toBool = true) :
     m.Writable a n := by
-  unfold Memory.Writable
   cases hb : m.bytes .write a n with
-  | ok bs => exact ⟨bs, rfl⟩
+  | ok bs => exact fun i hi => Memory.ok_of_mapM_ok hb i (List.mem_range.2 hi)
   | error e => simp [hb, Except.toBool] at h
 
 def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }

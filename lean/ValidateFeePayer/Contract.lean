@@ -16,13 +16,6 @@ namespace ValidateFeePayer
 
 open X86 Image.Layout
 
-def _root_.X86.Memory.Holds (m : Memory) (w : Width) (a v : UInt64) : Prop := m.read w a = .ok v
-
-def _root_.X86.Memory.HoldsBytes (m : Memory) (a : UInt64) (bs : List UInt8) : Prop :=
-  m.bytes .read a bs.length = .ok bs
-
-def _root_.X86.Memory.Writable (m : Memory) (a : UInt64) (n : Nat) : Prop := ∃ bs, m.bytes .write a n = .ok bs
-
 def off (a : UInt64) (offset : Nat) : UInt64 := a + offset.toUInt64
 
 /-- The three allocations behind `&mut AccountSharedData`: the struct, the

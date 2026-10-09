@@ -110,6 +110,13 @@ def read128 (m : Memory) (address : UInt64) : Except PageFault (BitVec 128) := d
 def write128 (m : Memory) (address : UInt64) (v : BitVec 128) : Except PageFault Memory :=
   m.writeBytes address (littleEndianBytes 8 (lowHalf v) ++ littleEndianBytes 8 (highHalf v))
 
+def Holds (m : Memory) (w : Width) (a v : UInt64) : Prop := m.read w a = .ok v
+
+def HoldsBytes (m : Memory) (a : UInt64) (bs : List UInt8) : Prop := m.bytes .read a bs.length = .ok bs
+
+def Writable (m : Memory) (a : UInt64) (n : Nat) : Prop :=
+  ∀ i < n, ∃ b, m.byte .write (a + i.toUInt64) = .ok b
+
 end Memory
 
 end X86
