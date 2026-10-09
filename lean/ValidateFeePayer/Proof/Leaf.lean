@@ -13,7 +13,7 @@ open X86 Lean Elab Tactic Meta
 
 theorem saturating_eq (x : UInt64) :
     (if ¬x = 18446744073709551615 then x + 1 else 18446744073709551615) = Spec.saturatingIncrement x := by
-  unfold Spec.saturatingIncrement Spec.UInt64.MAX; split <;> simp_all
+  unfold Spec.saturatingIncrement; split <;> simp_all
 
 theorem minimumBalance_simd0194 {rent : Spec.Rent} (h : rent.exemptionThreshold = Spec.simd0194ExemptionThreshold)
     (d : UInt64) : Spec.minimumBalance rent d =

@@ -68,13 +68,8 @@ instance : Alternative (Except Panic) where
     | .ok x, _ => .ok x
     | .error _, y => y ()
 
-def UInt64.MIN : UInt64 := 0
-def UInt64.MAX : UInt64 := 0xffffffffffffffff
-theorem UInt64.MIN_is_min : ∀ (x : UInt64), UInt64.MIN ≤ x := by grind [MIN]
-theorem UInt64.MAX_is_max : ∀ (x : UInt64), x ≤ UInt64.MAX := by grind [MAX]
-
 /-- `+= 1` on a `Saturating<usize>`. -/
-def saturatingIncrement (c : UInt64) : UInt64 := if c = UInt64.MAX then c else c + 1
+def saturatingIncrement (c : UInt64) : UInt64 := if c = 0xffffffffffffffff then c else c + 1
 
 /-! ## `solana-rent` 4.5.0 -/
 
@@ -91,10 +86,10 @@ def u64ToF64 (v : UInt64) : UInt64 := (F64.ofScaled v.toNat 0 false).1
 /-- Rust's `f64 as u64`: truncated toward zero and saturating, with NaN as 0. -/
 def f64ToU64 (x : UInt64) : UInt64 :=
   if F64.isNaN x then 0
-  else if F64.isInfinite x then (if F64.sign x then UInt64.MIN else UInt64.MAX)
+  else if F64.isInfinite x then (if F64.sign x then 0 else 0xffffffffffffffff)
   else
     let t := (F64.scaled x).toNat / 2 ^ 1074
-    if t ≥ UInt64.size then UInt64.MAX else t.toUInt64
+    if t ≥ UInt64.size then 0xffffffffffffffff else t.toUInt64
 
 /-- `Rent::minimum_balance`: `try_minimum_balance` and its `expect`.
 
@@ -104,7 +99,9 @@ folded it into `lamports_per_byte` (3480 × 2.0 → 6960 × 1.0; Agave
 `runtime/src/rent_collector.rs:49`, `bank.rs:6337`, `bank.rs:6412`). Per SIMD-0607 it
 is 1.0 on mainnet-beta since epoch 943 and was 2.0 before, so in production
 only the integer paths run; the `f64` path needs a non-standard genesis, the
-`[0; 8]` snapshot default, or a malformed sysvar. -/
+`[0; 8]` snapshot default, or a malformed sysvar. That path is written with
+`X86.F64`, the machine's own float model, so the `Tests.lean` cases that take
+it check the code's control flow, not the float arithmetic. -/
 def minimumBalance (rent : Rent) (dataLength : UInt64) : Except Panic UInt64 := do
   guard (dataLength ≤ maxPermittedDataLength)
   let bytes := accountStorageOverhead + dataLength
