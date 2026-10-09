@@ -52,7 +52,7 @@ struct vector {
   char flags[7];  // initial flags, in FLAG_LETTERS order, as 'C' or '-'
   char undefined[7];
   uint32_t mxcsr;
-  uint8_t memory[PAGE_COUNT][PAGE_SIZE];
+  uint8_t memory[PAGE_COUNT][PAGE_BYTES];
 };
 
 struct machine {
@@ -61,7 +61,7 @@ struct machine {
   uint64_t rflags;
   unsigned __int128 xmm[16];
   uint32_t mxcsr;
-  uint8_t memory[PAGE_COUNT][PAGE_SIZE];
+  uint8_t memory[PAGE_COUNT][PAGE_BYTES];
 };
 
 static const char *gpr_names[16] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
@@ -92,15 +92,15 @@ static unsigned __int128 parse_u128(const char *s) {
   return v;
 }
 
-static uint8_t *byte_at(uint8_t memory[PAGE_COUNT][PAGE_SIZE], uint64_t address) {
+static uint8_t *byte_at(uint8_t memory[PAGE_COUNT][PAGE_BYTES], uint64_t address) {
   for (size_t i = 0; i < PAGE_COUNT; i++)
-    if (address - pages[i].base < PAGE_SIZE) return &memory[i][address - pages[i].base];
+    if (address - pages[i].base < PAGE_BYTES) return &memory[i][address - pages[i].base];
   return NULL;
 }
 
-static void initial_memory(uint8_t memory[PAGE_COUNT][PAGE_SIZE]) {
+static void initial_memory(uint8_t memory[PAGE_COUNT][PAGE_BYTES]) {
   for (size_t i = 0; i < PAGE_COUNT; i++)
-    for (uint64_t off = 0; off < PAGE_SIZE; off++)
+    for (uint64_t off = 0; off < PAGE_BYTES; off++)
       memory[i][off] = pages[i].base == CODE_PAGE ? CODE_FILL : fill_byte(pages[i].base + off);
 }
 
@@ -176,9 +176,9 @@ static int parse_vector(char *line, struct vector *v, int lineno) {
     fprintf(stderr, "line %d: bad field '%s'\n", lineno, tok);
     exit(2);
   }
-  if (v->at + v->code_len > PAGE_SIZE) {
+  if (v->at + v->code_len > PAGE_BYTES) {
     // The instruction runs off the code page; only its first bytes are mapped.
-    memcpy(&v->memory[0][v->at], v->code, PAGE_SIZE - v->at);
+    memcpy(&v->memory[0][v->at], v->code, PAGE_BYTES - v->at);
   } else {
     memcpy(&v->memory[0][v->at], v->code, v->code_len);
   }
@@ -188,11 +188,11 @@ static int parse_vector(char *line, struct vector *v, int lineno) {
 static void child(const struct vector *v) {
   if (ptrace(PTRACE_TRACEME, 0, 0, 0)) die("PTRACE_TRACEME");
   for (size_t i = 0; i < PAGE_COUNT; i++) {
-    void *p = mmap((void *)pages[i].base, PAGE_SIZE, PROT_READ | PROT_WRITE,
+    void *p = mmap((void *)pages[i].base, PAGE_BYTES, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
     if (p != (void *)pages[i].base) die("mmap");
-    memcpy(p, v->memory[i], PAGE_SIZE);
-    if (mprotect(p, PAGE_SIZE, pages[i].prot)) die("mprotect");
+    memcpy(p, v->memory[i], PAGE_BYTES);
+    if (mprotect(p, PAGE_BYTES, pages[i].prot)) die("mprotect");
   }
   raise(SIGSTOP);
   _exit(3);  // not reached: the parent kills us after one step
@@ -215,7 +215,7 @@ static void read_machine(pid_t pid, struct machine *m) {
   int fd = open(path, O_RDONLY);
   if (fd < 0) die("open /proc/pid/mem");
   for (size_t i = 0; i < PAGE_COUNT; i++)
-    if (pread(fd, m->memory[i], PAGE_SIZE, (off_t)pages[i].base) != PAGE_SIZE) die("pread");
+    if (pread(fd, m->memory[i], PAGE_BYTES, (off_t)pages[i].base) != PAGE_BYTES) die("pread");
   close(fd);
 }
 
@@ -274,13 +274,13 @@ static void print_diff(const struct vector *v, const struct machine *before, con
     }
   if (after->mxcsr != before->mxcsr) printf(" mxcsr=0x%x", after->mxcsr);
   for (size_t p = 0; p < PAGE_COUNT; p++)
-    for (int off = 0; off < PAGE_SIZE;) {
+    for (int off = 0; off < PAGE_BYTES;) {
       if (after->memory[p][off] == before->memory[p][off]) {
         off++;
         continue;
       }
       printf(" mem=0x%llx:", (unsigned long long)(pages[p].base + off));
-      while (off < PAGE_SIZE && after->memory[p][off] != before->memory[p][off])
+      while (off < PAGE_BYTES && after->memory[p][off] != before->memory[p][off])
         printf("%02x", after->memory[p][off++]);
     }
 }

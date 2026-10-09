@@ -1,7 +1,7 @@
 // The machine every test vector starts from, unless the vector overrides it.
 // lean/X86Test/Harness.lean and gen.py define the same; keep them in sync.
 
-#define PAGE_SIZE 4096
+#define PAGE_BYTES 4096
 #define CODE_PAGE 0x40000000ull       // r-x; the page after it is unmapped
 #define DATA_PAGE 0x50000000ull       // rw-
 #define READ_ONLY_PAGE 0x50001000ull  // r--; the page after it is unmapped
