@@ -135,7 +135,7 @@ macro "writable" : tactic => `(tactic| (
 
 /-- `Evolved base chain`. -/
 macro "evolved" : tactic => `(tactic| (
-  repeat' (first | exact Evolved.refl _ | (apply Evolved.wr; rotate_left; writable))))
+  repeat' (first | with_reducible exact Evolved.refl _ | (apply Evolved.wr; rotate_left; writable))))
 
 /-- Two objects as `Nat` intervals do not overlap. Kept behind a definition
 so that `omega` does not see it: with many of these in context it would
@@ -307,7 +307,7 @@ attribute [vexec] ite_self
 end
 
 macro "walk_disch" : tactic => `(tactic| first
-  | assumption
+  | with_reducible assumption
   | (apply DataAt.evolved ‹DataAt _ _›; evolved)
   | writable
   | apart)
@@ -321,7 +321,9 @@ macro_rules
     apply Finishes.walk
     case hip => rfl
     case hx => assumption
-    case hc => (try dsimp only); first | assumption | (apply CodeAt.evolved ‹CodeAt _ _›; evolved)
+    -- Reducible only: unifying `m` with a `wr` chain at default transparency
+    -- unfolds the stores into `if`s on symbolic addresses.
+    case hc => (try dsimp only); first | with_reducible assumption | (apply CodeAt.evolved ‹CodeAt _ _›; evolved)
     -- Look the instruction up first: `simp` rewrites inside the continuation
     -- before the `DecodeThen` around it, and there `execute` of an unknown
     -- instruction would unfold into every case.
