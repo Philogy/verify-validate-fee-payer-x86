@@ -38,8 +38,8 @@ theorem codeByte_mapped {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b
 theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeExits c.loadBase c.exits where
   notReturn x b hx e := by
-    obtain ⟨mp, hmp, hc⟩ := codeByte_mapped pre.called.loaded.validBase hx
-    refine pre.called.returnOutsideImage mp hmp ?_
+    obtain ⟨mp, hmp, hc⟩ := codeByte_mapped pre.entered.validBase hx
+    refine pre.entered.returnOutsideImage mp hmp ?_
     have : c.returnAddress = c.exits.returnAddress := rfl
     rw [this, ← e]; exact hc
   notPanic x b hx e := by
@@ -54,12 +54,12 @@ theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c 
 
 theorem codeAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest, -⟩ := pre.called.loaded.image
-  rw [hrest]; exact codeAt_image pre.called.loaded.validBase rest
+  obtain ⟨rest, hrest, -⟩ := pre.entered.image
+  rw [hrest]; exact codeAt_image pre.entered.validBase rest.mappings
 
 theorem dataAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     DataAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest, -⟩ := pre.called.loaded.image
-  rw [hrest]; exact dataAt_image pre.called.loaded.validBase rest
+  obtain ⟨rest, hrest, -⟩ := pre.entered.image
+  rw [hrest]; exact dataAt_image pre.entered.validBase rest.mappings
 
 end ValidateFeePayer.Proof

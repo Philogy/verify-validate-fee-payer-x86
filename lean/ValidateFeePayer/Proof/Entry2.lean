@@ -47,7 +47,7 @@ theorem entry_state {c : Call} {account metrics rent relax s} (pre : Pre c accou
          s.register .r14, s.register .r15]
       .undefined s.vectorRegisters s.floatControl s.memory := by
   obtain ⟨ip, regs, flags, vr, fc, m⟩ := s
-  have hip := pre.called.atEntry
+  have hip := pre.entered.atEntry
   have hflags := pre.abi.flags
   have h1 := pre.metricsRegister
   have h6 := pre.accountRegister

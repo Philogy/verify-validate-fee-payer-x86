@@ -45,7 +45,8 @@ def Case.exits (c : Case) : Exits := ValidateFeePayer.exits c.loadBase c.returnA
 
 def stackTop : UInt64 := 0x7ffffff00000
 
-def Case.state (c : Case) : State :=
+/-- The caller's state right after its `call`: the image is not mapped yet. -/
+def Case.caller (c : Case) : State :=
   -- SysV: 16-byte aligned before the `call` pushed the return address.
   let sp := stackTop - 72
   let stack : Mapping :=
@@ -79,14 +80,16 @@ def Case.state (c : Case) : State :=
     |>.set Register.r8.index rentPtr
     |>.set Register.r9.index c.fee
     |>.set Register.stackPointer.index sp
-  { instructionPointer := entryAddress c.loadBase, registers, flags := .undefined,
+  { instructionPointer := 0, registers, flags := .undefined,
     vectorRegisters := Vector.replicate 16 0, floatControl := defaultFloatControl,
-    memory := ⟨imageMappings c.loadBase ++ stack :: objects⟩ }
+    memory := ⟨stack :: objects⟩ }
+
+def Case.state (c : Case) : State := enter c.loadBase c.caller
 
 def Case.account (c : Case) : Spec.Account :=
   { lamports := c.lamports, owner := Vector.ofFn fun i => c.owner.getD i 0, data := c.data }
 
-def Case.run (c : Case) : Outcome := X86.run c.exits fuel c.state
+def Case.run (c : Case) : Outcome := invoke c.loadBase c.returnAddress c.caller
 
 def Case.steps (c : Case) : Nat := go fuel c.state 0
 where
@@ -195,7 +198,7 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
 #guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (Image.panic_msg.at 0x555555554000)) with
   | .error (.unmapped _ _) => true | _ => false
 
-/-! The theorem's hypotheses are satisfiable: they hold of a concrete entry state. -/
+/-! The theorem's hypotheses are satisfiable: they hold of a concrete caller's state. -/
 deriving instance DecidableEq for Except
 
 theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write a n).toBool = true) :
@@ -209,23 +212,22 @@ def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }
 theorem writable_of_mem {m : Memory} {bs : List Block} (h : (bs.all fun b => (m.bytes .write b.base b.size).toBool) = true) :
     ∀ b ∈ bs, b.Writable m := fun b hb => writable_of_ok (List.all_eq_true.1 h b hb)
 
-example : Called example1.loadBase example1.returnAddress example1.state where
-  loaded := ⟨by decide +kernel, _, rfl, by unfold Block.Apart Block.endAddress; decide +kernel⟩
-  atEntry := by decide +kernel
+example : Called example1.loadBase example1.returnAddress example1.caller where
+  validBase := by decide +kernel
+  spanFree := by unfold SpanFree Block.Apart Block.endAddress; decide +kernel
+  abi := {
+    returnAddress := by unfold Memory.Holds; decide +kernel
+    stackAligned := by decide +kernel
+    flags := by decide +kernel }
   returnOutsideImage := by decide +kernel
   returnNotPanic := by decide +kernel
 
-example : SysV.Entry example1.state example1.returnAddress where
-  returnAddress := by unfold Memory.Holds; decide +kernel
-  stackAligned := by decide +kernel
-  flags := by decide +kernel
-
-example : Footprint example1.loadBase example1.state heap example1.account.data.length where
+example : Footprint example1.loadBase example1.caller heap example1.account.data.length where
   separate := by unfold Block.Separate Block.Apart Block.endAddress; decide +kernel
   noWrap := by unfold Block.NoWrap Block.endAddress; decide +kernel
   writable := writable_of_mem (by decide +kernel)
 
-example : Encoded example1.state heap example1.account example1.metrics example1.rent payerIndex example1.fee false where
+example : Encoded example1.caller heap example1.account example1.metrics example1.rent payerIndex example1.fee false where
   account := by unfold Spec.Account.Encodes PtrAt Memory.Holds Memory.HoldsBytes; decide +kernel
   payerIndex := by decide +kernel
   rent := by unfold Spec.Rent.Encodes Memory.Holds; decide +kernel

@@ -3,33 +3,48 @@ import ValidateFeePayer.Loader
 import ValidateFeePayer.Spec
 
 /-!
-The contract of the machine code, in three layers:
+The contract of the machine code. `invoke` is the run: from the caller's
+state, map the image in, jump to the entry and run until the code returns or
+panics. What it is run on comes in three layers:
 
-1. `Called`: the image is loaded (`Loaded`) and the state is a call into it.
+1. `Called`: the caller's state is a SysV call whose return address is
+   outside the image, and the image's span is free for it.
 2. `Footprint`: the memory the code touches is mapped as it needs, no two
    objects overlap and none wraps around; `Frame` says it leaves the rest alone.
 3. `Encoded`: the bytes at those places are the Rust values `Spec` takes;
    `Post` says they are the values it gives back.
 
-Where the arguments are comes from the ABI: `Abi.SysV` for what every call
-shares, `Abi.ValidateFeePayerEntry` for this function's observed layout.
+`Behaves` is what the run must do with them. Names from `X86` (the machine)
+and `Abi` (calling conventions, memory blocks) are written qualified; the
+rest is this function's.
 -/
 
 namespace ValidateFeePayer
 
-open X86 Abi Image.Layout
+open Image.Layout
 
 def off (a : UInt64) (offset : Nat) : UInt64 := a + offset.toUInt64
 
-/-- The argument locations at entry state `s`. -/
-abbrev args (s : State) : ValidateFeePayerEntry := .of s
+/-- The argument locations of the call made in `s`. -/
+abbrev args (s : X86.State) : Abi.ValidateFeePayerEntry := .of s
 
-/-! ## Layer 1: a call into the loaded image -/
+/-- The control-flow graph is acyclic, so each of the 239 instructions runs
+at most once; one more step reaches the exit. -/
+def fuel : Nat := 240
 
-/-- `s` calls the image loaded at `loadBase`, to return to `returnAddress`. -/
-structure Called (loadBase returnAddress : UInt64) (s : State) : Prop where
-  loaded : Loaded loadBase s.memory
-  atEntry : s.instructionPointer = entryAddress loadBase
+/-! ## Layer 1: a call into the image -/
+
+/-- Call the image loaded at `loadBase` from the caller's state `s`, whose
+stack holds the return address `returnAddress`, and run it to the end. -/
+def invoke (loadBase returnAddress : UInt64) (s : X86.State) : X86.Outcome :=
+  X86.run (exits loadBase returnAddress) fuel (enter loadBase s)
+
+/-- `s` is the caller's state right after its `call` pushed `returnAddress`,
+with the image not yet mapped in. -/
+structure Called (loadBase returnAddress : UInt64) (s : X86.State) : Prop where
+  validBase : ValidLoadBase loadBase
+  spanFree : SpanFree loadBase s.memory
+  abi : Abi.SysV.Entry s returnAddress
   -- Otherwise the code could "return" by jumping into itself.
   returnOutsideImage : ∀ mp ∈ imageMappings loadBase, ¬ mp.Contains returnAddress
   -- Reaching the panic entry would count as a return; a caller's return
@@ -51,7 +66,7 @@ structure AccountHeap where
   data : UInt64
 
 /-- Every object the code touches, and the image's reserved span. -/
-def objects (loadBase : UInt64) (s : State) (heap : AccountHeap) (dataLength : Nat) : List Block :=
+def objects (loadBase : UInt64) (s : X86.State) (heap : AccountHeap) (dataLength : Nat) : List Abi.Block :=
   let a := args s
   [⟨a.result, result.size⟩,
    ⟨a.account, account_shared_data.size⟩,
@@ -65,7 +80,7 @@ def objects (loadBase : UInt64) (s : State) (heap : AccountHeap) (dataLength : N
 
 /-- The bytes the code may change: the result, the account's lamports, the
 three counters it may increment, and its frame. -/
-def writes (s : State) : List Block :=
+def writes (s : X86.State) : List Abi.Block :=
   let a := args s
   [⟨a.result, result.size⟩,
    ⟨off a.account account_shared_data.lamports, 8⟩,
@@ -74,15 +89,17 @@ def writes (s : State) : List Block :=
    ⟨off a.errorMetrics transaction_error_metrics.insufficient_funds, 8⟩,
    ⟨s.stackPointer - stackUse.toUInt64, stackUse⟩]
 
-structure Footprint (loadBase : UInt64) (s : State) (heap : AccountHeap) (dataLength : Nat) : Prop where
+structure Footprint (loadBase : UInt64) (s : X86.State) (heap : AccountHeap) (dataLength : Nat) : Prop where
   -- `&mut` arguments do not alias in Rust; this is that, plus no overlap
   -- with the stack or the binary.
-  separate : Block.Separate (objects loadBase s heap dataLength)
+  separate : Abi.Block.Separate (objects loadBase s heap dataLength)
   noWrap : ∀ b ∈ objects loadBase s heap dataLength, b.NoWrap
   writable : ∀ b ∈ writes s, b.Writable s.memory
 
-/-- `s'` differs from the entry state `s` only in bytes the code may write. -/
-def Frame (s s' : State) : Prop := UnchangedOutside (writes s) s.memory s'.memory
+/-- `s'` differs from the caller's state `s` with the image loaded only in
+bytes the code may write. -/
+def Frame (loadBase : UInt64) (s s' : X86.State) : Prop :=
+  Abi.UnchangedOutside (writes s) (load loadBase s.memory) s'.memory
 
 /-! ## Layer 3: the Rust values
 
@@ -97,21 +114,21 @@ structure AccountAt where
   arcInner : UInt64
   data : UInt64
 
-def accountAt (s : State) (heap : AccountHeap) : AccountAt := ⟨(args s).account, heap.arcInner, heap.data⟩
+def accountAt (s : X86.State) (heap : AccountHeap) : AccountAt := ⟨(args s).account, heap.arcInner, heap.data⟩
 
-def Spec.Account.Encodes (m : Memory) (p : AccountAt) (x : Spec.Account) : Prop :=
-  PtrAt m p.account account_shared_data.data_arc p.arcInner ∧
+def Spec.Account.Encodes (m : X86.Memory) (p : AccountAt) (x : Spec.Account) : Prop :=
+  Abi.PtrAt m p.account account_shared_data.data_arc p.arcInner ∧
   m.Holds .bits64 (off p.account account_shared_data.lamports) x.lamports ∧
   m.HoldsBytes (off p.account account_shared_data.owner) x.owner.toList ∧
-  PtrAt m p.arcInner account_shared_data.arc_inner.data_ptr p.data ∧
+  Abi.PtrAt m p.arcInner account_shared_data.arc_inner.data_ptr p.data ∧
   m.Holds .bits64 (off p.arcInner account_shared_data.arc_inner.data_len) x.data.length.toUInt64 ∧
   m.HoldsBytes p.data x.data
 
-def Spec.Rent.Encodes (m : Memory) (p : UInt64) (x : Spec.Rent) : Prop :=
+def Spec.Rent.Encodes (m : X86.Memory) (p : UInt64) (x : Spec.Rent) : Prop :=
   m.Holds .bits64 (off p rent.lamports_per_byte) x.lamportsPerByte ∧
   m.Holds .bits64 (off p rent.exemption_threshold) x.exemptionThreshold
 
-def Spec.ErrorMetrics.Encodes (m : Memory) (p : UInt64) (x : Spec.ErrorMetrics) : Prop :=
+def Spec.ErrorMetrics.Encodes (m : X86.Memory) (p : UInt64) (x : Spec.ErrorMetrics) : Prop :=
   m.Holds .bits64 (off p transaction_error_metrics.account_not_found) x.accountNotFound ∧
   m.Holds .bits64 (off p transaction_error_metrics.invalid_account_for_fee) x.invalidAccountForFee ∧
   m.Holds .bits64 (off p transaction_error_metrics.insufficient_funds) x.insufficientFunds
@@ -127,19 +144,19 @@ def resultTag : Except Spec.TransactionError Unit → Nat
 for `InsufficientFundsForRent`, its `u8` account index are defined: Rust
 promises nothing about the other bytes (padding and other variants'
 payloads), and the code does not write them. -/
-def ResultEncodes (m : Memory) (p : UInt64) (x : Except Spec.TransactionError Unit) : Prop :=
+def ResultEncodes (m : X86.Memory) (p : UInt64) (x : Except Spec.TransactionError Unit) : Prop :=
   m.Holds .bits32 p (resultTag x).toUInt64 ∧
   match x with
   | .error (.insufficientFundsForRent i) => m.Holds .bits8 (off p result.account_index) i.toUInt64
   | _ => True
 
 /-- A `bool` must be 0 or 1 (Rust's validity invariant); the code relies on it. -/
-def BoolEncodes (m : Memory) (p : UInt64) (x : Bool) : Prop :=
+def BoolEncodes (m : X86.Memory) (p : UInt64) (x : Bool) : Prop :=
   m.Holds .bits8 p (if x then 1 else 0)
 
 /-- The entry state `s` holds the arguments `account`, `payerIndex`, `rent`,
 `fee`, `relax` and `metrics` where the ABI puts them. -/
-structure Encoded (s : State) (heap : AccountHeap) (account : Spec.Account) (metrics : Spec.ErrorMetrics)
+structure Encoded (s : X86.State) (heap : AccountHeap) (account : Spec.Account) (metrics : Spec.ErrorMetrics)
     (rent : Spec.Rent) (payerIndex : UInt16) (fee : UInt64) (relax : Bool) : Prop where
   account : account.Encodes s.memory (accountAt s heap)
   -- Only the low 16 bits are the `u16`; the rest is whatever the caller left.
@@ -157,20 +174,26 @@ def IntegerThreshold (rent : Spec.Rent) : Prop :=
   rent.exemptionThreshold = Spec.simd0194ExemptionThreshold ∨
     rent.exemptionThreshold = Spec.currentExemptionThreshold
 
-/-- The state `s'` after a normal return from entry state `s`, for which the
-spec gave `result` and left `metrics`. After an error the account is only
+/-- The state `s'` after a normal return from the call made in `s`, for which
+the spec gave `result` and left `metrics`. After an error the account is only
 bound by the frame: the code may have written the lamports already. -/
-structure Post (s : State) (heap : AccountHeap) (metrics : Spec.ErrorMetrics)
-    (result : Except Spec.TransactionError Spec.Account) (s' : State) : Prop where
-  returned : SysV.Returned s s'
-  returnsResultPointer : SysV.ReturnsIndirectly s s'
-  frame : Frame s s'
+structure Post (loadBase : UInt64) (s : X86.State) (heap : AccountHeap) (metrics : Spec.ErrorMetrics)
+    (result : Except Spec.TransactionError Spec.Account) (s' : X86.State) : Prop where
+  returned : Abi.SysV.Returned s s'
+  returnsResultPointer : Abi.SysV.ReturnsIndirectly s s'
+  frame : Frame loadBase s s'
   resultEncoded : ResultEncodes s'.memory (args s).result (result.map fun _ => ())
   accountEncoded : ∀ account, result = .ok account → account.Encodes s'.memory (accountAt s heap)
   metricsEncoded : metrics.Encodes s'.memory (args s).errorMetrics
 
-/-- The control-flow graph is acyclic, so each of the 239 instructions runs
-at most once; one more step reaches the exit. -/
-def fuel : Nat := 240
+/-- What the run from the call made in `s` must do, given `spec`, the Rust
+function's answer on the arguments `s` encodes: panic, if the spec panics,
+or else return with what the spec returns. Any other outcome (a fault, a bad
+jump, still running) does not behave. -/
+def Behaves (loadBase : UInt64) (s : X86.State) (heap : AccountHeap)
+    (spec : Except Spec.Error Spec.Account × Spec.ErrorMetrics) : X86.Outcome → Prop
+  | .panicked s' => (∃ p, spec.1 = .error (.panic p)) ∧ Frame loadBase s s'
+  | .returned s' => ∃ result, spec.1 = result.mapError .tx ∧ Post loadBase s heap spec.2 result s'
+  | _ => False
 
 end ValidateFeePayer

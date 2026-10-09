@@ -3,9 +3,9 @@ import ValidateFeePayer.Contract
 /-!
 The walk's view of one call: every location and argument as a plain field,
 so the walk can name them by variables. `Pre` bundles the theorem's
-hypotheses about such a call; `CallPost` and `Call.Frame` are `Post` and
-`Frame` over the fields, which `Correctness.lean` turns back into the
-contract's form.
+hypotheses about such a call, at the entry state; `CallPost` and
+`Call.Frame` are `Post` and `Frame` over the fields, which `Correctness.lean`
+turns back into the contract's form.
 -/
 
 namespace ValidateFeePayer.Proof
@@ -31,11 +31,20 @@ def Call.of (loadBase returnAddress : UInt64) (s : State) (heap : AccountHeap) (
 
 def Call.exits (c : Call) : Exits := ValidateFeePayer.exits c.loadBase c.returnAddress
 
-/-- The theorem's hypotheses, for the call `c` made in state `s`. -/
+/-- `s` is `enter loadBase` of a caller's state, in the form the walk reads:
+the image's mappings come first, and control is at the entry. -/
+structure Entered (loadBase returnAddress : UInt64) (s : State) : Prop where
+  validBase : ValidLoadBase loadBase
+  image : ∃ rest, s.memory = load loadBase rest ∧ SpanFree loadBase rest
+  atEntry : s.instructionPointer = entryAddress loadBase
+  returnOutsideImage : ∀ mp ∈ imageMappings loadBase, ¬ mp.Contains returnAddress
+  returnNotPanic : returnAddress ≠ panicAddress loadBase
+
+/-- The theorem's hypotheses, moved to the entry state `s` of the call `c`. -/
 structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) : Prop where
   ofState : Call.of c.loadBase c.returnAddress s c.heap c.payerIndex c.fee = c
-  called : Called c.loadBase c.returnAddress s
+  entered : Entered c.loadBase c.returnAddress s
   abi : SysV.Entry s c.returnAddress
   footprint : Footprint c.loadBase s c.heap account.data.length
   encoded : Encoded s c.heap account metrics rent c.payerIndex c.fee relax
