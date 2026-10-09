@@ -6,6 +6,7 @@ import ValidateFeePayer.Checks
 import ValidateFeePayer.Spec
 import ValidateFeePayer.Reference
 import ValidateFeePayer.ReferenceAgrees
+import ValidateFeePayer.SpecTests
 import ValidateFeePayer.Contract
 import ValidateFeePayer.Correctness
 import ValidateFeePayer.Tests
