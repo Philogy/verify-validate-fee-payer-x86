@@ -30,6 +30,12 @@ Known differences (`known=`):
 - `noncanonical`: a load or store at a non-canonical address raises #GP;
   the model has no canonical-address check and reports a page fault. Both
   stop the program.
+- `sar-carry`: `sar` with a masked count at least the operand width (only
+  possible for 8- and 16-bit operands). The SDM leaves CF undefined there
+  only for `shl` and `shr`; for `sar` the CPU sets it to the sign bit. The
+  model (`Machine.lean`, `shift`) makes it undefined for all three. That is
+  sound (reading it stops the run) but less than the SDM defines; whether to
+  define it is open.
 
 Not compared: state the model omits (segment registers, x87/MMX, YMM upper
 halves); `rflags` bits outside the six flags are printed if they change, so

@@ -1,35 +1,35 @@
-push rax | 50 | rax=0x3c274e5179b4b759
-pop rax | 58 | mem=0x60000800:b83d08e08f652738
-push rcx | 51 | rcx=0xfb2ae2e28ae7c880
-pop rcx | 59 | mem=0x60000800:c54d31ab9dccf9a9
-push rdx | 52 | rdx=0x145cb6c88a311397
-pop rdx | 5a | mem=0x60000800:0f99107171ddb3f2
-push rbx | 53 | rbx=0xb815470626a3420c
-pop rbx | 5b | mem=0x60000800:4271929dd5a3b2f1
+push rax | 50 | rax=0x2eda384ef8bc4d4e
+pop rax | 58 | mem=0x60000800:2980ecf5bb0daca6
+push rcx | 51 | rcx=0xfe4de6773a44fedf
+pop rcx | 59 | mem=0x60000800:2ba941b6e4bbdf3c
+push rdx | 52 | rdx=0x25cd37e17908f29b
+pop rdx | 5a | mem=0x60000800:41057de9da76e603
+push rbx | 53 | rbx=0x3b4e188540dc00c8
+pop rbx | 5b | mem=0x60000800:1c9ddfbd43045238
 push rsp | 54 | 
-push rbp | 55 | rbp=0xc29bae5e3e53c71b
-pop rbp | 5d | mem=0x60000800:5e6c898391000491
-push rsi | 56 | rsi=0xd74389eac26bff15
-pop rsi | 5e | mem=0x60000800:3803b1a7af2bdfba
-push rdi | 57 | rdi=0x7f6275a4ffb8e0ec
-pop rdi | 5f | mem=0x60000800:64bc399e826fe73e
-push r8 | 4150 | r8=0xf8be70c39fb1f437
-pop r8 | 4158 | mem=0x60000800:9a2b8ff25cb873b4
-push r9 | 4151 | r9=0x86ce773790fea7d8
-pop r9 | 4159 | mem=0x60000800:2661f2470319607c
-push r10 | 4152 | r10=0x265ed32df3cba7d3
-pop r10 | 415a | mem=0x60000800:66bff1d3daec8dc1
-push r11 | 4153 | r11=0x371ee7445391cd0d
-pop r11 | 415b | mem=0x60000800:280878e9686bcab5
-push r12 | 4154 | r12=0x821d70f8e4a1279b
-pop r12 | 415c | mem=0x60000800:b74d60e4dab45c30
-push r13 | 4155 | r13=0xea65f477a1801876
-pop r13 | 415d | mem=0x60000800:b2912aaa22a4ab2c
-push r14 | 4156 | r14=0x6f878ba4a2c60c7b
-pop r14 | 415e | mem=0x60000800:05358261c68953df
-push r15 | 4157 | r15=0x7575b326310efe45
-pop r15 | 415f | mem=0x60000800:43a8951b75b99a5d
-pop rsp | 5c | mem=0x60000800:d32bad0bc0021fe6
+push rbp | 55 | rbp=0x40e3f42590c32e93
+pop rbp | 5d | mem=0x60000800:59beedf8c197f839
+push rsi | 56 | rsi=0xb671f7e1de2517c6
+pop rsi | 5e | mem=0x60000800:a63735e1588f1588
+push rdi | 57 | rdi=0x13e310f449543095
+pop rdi | 5f | mem=0x60000800:8434562e392062f0
+push r8 | 4150 | r8=0x425881b162c70300
+pop r8 | 4158 | mem=0x60000800:1dc190c8ef05282b
+push r9 | 4151 | r9=0xb0ffcc27107ebd4f
+pop r9 | 4159 | mem=0x60000800:68e251bffdc0e75e
+push r10 | 4152 | r10=0x4a17826c98ad6c84
+pop r10 | 415a | mem=0x60000800:b00bbca307143c25
+push r11 | 4153 | r11=0xc4422b26366ad43
+pop r11 | 415b | mem=0x60000800:2dbe0788dde05c14
+push r12 | 4154 | r12=0xf0160d379ccc77cb
+pop r12 | 415c | mem=0x60000800:b31730ad45826c63
+push r13 | 4155 | r13=0x287695ef34c46449
+pop r13 | 415d | mem=0x60000800:9fe45cd83c39584e
+push r14 | 4156 | r14=0x10aad414068ce26b
+pop r14 | 415e | mem=0x60000800:49a74a9000a699d0
+push r15 | 4157 | r15=0xff285a5baf494aea
+pop r15 | 415f | mem=0x60000800:57bedb8c97fb5d35
+pop rsp | 5c | mem=0x60000800:9b8c206ddaba37b2
 push 0x0 | 6a00 | 
 push 0x5 | 6a05 | 
 push -0x1 | 6aff | 
@@ -38,92 +38,92 @@ push -0x80 | 6a80 |
 push 0x80 | 6880000000 | 
 push 0x12345678 | 6878563412 | 
 push -0x80000000 | 6800000080 | 
-push qword ptr [r8] | 41ff30 | r8=0x50000927
-pop qword ptr [r15] | 418f07 | r15=0x5000047b
-push qword ptr [r13 + 0x6c] | 41ff756c | r13=0x50000a4d
-pop qword ptr [0x500003c9] | 8f0425c9030050 | 
-push qword ptr [r14] | 41ff36 | r14=0x500006c2
-pop qword ptr [r10] | 418f02 | r10=0x50000095
-push qword ptr [0x50000b78] | ff3425780b0050 | 
-pop qword ptr [rbp] | 8f4500 | rbp=0x50000ea5
+push qword ptr [rip + 0xffffa01] | ff3501faff0f | 
+pop qword ptr [0x50000f5e] | 8f04255e0f0050 | 
+push qword ptr [0x50000c48] | ff3425480c0050 | 
+pop qword ptr [r13 - 0x3c] | 418f45c4 | r13=0x50000c6b
+push qword ptr [8*r11 + 0xd0065] | 42ff34dd65000d00 | r11=0x9fe616f
+pop qword ptr [rdx + 0x6c] | 8f426c | rdx=0x50000ae7
+push qword ptr [0x500007be] | ff3425be070050 | 
+pop qword ptr [r13] | 418f4500 | r13=0x50000f29
 push qword ptr [rsp] | ff3424 | 
 pop qword ptr [rsp] | 8f0424 | 
 push qword ptr [rsp + 0x8] | ff742408 | 
 pop qword ptr [rsp + 0x8] | 8f442408 | 
 push qword ptr [rsp + 0x10] | ff742410 | 
 pop qword ptr [rsp + 0x10] | 8f442410 | 
-cbw | 6698 | rax=0x0 rdx=0xde2517c639f897c1
-cbw | 6698 | rax=0x7f rdx=0xe13537a6b671f7e1
-cbw | 6698 | rax=0x80 rdx=0x4954309588158f58
-cbw | 6698 | rax=0x7fff rdx=0x2e56348413e310f4
-cbw | 6698 | rax=0x8000 rdx=0x62c70300f0622039
-cbw | 6698 | rax=0x7fffffff rdx=0xc890c11d425881b1
-cbw | 6698 | rax=0x80000000 rdx=0x107ebd4f2b2805ef
-cbw | 6698 | rax=0x8000000000000000 rdx=0xbf51e268b0ffcc27
-cbw | 6698 | rax=0xffffffffffffffff rdx=0x98ad6c845ee7c0fd
-cbw | 6698 | rax=0xbddf9d1c3b4e1885 rdx=0xa3bc0bb04a17826c
-cbw | 6698 | rax=0x90c32e9338520443 rdx=0x6366ad43253c1407
-cbw | 6698 | rax=0xf8edbe5940e3f425 rdx=0x8807be2d0c4422b2
-cwde | 98 | rax=0x0 rdx=0xd85ce49f287695ef
-cwde | 98 | rax=0x7f rdx=0x68ce26b4e58393c
-cwde | 98 | rax=0x80 rdx=0x904aa74910aad414
-cwde | 98 | rax=0x7fff rdx=0xaf494aead099a600
-cwde | 98 | rax=0x8000 rdx=0x8cdbbe57ff285a5b
-cwde | 98 | rax=0x7fffffff rdx=0x6d208c9b355dfb97
-cwde | 98 | rax=0x80000000 rdx=0x2073f836b237bada
-cwde | 98 | rax=0x8000000000000000 rdx=0xf5e75111a6694211
-cwde | 98 | rax=0xffffffffffffffff rdx=0xc486f82bdd117333
-cwde | 98 | rax=0x9ccc77cb145ce0dd rdx=0xc2f7d3ffde8eb060
-cwde | 98 | rax=0xad3017b3f0160d37 rdx=0x2e2898beb676cb9
-cwde | 98 | rax=0x34c46449636c8245 rdx=0xb20c26aa8ae678be
-cdqe | 4898 | rax=0x0 rdx=0x3d8d0573ed134d0d
-cdqe | 4898 | rax=0x7f rdx=0xe9b9b25f623b40c6
-cdqe | 4898 | rax=0x80 rdx=0x41dff15458ac06db
-cdqe | 4898 | rax=0x7fff rdx=0xbdde5a2fc325ff0d
-cdqe | 4898 | rax=0x8000 rdx=0x2b1c451980c0795b
-cdqe | 4898 | rax=0x7fffffff rdx=0x5df635387d9f9006
-cdqe | 4898 | rax=0x80000000 rdx=0xee8d27cc4ba8faf9
-cdqe | 4898 | rax=0x8000000000000000 rdx=0xa33318356a4e5a1c
-cdqe | 4898 | rax=0xffffffffffffffff rdx=0xd5a24488d23aaa07
-cdqe | 4898 | rax=0xa4408a49c0bb2f1e rdx=0x7401891c92a412d5
-cdqe | 4898 | rax=0x5040bda4225f508d rdx=0x251acd1cb53c54aa
-cdqe | 4898 | rax=0x2a4a5ba4ac3211ce rdx=0xe09e99f7762d467f
-cwd | 6699 | rax=0x0 rdx=0x38563216f294cc57
-cwd | 6699 | rax=0x7f rdx=0x8cfeb14700648aa5
-cwd | 6699 | rax=0x80 rdx=0x11f4eeb01319e7fc
-cwd | 6699 | rax=0x7fff rdx=0xf2140e8508cf96f5
-cwd | 6699 | rax=0x8000 rdx=0xe83ce304cea0f054
-cwd | 6699 | rax=0x7fffffff rdx=0x16e6789b9e9deaad
-cwd | 6699 | rax=0x80000000 rdx=0x6d3b3ff75df256c4
-cwd | 6699 | rax=0x8000000000000000 rdx=0xf233340865913398
-cwd | 6699 | rax=0xffffffffffffffff rdx=0xe4a73ccd97b9f2f3
-cwd | 6699 | rax=0x4cc98c18026e9a10 rdx=0x1695d7c43453cafc
-cwd | 6699 | rax=0x213b90aa39b215cf rdx=0x7667ff742f37b3d5
-cwd | 6699 | rax=0xc558fcf87be9aa78 rdx=0x3a4c30ae742c7851
-cdq | 99 | rax=0x0 rdx=0x31694f439b86cecd
-cdq | 99 | rax=0x7f rdx=0xde00a6cb1c9fef16
-cdq | 99 | rax=0x80 rdx=0xcaa256d91f136f67
-cdq | 99 | rax=0x7fff rdx=0x8e8b4e842bf7cb9a
-cdq | 99 | rax=0x8000 rdx=0x3c71b1be07560f5c
-cdq | 99 | rax=0x7fffffff rdx=0xf0ed34096599a23d
-cdq | 99 | rax=0x80000000 rdx=0x744df0cfcc20f92f
-cdq | 99 | rax=0x8000000000000000 rdx=0xa8da96442b2eb548
-cdq | 99 | rax=0xffffffffffffffff rdx=0x7305c42f81092986
-cdq | 99 | rax=0xe94ec120785ecc00 rdx=0x47559c1a2c4792d9
-cdq | 99 | rax=0x4536a15db36788ef rdx=0xc50432f9fadfc978
-cdq | 99 | rax=0x780adaa87a1cc3c3 rdx=0x424346846214f6c
-cqo | 4899 | rax=0x0 rdx=0x93eb1d04840f59a6
-cqo | 4899 | rax=0x7f rdx=0x49c97c9655382a0c
-cqo | 4899 | rax=0x80 rdx=0xea8fb61cb9a8577c
-cqo | 4899 | rax=0x7fff rdx=0x4758d16d47edcfe8
-cqo | 4899 | rax=0x8000 rdx=0xe3ec01950d2e7ffb
-cqo | 4899 | rax=0x7fffffff rdx=0x44f50477fbaa8458
-cqo | 4899 | rax=0x80000000 rdx=0xc15514c638a58540
-cqo | 4899 | rax=0x8000000000000000 rdx=0xe1d21f304036d5e8
-cqo | 4899 | rax=0xffffffffffffffff rdx=0x74da30f532e60607
-cqo | 4899 | rax=0x2fa9ca6f24c83cd9 rdx=0xefa6cd033871dd4d
-cqo | 4899 | rax=0x5745467077b5bef5 rdx=0xfb484e77cc34201b
-cqo | 4899 | rax=0x1004fbfa10d4ebf rdx=0xd7c6e3ba9dc0187d
+cbw | 6698 | rax=0x0 rdx=0x97b9f2f3f2333408
+cbw | 6698 | rax=0x7f rdx=0x3453cafce4a73ccd
+cbw | 6698 | rax=0x80 rdx=0x2f37b3d51695d7c4
+cbw | 6698 | rax=0x7fff rdx=0x742c78517667ff74
+cbw | 6698 | rax=0x8000 rdx=0x785ecc003a4c30ae
+cbw | 6698 | rax=0x7fffffff rdx=0xb36788efe94ec120
+cbw | 6698 | rax=0x80000000 rdx=0x7a1cc3c34536a15d
+cbw | 6698 | rax=0x8000000000000000 rdx=0x9b86cecd780adaa8
+cbw | 6698 | rax=0xffffffffffffffff rdx=0x1c9fef1631694f43
+cbw | 6698 | rax=0x9e9deaade83ce304 rdx=0x1f136f67de00a6cb
+cbw | 6698 | rax=0x5df256c416e6789b rdx=0x2bf7cb9acaa256d9
+cbw | 6698 | rax=0x659133986d3b3ff7 rdx=0x7560f5c8e8b4e84
+cwde | 98 | rax=0x0 rdx=0x81092986a8da9644
+cwde | 98 | rax=0x7f rdx=0x2c4792d97305c42f
+cwde | 98 | rax=0x80 rdx=0xfadfc97847559c1a
+cwde | 98 | rax=0x7fff rdx=0x46214f6cc50432f9
+cwde | 98 | rax=0x8000 rdx=0x24c83cd904243468
+cwde | 98 | rax=0x7fffffff rdx=0x77b5bef52fa9ca6f
+cwde | 98 | rax=0x80000000 rdx=0xa10d4ebf57454670
+cwde | 98 | rax=0x8000000000000000 rdx=0x840f59a601004fbf
+cwde | 98 | rax=0xffffffffffffffff rdx=0x55382a0c93eb1d04
+cwde | 98 | rax=0x6599a23d3c71b1be rdx=0xb9a8577c49c97c96
+cwde | 98 | rax=0xcc20f92ff0ed3409 rdx=0x47edcfe8ea8fb61c
+cwde | 98 | rax=0x2b2eb548744df0cf rdx=0xd2e7ffb4758d16d
+cdqe | 4898 | rax=0x0 rdx=0x32e60607e1d21f30
+cdqe | 4898 | rax=0x7f rdx=0x3871dd4d74da30f5
+cdqe | 4898 | rax=0x80 rdx=0xcc34201befa6cd03
+cdqe | 4898 | rax=0x7fff rdx=0x9dc0187dfb484e77
+cdqe | 4898 | rax=0x8000 rdx=0x5f09f185d7c6e3ba
+cdqe | 4898 | rax=0x7fffffff rdx=0x836497dc47dd4ffa
+cdqe | 4898 | rax=0x80000000 rdx=0xe143c37f3d679a6e
+cdqe | 4898 | rax=0x8000000000000000 rdx=0x840823ee9071c73f
+cdqe | 4898 | rax=0xffffffffffffffff rdx=0xee797f1107ceb9d3
+cdqe | 4898 | rax=0xfbaa8458e3ec0195 rdx=0x5a315ed9b4467970
+cdqe | 4898 | rax=0x38a5854044f50477 rdx=0xfeb37ea00fe868af
+cdqe | 4898 | rax=0x4036d5e8c15514c6 rdx=0x64be3898f064f944
+cwd | 6699 | rax=0x0 rdx=0x81dff16d13b5c7f
+cwd | 6699 | rax=0x7f rdx=0x981b4d54ffdb1b32
+cwd | 6699 | rax=0x80 rdx=0x6ad8491dc39910f7
+cwd | 6699 | rax=0x7fff rdx=0xa4d0d1465611578d
+cwd | 6699 | rax=0x8000 rdx=0xdfb93b288b136d25
+cwd | 6699 | rax=0x7fffffff rdx=0x33df2c78b8fa6c4c
+cwd | 6699 | rax=0x80000000 rdx=0xb942ab0bc58f5228
+cwd | 6699 | rax=0x8000000000000000 rdx=0x916b1c7c4f54cca1
+cwd | 6699 | rax=0xffffffffffffffff rdx=0x93cc91c55a73575f
+cwd | 6699 | rax=0xb272b402c88987a0 rdx=0x3f5806a386108765
+cwd | 6699 | rax=0xad4c522507755eab rdx=0x857c6f16982ca972
+cwd | 6699 | rax=0x29d727f8d5a8b148 rdx=0x2a09c145881f46f5
+cdq | 99 | rax=0x0 rdx=0x9345f3f3acf35dd7
+cdq | 99 | rax=0x7f rdx=0xffa71d3799a7d69c
+cdq | 99 | rax=0x80 rdx=0x9e8044e08db7a9e7
+cdq | 99 | rax=0x7fff rdx=0xf5d3eb03759565d2
+cdq | 99 | rax=0x8000 rdx=0x620f3a50ba65659c
+cdq | 99 | rax=0x7fffffff rdx=0xb71946b767eb301b
+cdq | 99 | rax=0x80000000 rdx=0xee5964540fc54fee
+cdq | 99 | rax=0x8000000000000000 rdx=0x29d98511d30dc703
+cdq | 99 | rax=0xffffffffffffffff rdx=0xb32ce0ed614044d8
+cdq | 99 | rax=0xbd280d66f92e4492 rdx=0xdf665db4e843cd88
+cdq | 99 | rax=0x8a5dbf70db1cd7ee rdx=0xe2573de53f301b52
+cdq | 99 | rax=0xdb041fcf69e2482d rdx=0xb990974bce7ccb01
+cqo | 4899 | rax=0x0 rdx=0x37443ff803b68c23
+cqo | 4899 | rax=0x7f rdx=0x7546a0d694b2a8f5
+cqo | 4899 | rax=0x80 rdx=0x8caaba3e1a2e2af3
+cqo | 4899 | rax=0x7fff rdx=0xeb7f38545599e2d1
+cqo | 4899 | rax=0x8000 rdx=0x9facbf774893573
+cqo | 4899 | rax=0x7fffffff rdx=0xfaed5ce33dea976d
+cqo | 4899 | rax=0x80000000 rdx=0x9e1d80c38283b3df
+cqo | 4899 | rax=0x8000000000000000 rdx=0xb666d51734938d86
+cqo | 4899 | rax=0xffffffffffffffff rdx=0x2516854473bd5af2
+cqo | 4899 | rax=0x9a0b195c3c35193d rdx=0x9e16c91342a26cbf
+cqo | 4899 | rax=0xbae620c925445100 rdx=0xbce949c4dfb35578
+cqo | 4899 | rax=0x69133b71282703d6 rdx=0x4aa207c73ade5ac0
 nop | 90 | 
 nop dword ptr [rax + rax] | 0f1f0400 | 
 nop word ptr [rax + rax] | 660f1f0400 | 

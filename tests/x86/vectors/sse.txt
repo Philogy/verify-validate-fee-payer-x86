@@ -1,171 +1,201 @@
-movdqa xmm11, xmm8 | 66450f6fd8 | xmm8=0x9071c73fe143c37f3d679a6e836497dc
-movdqa xmm0, xmm11 | 66410f6fc3 | xmm11=0x64be3898f064f944feb37ea00fe868af
-movdqa xmm0, xmmword ptr [rip + 0x10000478] | 660f6f0578040010 | 
-movdqa xmm11, xmmword ptr [r9 - 0x70] | 66450f6f5990 | r9=0x50000b4e
-movdqa xmmword ptr [8*r12 + 0x883d0], xmm12 | 66460f7f24e5d0830800 | r12=0x9fef0ac
-movdqa xmmword ptr [0x50000b71], xmm5 | 660f7f2c25710b0050 | 
-movdqu xmm12, xmm7 | f3440f6fe7 | xmm7=0x3c35193db990974bce7ccb01e2573de5
-movdqu xmm4, xmm5 | f30f6fe5 | xmm5=0x94b2a8f537443ff803b68c2369133b71
-movdqu xmm14, xmmword ptr [rsi] | f3440f6f36 | rsi=0x50000750
-movdqu xmm0, xmmword ptr [8*r12 - 0x75163] | f3420f6f04e59daef8ff | r12=0xa00ea77
-movdqu xmmword ptr [r13 + 4*rbx], xmm11 | f3450f7f5c9d00 | rbx=0xcc5efede7f94d24d r13=0xce84048651acbb4c
-movdqu xmmword ptr [rbp - 0x6116d37d], xmm14 | f3440f7fb5832ce99e | rbp=0xb116dc9f
-movapd xmm2, xmm2 | 660f28d2 | xmm2=0x56a10245c1e48c389ab76883f10d9516
-movapd xmm1, xmm6 | 660f28ce | xmm6=0x2dc36f6265e085bf39d3b648eaf32a56
-movapd xmm14, xmmword ptr [rbp] | 66440f287500 | rbp=0x500001a0
-movapd xmm14, xmmword ptr [rsp - 0x61fe1d4d] | 66440f28b424b3e2019e | rsp=0xb1fe2c0e
-movapd xmmword ptr [rdx + 8*rcx], xmm10 | 66440f2914ca | rcx=0x92a8bd61bec9ba75 rdx=0x6aba14f259b22fb8
-movapd xmmword ptr [rbp + 8*rbx - 0x15ced9c], xmm9 | 66440f298cdd6412a3fe | rbx=0x20004a7ba604f14e rbp=0xfffdac2321357248
-movupd xmm0, xmm8 | 66410f10c0 | xmm8=0xd6991cbe16e7136865382ceddd859fba
-movupd xmm11, xmm4 | 66440f10dc | xmm4=0x0d7903d760ee5cfdcbba153cbc09ae65
-movupd xmm12, xmmword ptr [rip + 0x10000557] | 66440f102557050010 | 
-movupd xmm13, xmmword ptr [rbx + r13] | 66460f102c2b | r13=0x97034cfdde0c70a6 rbx=0x68fcb30271f39727
-movupd xmmword ptr [rbp + 2*r14], xmm2 | 66420f11547500 | r14=0x74fcf6332c4138db rbp=0x16061399f77d933a
-movupd xmmword ptr [r11 + 2*r12], xmm10 | 66470f111463 | r12=0x19 r11=0x50000784
-movaps xmm15, xmm13 | 450f28fd | xmm13=0xd3f7f198d583ed75a0d833a89fad7380
-movaps xmm0, xmm3 | 0f28c3 | xmm3=0x5444188d85918344d35bfbabd39705c4
-movaps xmm1, xmmword ptr [0x50000190] | 0f280c2590010050 | 
-movaps xmm5, xmmword ptr [rcx + 2*r13] | 420f282c69 | r13=0x2e rcx=0x50000143
-movaps xmmword ptr [8*rax + 0x7a590], xmm13 | 440f292cc590a50700 | rax=0x9ff0caa
-movaps xmmword ptr [0x500007ae], xmm3 | 0f291c25ae070050 | 
-movups xmm10, xmm2 | 440f10d2 | xmm2=0x8e58bf643bca6596b89d54d6ce15a9f7
-movups xmm1, xmm1 | 0f10c9 | xmm1=0xbf759c446c6752fbf4a05e98a0e4de37
-movups xmm12, xmmword ptr [2*rdx - 0xe3ce8] | 440f10245518c3f1ff | rdx=0x280721f4
-movups xmm2, xmmword ptr [r11 + 2*r15 - 0x73ef428c] | 430f10947b74bd108c | r15=0x50804ed8c4a493b6 r11=0x5eff624f3aa61b56
-movups xmmword ptr [r15 + 0x52c14], xmm3 | 420f111c3d142c0500 | r15=0x4ffadb0c
-movups xmmword ptr [2*r14 + 0x4ed38], xmm1 | 420f110c7538ed0400 | r14=0x27fd9027
-movd xmm12, r11d | 66450f6ee3 | r11=0xa3d07d3e74f64787
-movd eax, xmm12 | 66440f7ee0 | 
-movd xmm12, dword ptr [rip + 0xffffb5d] | 66440f6e255dfbff0f | 
-movd dword ptr [rip + 0x10000566], xmm12 | 66440f7e2566050010 | 
-movd xmm6, r11d | 66410f6ef3 | r11=0xef6d87a981983026
-movd r12d, xmm6 | 66410f7ef4 | 
-movd xmm6, dword ptr [rip + 0x10000359] | 660f6e3559030010 | 
-movd dword ptr [rip + 0xffff8e6], xmm6 | 660f7e35e6f8ff0f | 
-movd xmm0, r8d | 66410f6ec0 | r8=0xa2e0a986844632a6
-movd ebx, xmm0 | 660f7ec3 | 
-movd xmm0, dword ptr [r15 + 0x58c4da21] | 66410f6e8721dac458 | r15=0xfffffffff73b2cee
-movd dword ptr [r10 + r8], xmm0 | 66430f7e0402 | r8=0xaadc7ab87eff7636 r10=0x55238547d100959a
-movq xmm2, r15 | 66490f6ed7 | r15=0x5b09cb9dd575a588
-movq r10, xmm2 | 66490f7ed2 | 
-movq xmm2, qword ptr [8*rdi - 0x50642] | 66480f6e14fdbef9faff | rdi=0xa00a243
-movq qword ptr [2*rdi + 0xd397f], xmm2 | 66480f7e147d7f390d00 | rdi=0x27f96831
-movq xmm4, r9 | 66490f6ee1 | r9=0xa5dee0d34a6f254e
-movq rdi, xmm4 | 66480f7ee7 | 
-movq xmm4, qword ptr [0x50000104] | 66480f6e242504010050 | 
-movq qword ptr [r11 + 8*r12], xmm4 | 664b0f7e24e3 | r12=0x13438b71864893c0 r11=0x65e3a4741dbb71bd
-movq xmm6, rsp | 66480f6ef4 | rsp=0x986551484ad44283
-movq r9, xmm6 | 66490f7ef1 | 
-movq xmm6, qword ptr [0x5000080a] | 66480f6e34250a080050 | 
-movq qword ptr [r12], xmm6 | 66490f7e3424 | r12=0x50000508
-movsd xmm14, xmm11 | f2450f10f3 | 
-movsd xmm14, qword ptr [r12 + 8*rbp] | f2450f1034ec | rbp=0xb4afb2fb20730118 r12=0x5a8268274c67fb8e
-movsd qword ptr [rbp + 0xf34d], xmm14 | f2440f11342d4df30000 | rbp=0x4fff0eed
-movsd xmm5, xmm11 | f2410f10eb | 
-movsd xmm5, qword ptr [r12 + 4*r15] | f2430f102cbc | r15=0x23 r12=0x5000091d
-movsd qword ptr [0x50000924], xmm5 | f20f112c2524090050 | 
-movsd xmm15, xmm13 | f2450f10fd | 
-movsd xmm15, qword ptr [r8 + rdi] | f2450f103c38 | rdi=0xd37f075ce4f2aca5 r8=0x2c80f8a36b0d5c5c
-movsd qword ptr [r9 + 0x41], xmm15 | f2450f117941 | r9=0x500007e4
-pand xmm1, xmm3 | 660fdbcb | xmm1=0x4105c304b81b1ccecc99929767783ef6 flags=CAZS xmm3=0x7638521fd15a57943e71a7bb99391ff5
-pand xmm9, xmm2 | 66440fdbca | xmm9=0x5c0d1d67338db34f659ecd35be6caf85 flags=CPS xmm2=0x67c025465f812fca0ef36d722667ed8b
-pand xmm2, xmm8 | 66410fdbd0 | xmm2=0x4d74137339a8f9f8c81860b8db59e588 flags=CPASO xmm8=0x632fc9a4c13899e08d57f96b789e92d6
-pand xmm6, xmmword ptr [8*r12 + 0xe7018] | 66420fdb34e518700e00 | xmm6=0xfcb597a01572bdddd5df560ae6a025b5 flags=PZS r12=0x9fe3347 mem=0x50000a50:eef8eb39fc89416af507481793404a77
-pand xmm10, xmmword ptr [rcx + r11] | 66460fdb1419 | xmm10=0x61beedb384d03afd9ce3607e39d2d532 flags=CZS r11=0x673fc5257b7d7beb rcx=0x98c03adad4828c25 mem=0x50000810:b08ab6fd6096744bcce9f198a4023ec0
-pand xmm7, xmmword ptr [2*rax + 0x7c0fa] | 660fdb3c45fac00700 | xmm7=0xd5b1c53108f84013298fce9e809e5180 flags=S rax=0x27fc22bf mem=0x50000678:942994c9e318aa74beb56ba934fe6c2d
-pandn xmm14, xmm14 | 66450fdff6 | xmm14=0xadb655b11603806dd24f416a8d7345c5 flags=S xmm14=0x5fa9948a2cfc2ed5a5e4473c80cbaa87
-pandn xmm1, xmm15 | 66410fdfcf | xmm1=0x5c561e6a3d0c2e8fd84bcf165d7a2b38 flags=CPZSO xmm15=0xe7a51ebaa8d3d8c27860801b5987dd7e
-pandn xmm6, xmm7 | 660fdff7 | xmm6=0x01a2a77289aa328c5fb7cf1260e43a53 flags=PAS xmm7=0xed8db64d253c5a46bbc2b914ea200c09
-pandn xmm13, xmmword ptr [r11 - 0x2b426f59] | 66450fdfaba790bdd4 | xmm13=0x7f7ab6e238fdfb31272fb62785c8846c flags=CPA r11=0x7b4272b9 mem=0x50000360:fcd43b223d6c9649b24002c3ec99cbd2
-pandn xmm15, xmmword ptr [0x50000ad0] | 66440fdf3c25d00a0050 | xmm15=0x4e1f7f8446411375bf7dc20bd8a212a7 flags=CPSO mem=0x50000ad0:d74df2053baa8502d256cd1e3212452e
-pandn xmm13, xmmword ptr [rbp + 8*r10] | 66460fdf6cd500 | xmm13=0xf93ba1b74c7f8cfa494cbb6036f2ec76 flags=A r10=0x10 rbp=0x500002f8 mem=0x50000378:3265652a3d1c12fb910afa7e89affd04
-por xmm14, xmm0 | 66440febf0 | xmm14=0x3a2b20920a2afb2b6024810030a6cd6c flags=CSO xmm0=0xb55860e7d27aaee5f2de6918944b9b89
-por xmm1, xmm5 | 660febcd | xmm1=0xb5e07565e4a9f637239b41628833d652 flags=PAZO xmm5=0x4565396d544517fe982870c3236f8847
-por xmm4, xmm7 | 660febe7 | xmm4=0x43dcff319ae621b38a67289781a85bcd flags=PZO xmm7=0x62d68149648698682e72676786c4646f
-por xmm8, xmmword ptr [r13 + 0x2] | 66450feb4502 | xmm8=0x071f306c85d324083d4bfce5324f8540 flags=CPAZ r13=0x50000e0e mem=0x50000e10:ac6d0b30e76051cda0e8c4d3d7f9305b
-por xmm12, xmmword ptr [2*r15 - 0xa06ea] | 66460feb247d16f9f5ff | xmm12=0x0825704272f6d7647c7910ac2bc6c366 flags=S r15=0x28050645 mem=0x500005a0:df3f312f7298057a60090992ecb5a7c9
-por xmm5, xmmword ptr [rbx] | 660feb2b | xmm5=0x8ba988a03e1b3de43a04e408233f67d7 flags=CPAZ rbx=0x50000028 mem=0x50000028:65f4941e077345e3e4a7272f64e07321
-pxor xmm11, xmm4 | 66440fefdc | xmm11=0x021b652667ce97fc05dc4241403938e7 flags=CPAZS xmm4=0x3e1bc9067abd00345401c4894429f0bc
-pxor xmm8, xmm9 | 66450fefc1 | xmm8=0x67953e318581284fa6543fb3d9f4f686 flags=CASO xmm9=0x497959336db785dd838a7ad51a21ce3f
-pxor xmm14, xmm6 | 66440feff6 | xmm14=0xca7adb413f354728092f4b89c1a11b88 flags=ASO xmm6=0x06dde909ccd0e0a3bf514c4aaa535ffa
-pxor xmm1, xmmword ptr [4*r15 - 0xbece0] | 66420fef0cbd2013f4ff | xmm1=0xb3b0e5b4bee90aab6de474179b0f9a21 flags=CAZSO r15=0x1402fd50 mem=0x50000860:a74930d8ee3d72c30caef9503118b1fe
-pxor xmm3, xmmword ptr [rax] | 660fef18 | xmm3=0x07537fdfd9f19acad9059fbf6b0db4bf flags=CAZO rax=0x50000160 mem=0x50000160:a73faed9bda7dbbbc83e7cd5d9c2d926
-pxor xmm11, xmmword ptr [8*r12 - 0x2de78] | 66460fef1ce58821fdff | xmm11=0xe711361175dffd3cafe4769068d76097 flags=CAZSO r12=0xa005d1e mem=0x50000a78:14d20a2103a25f60ae507826f0802663
-andpd xmm4, xmm5 | 660f54e5 | xmm4=0xe03f6044f419ce583aee11a2f283c3f4 flags=AO xmm5=0x02a1eccc1c9191b71e7c646fd0e70edb
-andpd xmm11, xmm5 | 66440f54dd | xmm11=0xbb40e34022ed473561d71279e280f497 flags=CAO xmm5=0xe85f57c675eb41e4dc04c8809cfb43a5
-andpd xmm12, xmm8 | 66450f54e0 | xmm12=0x5b71b9bb65ff5b6d847bd781404e067b flags=AZ xmm8=0xe5b46f073d517b8f49df21d7a57ded88
-andpd xmm14, xmmword ptr [r10 + 0x2f] | 66450f54722f | xmm14=0x71076bf7e141a29f4e3b7982b0e249f6 flags=CZSO r10=0x50000c51 mem=0x50000c80:6d9a6a6895bfc366c599c7a87fc62feb
-andpd xmm11, xmmword ptr [4*r10 - 0xbedd8] | 66460f541c952812f4ff | xmm11=0x167537ed6cf2e19522953bd625ae7c1a flags=AZS r10=0x1402ff66 mem=0x50000fc0:d7ab5ca320bbd23bf361baead88b9d34
-andpd xmm1, xmmword ptr [rbx - 0x625f597f] | 660f548b81a6a09d | xmm1=0xa67cfec6abb99789f98f56d1dc1eab55 flags=CAZO rbx=0xb25f6737 mem=0x50000db8:1b42bed85290a2fd55fa437510066650
-andnpd xmm6, xmm12 | 66410f55f4 | xmm6=0x5db2099f788b82e9d995ecfb57e3e49c flags=CPZSO xmm12=0xc64105a56ddc1201c7d00975c1239fd3
-andnpd xmm0, xmm3 | 660f55c3 | xmm0=0xec552f42cb2a65b6d33507580b5ad770 flags=CZSO xmm3=0xf32a6ba9c9235172bf75b13c18bfe45c
-andnpd xmm11, xmm11 | 66450f55db | xmm11=0x328773da2d970da1d96be5fdc2de18be flags=CAZSO xmm11=0x79d69a06fcee59667ab2e85a6be42013
-andnpd xmm10, xmmword ptr [0x500009e0] | 66440f551425e0090050 | xmm10=0x8a5e9b9e6c6bc3b36202efc173a46323 flags=CAZS mem=0x500009e0:af3737f1bf9026de7c2a8a12e484115a
-andnpd xmm3, xmmword ptr [r9 + 8*rax] | 66410f551cc1 | xmm3=0xbabc3d2a7859b8a673b4683b422e720b flags=CPAO rax=0x3e6a1cf382501772 r9=0xcaf18643d7f45b0 mem=0x50000140:c482363b3edb6fd217ce8e9dea34a14f
-andnpd xmm10, xmmword ptr [0x50000f98] | 66440f551425980f0050 | xmm10=0xba5cb43898fe31dd669b8e80d5a858ab flags=ZO mem=0x50000f98:2f6c28ccbf621cfd1ebd5020e483a937
-orpd xmm8, xmm11 | 66450f56c3 | xmm8=0x54619cfc49677519410df30c17e19f1d flags=CPAS xmm11=0x3bea2e6fe026a807385c810a918e9e55
-orpd xmm8, xmm5 | 66440f56c5 | xmm8=0x9bd16a1b41ab4c1833448535830bfc8e flags=O xmm5=0x5aabeff94ce49e5525a5a90f227255d6
-orpd xmm9, xmm9 | 66450f56c9 | xmm9=0x2c61aa499b50afa32c53ade103ba2db1 flags=PAO xmm9=0x83959d9a04496319ae2f924ae45551d9
-orpd xmm15, xmmword ptr [r10 + 0x10d39] | 66460f563c15390d0100 | xmm15=0x28c0ef468f0a8b7f9ed5d928e9a249b5 flags=PAZO r10=0x4fff0197 mem=0x50000ed0:96f42f5f03a0fb3a1e800002bf0760fb
-orpd xmm9, xmmword ptr [rip + 0xffffba7] | 66440f560da7fbff0f | xmm9=0x107dcc9f99fd3e397570220612d649be flags=- mem=0x500003b0:c482e70c1a2d9fa5d0c80c8de14fe70c
-orpd xmm7, xmmword ptr [r9 - 0x392ce1cf] | 66410f56b9311ed3c6 | xmm7=0xc6b028e73b2a82e2ed2ac0065fbc8fc9 flags=PAZS r9=0x892cea77 mem=0x500008a8:ddb1afbc299b4e243f017f8807905583
-xorpd xmm4, xmm0 | 660f57e0 | xmm4=0xb6a629e365de3ea0bfb590129df4f17d flags=CAS xmm0=0x5d0c027e428c0acd3ada164d3a42ff7d
-xorpd xmm1, xmm10 | 66410f57ca | xmm1=0x4778f35bca38910c46c6d395ea31fe4a flags=PAZ xmm10=0xe8039e9df2dbd79e55379e63756a9ff6
-xorpd xmm5, xmm5 | 660f57ed | xmm5=0x39833002f43e66a0064b0205c16eb1bb flags=SO xmm5=0x66f4a47889ce9325ee5c65b54326cb3d
-xorpd xmm12, xmmword ptr [rip + 0x10000417] | 66440f572517040010 | xmm12=0x734c5005f1163bcc55039849fe3a6f8a flags=PA mem=0x50000c20:c1a2d22313332b1967db81e6c73125fe
-xorpd xmm0, xmmword ptr [0x50000e90] | 660f570425900e0050 | xmm0=0xcab3fb6b7a56145d14122aab7b9f52c7 flags=AZ mem=0x50000e90:9aa56be4cb5d31040a684351a27841e2
-xorpd xmm5, xmmword ptr [rip + 0xffffdf0] | 660f572df0fdff0f | xmm5=0x390c19faa4cc6057096074bb44466857 flags=CAZ mem=0x500005f8:683c0943a9373a2ad61a3648fdaf3e27
-andps xmm7, xmm10 | 410f54fa | xmm7=0x0f9d730afa93f6f0772a352a46715b8b flags=PAZSO xmm10=0x15e9ea115cef566b0e0eb5aababd30df
-andps xmm0, xmm1 | 0f54c1 | xmm0=0xc332a91c9fbb2be14ad859b0fe24aca7 flags=ZO xmm1=0xcbb4f34c79720ad2df806cc76a2ea6a1
-andps xmm0, xmm12 | 410f54c4 | xmm0=0x6c0030897d8dd379d2a24e6415f6a76f flags=- xmm12=0x6d2932e10fa0103493da5e7ce810d533
-andps xmm2, xmmword ptr [8*rax + 0x9f9c0] | 0f5414c5c0f90900 | xmm2=0xddc856b777586facd2c2e1f9bdf69dbe flags=CPZ rax=0x9fec272 mem=0x50000d50:4e0f3770fe75ad0d1f47fdc632f356ef
-andps xmm14, xmmword ptr [8*rcx + 0xb790] | 440f5434cd90b70000 | xmm14=0x40a37ae10319dcf448a6075d6fc05755 flags=CPAZ rcx=0x9ffead6 mem=0x50000e40:e7367ca7a590678d26393da2489b5b35
-andps xmm2, xmmword ptr [rbp + r9 - 0x24cbfbdd] | 420f54940d230434db | xmm2=0xd8f6c7088f5fbdb0cc55e675b8e1b79f flags=CPZ r9=0x3a rbp=0x74cc01cb mem=0x50000628:949dace6a97a72568e2d31d2699127ce
-andnps xmm13, xmm8 | 450f55e8 | xmm13=0x0ad9d29139e63b1fb6bf7c036fb00d01 flags=CPZS xmm8=0xe6c2f74f41c722f3e81c2cf27f765b39
-andnps xmm12, xmm10 | 450f55e2 | xmm12=0xc9a0ae6c5187699c205bb4035021b478 flags=PAZSO xmm10=0x4e64c5b97853a48c43298ff06dea6fdf
-andnps xmm1, xmm8 | 410f55c8 | xmm1=0x79ebdee83a62d896cb7b3b2d4e6cf804 flags=CPAO xmm8=0x9955e1878a23231e3556055b28c73cbd
-andnps xmm9, xmmword ptr [rip + 0xffff998] | 440f550d98f9ff0f | xmm9=0xa7257197b3b7f6ede756aedd5385b8b8 flags=CAS mem=0x500001a0:3d96e401e2236d99382a70ed04f3df1d
-andnps xmm5, xmmword ptr [4*rbx + 0x8a618] | 0f552c9d18a60800 | xmm5=0x60fffe1f5eaa795edaeb10560ef907e5 flags=CO rbx=0x13fdd9ba mem=0x50000d00:63de654d48b58baa6f62deac1f5d4cb4
-andnps xmm7, xmmword ptr [r9 + 2*r14 - 0x69623cd2] | 430f55bc712ec39d96 | xmm7=0xb1ceadb7a798ebb541f43265f01b5069 flags=CPO r14=0x1050a184e32bd4b5 r9=0xdf5ebcf6f30a9640 mem=0x500002d8:6dc3f54d92bbe9e8722d4b86a9e422b2
-orps xmm8, xmm12 | 450f56c4 | xmm8=0xcc257ef3f63d80659c32a40b8e979ce9 flags=CAS xmm12=0x33f1233c2d0eb1124fbaad1d41f7c80b
-orps xmm11, xmm9 | 450f56d9 | xmm11=0x2926c14a834310310310b11487a13098 flags=CZ xmm9=0x987a21ac728b065b43dab1ec47f82d83
-orps xmm3, xmm15 | 410f56df | xmm3=0xa9a64cbcdcbcfd12ff42197f67b10667 flags=PZS xmm15=0xabd9823aba6ccf0f05eb47f8314b3a3d
-orps xmm14, xmmword ptr [rcx + 0x5a5a] | 440f56340d5a5a0000 | xmm14=0x462d9b7b2f2dd512cdd3a4fdf1825747 flags=C rcx=0x4fffb3c6 mem=0x50000e20:cf235f0137860f5896cdb56148c6a5c4
-orps xmm2, xmmword ptr [r10 - 0x67] | 410f565299 | xmm2=0x76b135a1bb1dc6287ad4ed5757d4fbe9 flags=Z r10=0x50000fe7 mem=0x50000f80:51dbfaf34631e0c50bc3226e5c6aeee8
-orps xmm13, xmmword ptr [0x50000c78] | 440f562c25780c0050 | xmm13=0xe5c72e7c4ad9a517e0a12aab2e19bc52 flags=PSO mem=0x50000c78:1d7baaee306b46fb9584080afe2c9e18
-xorps xmm13, xmm2 | 440f57ea | xmm13=0x2a9e3f456effac8bfb11057e90a9cb56 flags=CPA xmm2=0xfc234503aba81033385e1724a9f179a9
-xorps xmm13, xmm14 | 450f57ee | xmm13=0xe7af2c60cc650a2fdababef773212d2c flags=CPZO xmm14=0xe73731f977d7c46ebf89959ea90b947a
-xorps xmm4, xmm13 | 410f57e5 | xmm4=0x17ecbdfb6ad8efd7fefc04641de992e2 flags=PAZS xmm13=0xa9b14ca0fa35feb057a727ef193ac465
-xorps xmm8, xmmword ptr [rdx + 0x294a0a85] | 440f5782850a4a29 | xmm8=0x7ccaf4fa01199f23f6330d0358b16d49 flags=CZS rdx=0x26b6045b mem=0x50000ee0:07077d27f48300a474ad77924a0d4480
-xorps xmm6, xmmword ptr [0x50000820] | 0f57342520080050 | xmm6=0x59780b95c62c43d9ae150be0658569c4 flags=CP mem=0x50000820:8acd953c1210b4f9984790a1e52ca88d
-xorps xmm14, xmmword ptr [8*r14 + 0xd77b8] | 460f5734f5b8770d00 | xmm14=0xd8ee94562858d817dced77e2c04e6670 flags=CO r14=0x9fe512a mem=0x50000108:b442ab5cdc59b5a19223fc79e52fc6cc
-ptest xmm14, xmm4 | 66440f3817f4 | xmm14=0x5bef00b6a0c732d6640798cda5c57a1c flags=PZ xmm4=0x5bef00b6a0c732d6640798cda5c57a1c
-ptest xmm13, xmm10 | 66450f3817ea | xmm13=0x33bc11de398fb2010a9387d59654b862 flags=CAZSO xmm10=0xacc7599c96742fa1f5537969d1b9413d
-ptest xmm12, xmm11 | 66450f3817e3 | xmm12=0x00000000000000000000000000000000 flags=PASO xmm11=0x0738b5e7971d602de3aded77d6211f0f
-ptest xmm8, xmmword ptr [r11 - 0xf50fd] | 66460f3817041d03aff0ff | xmm8=0x187775047cdce32705d3570bdfd2289d flags=CP r11=0x500f58cd mem=0x500007d0:62d72d20f4a82cfad81c2383fb8a88e7
-ptest xmm0, xmmword ptr [r9 + 0x676a646e] | 66410f3817816e646a67 | xmm0=0x389512886d5d398aba838fa595a0c434 flags=PASO r9=0xffffffffe8959c92 mem=0x50000100:6fe3dc62e39ad46ca9db742d752c27d5
-ptest xmm5, xmmword ptr [rbx + 8*rdx - 0x2d653f94] | 660f3817acd36cc09ad2 | xmm5=0xf202ca29fa100534c0c1cffe8cad48d1 flags=CPZS rdx=0x3c rbx=0x7d65495c mem=0x50000ba8:9093b479d92ee9686cd90d00128ba5b6
-punpckldq xmm3, xmm5 | 660f62dd | xmm3=0x4262cdf95163c95c0de852aa27c916aa flags=CA xmm5=0x1f967f9d82e2105b112cadc19fdfc663
-punpckldq xmm10, xmm7 | 66440f62d7 | xmm10=0x22d12ac7f852e9d56871919f6782031b flags=AZ xmm7=0x7dcff69d20d1d06942ada2a20de14758
-punpckldq xmm5, xmm12 | 66410f62ec | xmm5=0xd54c8dcab214179e3eeaf18fbf61b041 flags=CPS xmm12=0xd607580a907d38b9cc98cb13bf2dc38b
-punpckldq xmm0, xmmword ptr [r9 + rdx + 0x2d] | 66410f6244112d | xmm0=0x527e1c96934f65f04d6a0d5f25f8ee4b flags=CAZ rdx=0x8 r9=0x5000067b mem=0x500006b0:d27d8bab7cd7519504de722f69431802
-punpckldq xmm4, xmmword ptr [rip + 0xffffa98] | 660f622598faff0f | xmm4=0xc6d6a51314be9f2ebdbe92440a6f5dd8 flags=CAZ mem=0x500002a0:68d0c169126d13c5961f529b48d51c1a
-punpckldq xmm3, xmmword ptr [r12] | 66410f621c24 | xmm3=0x0743bd79da82046896a359b8fd89c234 flags=CPSO r12=0x50000308 mem=0x50000308:2b55c784d905de40e9bca14ff49945b8
-punpcklqdq xmm15, xmm2 | 66440f6cfa | xmm15=0x6c185a2605c1a74d7cb0b5408601c112 flags=PS xmm2=0x160a6ad78ba7e61e12f4310ef6eb55b8
-punpcklqdq xmm14, xmm15 | 66450f6cf7 | xmm14=0x8ff2085cb0df098669e1fcfec813580a flags=PAZ xmm15=0x2eba863c1d95e5552c1a13226316d708
-punpcklqdq xmm6, xmm13 | 66410f6cf5 | xmm6=0x3f595fcd545da77e6ea0d32b021ae1fe flags=CAZ xmm13=0xef070139110bfbd888727c66a04f08c1
-punpcklqdq xmm7, xmmword ptr [rsi + 8*rdx] | 660f6c3cd6 | xmm7=0x36696ecf2c9123197745d213da80617e flags=CA rdx=0x217c935525bed10d rsi=0xf41b655722097ed8 mem=0x50000740:ef9c527288527b630fe80605c119ab99
-punpcklqdq xmm2, xmmword ptr [r12 + 4*r8 - 0x3a] | 66430f6c5484c6 | xmm2=0xa2c10dd44cd4bc51bf3c99c3b68402b9 flags=PZO r8=0xee8f420e3e5a8454 r12=0x45c2f7c75695f21a mem=0x50000330:b893b65a97d4e9269d21c136afb2b2a3
-punpcklqdq xmm12, xmmword ptr [rax + 8*rbx] | 66440f6c24d8 | xmm12=0x03c3a57f8912bda82b3f6c14e3e2c79f flags=AS rbx=0xd0028635ba88427b rax=0x7febce527bbdf730 mem=0x50000b08:af3fce0655d1abd89b3beb5f40dfdf2a
-unpcklpd xmm11, xmm7 | 66440f14df | xmm11=0x7776cf2bf1bd64ad2b52533f6eaf55d2 flags=CPZO xmm7=0x90d17dbefe05f61f62ed67557dc85665
-unpcklpd xmm7, xmm12 | 66410f14fc | xmm7=0x5582193d88fe2fafcc036191201f359c flags=PZO xmm12=0x0519bc29fd79bd6f6792ae48e9a5ed17
-unpcklpd xmm10, xmm11 | 66450f14d3 | xmm10=0x8b8dc903bd9e32c06af56ef4f57e1ae0 flags=PZS xmm11=0xe1024f900fc431000d61992681123406
-unpcklpd xmm1, xmmword ptr [2*rbx + 0x5dc8a] | 660f140c5d8adc0500 | xmm1=0xeb908fd60224706610f11cce61110ec9 flags=CAZ rbx=0x27fd1283 mem=0x50000190:728aa915af2c7469e78df0956b7587dd
-unpcklpd xmm11, xmmword ptr [r11 + 0xb4fa47b] | 66450f149b7ba44f0b | xmm11=0xd2e684227111a229019ff34831675121 flags=CPAZO r11=0x44b06655 mem=0x50000ad0:30a3a235dcbe262216ee57ab9d079704
-unpcklpd xmm6, xmmword ptr [rcx] | 660f1431 | xmm6=0xd28098b95ce7d07046f674dd0755e2cc flags=SO rcx=0x500006f8 mem=0x500006f8:de39b3bd1d4c9fd0b6f9e17ef140e024
-unpckhpd xmm3, xmm12 | 66410f15dc | xmm3=0xdd864252fe8b4a738779a96e6ea51c35 flags=PAZSO xmm12=0xa38b706736f272e0f2871d87e44cf653
-unpckhpd xmm12, xmm7 | 66440f15e7 | xmm12=0x7885b23b6ea570400a95ce44c6b35c41 flags=CAZO xmm7=0x263ad164f881eafcc476084ad44f94b4
-unpckhpd xmm4, xmm6 | 660f15e6 | xmm4=0xe56957eeffed475a0d668407a41f5479 flags=CAZO xmm6=0xa83c1dfb1ec2ed61b147624e04b1d7f4
-unpckhpd xmm2, xmmword ptr [2*r11 + 0xfc9c8] | 66420f15145dc8c90f00 | xmm2=0x487840cab266f14285cbaeef2b7b6a43 flags=CPS r11=0x27f82254 mem=0x50000e70:2047cfb26f7590b288d38c40a97f1109
-unpckhpd xmm13, xmmword ptr [r15] | 66450f152f | xmm13=0xf87980bbb9b7da793979b49a91949c56 flags=CO r15=0x500001b0 mem=0x500001b0:b592f3a1e391f197ab60017df12a7ea8
-unpckhpd xmm13, xmmword ptr [0x50000ab8] | 66440f152c25b80a0050 | xmm13=0x12bff40a4da1a9f472119bb0bd2f0a51 flags=CPA mem=0x50000ab8:6f1e9a1e97e5f2897793cf2dea4c9ae2
+movdqa xmm5, xmm0 | 660f6fe8 | xmm0=0x8cb54242e8578d52ea464c093db0bb1a
+movdqa xmm15, xmm12 | 66450f6ffc | xmm12=0x000009f822ba68b8dd6fabe2b0502ab7
+movdqa xmm11, xmmword ptr [r13 + 4*rbx] | 66450f6f5c9d00 | rbx=0xcc5efede7f94d24d r13=0xce84048651acbb4c
+movdqa xmm14, xmmword ptr [rbp - 0x6116d37d] | 66440f6fb5832ce99e | rbp=0xb116dc9f
+movdqa xmmword ptr [rdi], xmm12 | 66440f7f27 | rdi=0x50000c80
+movdqa xmmword ptr [rbp], xmm14 | 66440f7f7500 | rbp=0x500002d2
+movdqu xmm0, xmm4 | f30f6fc4 | xmm4=0x8aea1a9a2a0514f01e01e2b363e26d92
+movdqu xmm15, xmm15 | f3450f6fff | xmm15=0xa57b61fbc598c63c95379944245f886b
+movdqu xmm2, xmmword ptr [r12 + 0x7c] | f3410f6f54247c | r12=0x500006c4
+movdqu xmm14, xmmword ptr [rip + 0xffff9a9] | f3440f6f35a9f9ff0f | 
+movdqu xmmword ptr [rip + 0xffffd47], xmm15 | f3440f7f3d47fdff0f | 
+movdqu xmmword ptr [0x50000147], xmm15 | f3440f7f3c2547010050 | 
+movapd xmm15, xmm15 | 66450f28ff | xmm15=0x3e42d20d2df8164d7a611cbbcd1e5db9
+movapd xmm0, xmm4 | 660f28c4 | xmm4=0x8d6c15444b44e7747b812c4381b0d9de
+movapd xmm12, xmmword ptr [rcx + 8*r15] | 66460f2824f9 | r15=0xce46ad407c8d9c80 rcx=0x8dca95fc6b931c00
+movapd xmm9, xmmword ptr [r13] | 66450f284d00 | r13=0x50000366
+movapd xmmword ptr [rdi + r14], xmm14 | 66460f293437 | r14=0x15 rdi=0x500004fb
+movapd xmmword ptr [rsp + r13 - 0x23dc3df3], xmm0 | 66420f29842c0dc223dc | r13=0x33c44d13ad03ef1f rsp=0xcc3bb2ecc6d85596
+movupd xmm10, xmm15 | 66450f10d7 | xmm15=0xd583ed75a0d833a89fad73806e4f6771
+movupd xmm0, xmm3 | 660f10c3 | xmm3=0x5444188d85918344d35bfbabd39705c4
+movupd xmm1, xmmword ptr [0x50000190] | 660f100c2590010050 | 
+movupd xmm5, xmmword ptr [rcx + 2*r13] | 66420f102c69 | r13=0x2e rcx=0x50000143
+movupd xmmword ptr [8*rax + 0x7a590], xmm13 | 66440f112cc590a50700 | rax=0x9ff0caa
+movupd xmmword ptr [0x500007ae], xmm3 | 660f111c25ae070050 | 
+movaps xmm10, xmm2 | 440f28d2 | xmm2=0x8e58bf643bca6596b89d54d6ce15a9f7
+movaps xmm1, xmm1 | 0f28c9 | xmm1=0xbf759c446c6752fbf4a05e98a0e4de37
+movaps xmm12, xmmword ptr [2*rdx - 0xe3ce8] | 440f28245518c3f1ff | rdx=0x280721f4
+movaps xmm2, xmmword ptr [r11 + 2*r15 - 0x73ef428c] | 430f28947b74bd108c | r15=0x50804ed8c4a493b6 r11=0x5eff624f3aa61b56
+movaps xmmword ptr [r15 + 0x52c14], xmm3 | 420f291c3d142c0500 | r15=0x4ffadb0c
+movaps xmmword ptr [2*r14 + 0x4ed38], xmm1 | 420f290c7538ed0400 | r14=0x27fd9027
+movups xmm11, xmm12 | 450f10dc | xmm12=0xd53744e6921266c9a3d07d3e74f64787
+movups xmm0, xmm6 | 0f10c6 | xmm6=0x85b08b23a918914bd6fc9dbeadec58c2
+movups xmm6, xmmword ptr [rip + 0xffffde9] | 0f1035e9fdff0f | 
+movups xmm12, xmmword ptr [rip + 0x10000017] | 440f102517000010 | 
+movups xmmword ptr [rip + 0x10000359], xmm1 | 0f110d59030010 | 
+movups xmmword ptr [0x50000ac5], xmm0 | 0f110425c50a0050 | 
+movdqa xmm14, xmmword ptr [rbp - 0xf0a57dc] | 66440f6fb524a8f5f0 | rbp=0x5f0a601c
+movdqa xmm15, xmmword ptr [rdx + 4*r12] | 66460f6f3ca2 | r12=0x7fd2cd42572535be rdx=0xb4caf6f36b2a18
+movdqa xmm14, xmmword ptr [4*r12 + 0xb0a50] | 66460f6f34a5500a0b00 | r12=0x13fd4014
+movdqa xmm4, xmmword ptr [rip + 0x100003b8] | 660f6f25b8030010 | 
+movdqa xmm13, xmmword ptr [0x50000f90] | 66440f6f2c25900f0050 | 
+movdqu xmm12, xmmword ptr [rsp - 0x18738c82] | f3440f6fa4247e738ce7 | rsp=0x68739322
+movdqu xmm15, xmmword ptr [rdx + 2*r14 + 0x16] | f3460f6f7c7216 | r14=0x24 rdx=0x500006e2
+movdqu xmm4, xmmword ptr [r14 + 0xda757] | f3420f6f243557a70d00 | r14=0x4ff26379
+movdqu xmm6, xmmword ptr [rip + 0x100004e8] | f30f6f35e8040010 | 
+movdqu xmm9, xmmword ptr [0x500004a0] | f3440f6f0c25a0040050 | 
+movapd xmm2, xmmword ptr [r10 + 0x7997e59d] | 66410f28929de59779 | r10=0xffffffffd6682263
+movapd xmm12, xmmword ptr [r8 + 4*r9 - 0x15] | 66470f286488eb | r9=0x31d55ec7c530615f r8=0x38aa84e13b3e89c9
+movapd xmm13, xmmword ptr [8*rcx - 0x87078] | 66440f282ccd888ff7ff | rcx=0xa010ead
+movapd xmm8, xmmword ptr [rip + 0xffff817] | 66440f280517f8ff0f | 
+movapd xmm8, xmmword ptr [0x50000b80] | 66440f280425800b0050 | 
+movupd xmm8, xmmword ptr [rdx - 0x30] | 66440f1042d0 | rdx=0x50000bb0
+movupd xmm7, xmmword ptr [rbx + r11] | 66420f103c1b | r11=0x6e5f6b678691fd14 rbx=0x91a09498c96e036c
+movupd xmm9, xmmword ptr [4*rdi - 0xe8f04] | 66440f100cbdfc70f1ff | rdi=0x1403a601
+movupd xmm6, xmmword ptr [rip + 0x10000018] | 660f103518000010 | 
+movupd xmm12, xmmword ptr [0x500009a0] | 66440f102425a0090050 | 
+movaps xmm7, xmmword ptr [rcx] | 0f2839 | rcx=0x50000d70
+movaps xmm3, xmmword ptr [r13 + 4*rbx] | 410f285c9d00 | rbx=0xd r13=0x50000cdc
+movaps xmm6, xmmword ptr [8*rbx + 0x70348] | 0f2834dd48030700 | rbx=0x9ff202d
+movaps xmm10, xmmword ptr [rip + 0x10000718] | 440f281518070010 | 
+movaps xmm8, xmmword ptr [0x500009b0] | 440f280425b0090050 | 
+movups xmm12, xmmword ptr [r15] | 450f1027 | r15=0x50000be0
+movups xmm6, xmmword ptr [r8 + 4*rax - 0x328bec8d] | 410f10b480731374cd | rax=0x6c79c119eda6ffec r8=0x4e18fb98cbeffa8d
+movups xmm8, xmmword ptr [2*r9 + 0xd74ea] | 460f10044dea740d00 | r9=0x27f94753
+movups xmm5, xmmword ptr [rip + 0x10000419] | 0f102d19040010 | 
+movups xmm5, xmmword ptr [0x50000a80] | 0f102c25800a0050 | 
+movd xmm2, esi | 660f6ed6 | rsi=0x60e6cc6de7a1fb1
+movd r12d, xmm2 | 66410f7ed4 | 
+movd xmm2, dword ptr [rip + 0x1000039f] | 660f6e159f030010 | 
+movd dword ptr [rcx + 8*rsi], xmm2 | 660f7e14f1 | rsi=0x459089cf7c46931 rcx=0xdd37bb1891dcc5e2
+movd xmm4, esi | 660f6ee6 | rsi=0xe11d47a13d3df3a3
+movd r10d, xmm4 | 66410f7ee2 | 
+movd xmm4, dword ptr [rax + 0x7c852] | 660f6e240552c80700 | rax=0x4ff84656
+movd dword ptr [rbp + 2*rax + 0x359b21e5], xmm4 | 660f7ea445e5219b35 | rax=0x1e rbp=0x1a64e596
+movd xmm8, edx | 66440f6ec2 | rdx=0x84e6557967ff980b
+movd r9d, xmm8 | 66450f7ec1 | 
+movd xmm8, dword ptr [2*rdi + 0xca223] | 66440f6e047d23a20c00 | rdi=0x27f9b102
+movd dword ptr [rcx + 0x3e], xmm8 | 66440f7e413e | rcx=0x500001eb
+movq xmm13, r11 | 664d0f6eeb | r11=0xc6a92d87cde99af
+movq r14, xmm13 | 664d0f7eee | 
+movq xmm13, qword ptr [r14 + 2*r8] | 664f0f6e2c46 | r8=0x3dde11e89581c6c8 r14=0x8443dc2f24fc7328
+movq qword ptr [r13 + 8*rdi], xmm13 | 664d0f7e6cfd00 | rdi=0x4 r13=0x500002ea
+movq xmm4, r13 | 66490f6ee5 | r13=0xc30240b249966c3d
+movq rsp, xmm4 | 66480f7ee4 | 
+movq xmm4, qword ptr [r14 + 4*r11 + 0x444f768f] | 664b0f6ea49e8f764f44 | r11=0x7 r14=0xbb08ce4
+movq qword ptr [rax + 8*rcx + 0x29], xmm4 | 66480f7e64c829 | rcx=0xd8a212a72e451232 rax=0x3aef6ac6ddd77721
+movq xmm7, r9 | 66490f6ef9 | r9=0x965069dec47ad3e
+movq rax, xmm7 | 66480f7ef8 | 
+movq xmm7, qword ptr [0x50000aa3] | 66480f6e3c25a30a0050 | 
+movq qword ptr [8*rdx + 0xfbe89], xmm7 | 66480f7e3cd589be0f00 | rdx=0x9fe09b0
+movsd xmm0, xmm6 | f20f10c6 | 
+movsd xmm0, qword ptr [r11 + 2*rbp] | f2410f10046b | rbp=0x5c20a64c84910638 r11=0x47beb36746ddf824
+movsd qword ptr [2*r9 - 0x7c0b9], xmm0 | f2420f11044d473ff8ff | r9=0x2803e717
+movsd xmm14, xmm8 | f2450f10f0 | 
+movsd xmm14, qword ptr [rbp + 2*r13] | f2460f10746d00 | r13=0xc446bf0ac0e1cfe7 rbp=0x777281eace3c6176
+movsd qword ptr [r10], xmm14 | f2450f1132 | r10=0x500008da
+movsd xmm8, xmm4 | f2440f10c4 | 
+movsd xmm8, qword ptr [rip + 0x10000641] | f2440f100541060010 | 
+movsd qword ptr [rip + 0x10000054], xmm8 | f2440f110554000010 | 
+pand xmm8, xmm13 | 66450fdbc5 | xmm8=0x44c648cfc7441ad5dcee8854203c718d flags=CZ xmm13=0x3032713387f132cc6df3e0a3a63a5998
+pand xmm12, xmm14 | 66450fdbe6 | xmm12=0x1f12f78e744ce846338b1bb3eaa8a1aa flags=CPZO xmm14=0xe391ce8368b50d9cd97bf7c9a42571d4
+pand xmm6, xmm15 | 66410fdbf7 | xmm6=0x6826cbb39b9f106a9fd85f87ead5da57 flags=PASO xmm15=0x8c0decd75c5389f617cdd15763cfe92a
+pand xmm5, xmmword ptr [0x50000800] | 660fdb2c2500080050 | xmm5=0xdadbd912d657f6ffe909a53b7d2adc2b flags=CPZO mem=0x50000800:ac10797c64d7f672427025086601a5f0
+pand xmm2, xmmword ptr [r9] | 66410fdb11 | xmm2=0xa4706d09eebe114396cdd984cc6a2832 flags=CZO r9=0x500003a0 mem=0x500003a0:942d30f3c9204d9a30623fe9750247ae
+pand xmm0, xmmword ptr [rbp + r11 - 0x39a02872] | 66420fdb841d8ed75fc6 | xmm0=0x635434e0202250a002f3487ad94065ba flags=PZSO r11=0xe7ece879577fadae rbp=0x1813178732207b1c mem=0x50000058:84b95ce3ba13c1e5556fe792c02e5b86
+pandn xmm4, xmm9 | 66410fdfe1 | xmm4=0x8581284fa6543fb3d9f4f68649795933 flags=CPAZSO xmm9=0x6db785dd838a7ad51a21ce3f41098f86
+pandn xmm14, xmm6 | 66440fdff6 | xmm14=0xca7adb413f354728092f4b89c1a11b88 flags=ASO xmm6=0x06dde909ccd0e0a3bf514c4aaa535ffa
+pandn xmm1, xmm5 | 660fdfcd | xmm1=0xb3b0e5b4bee90aab6de474179b0f9a21 flags=CAZSO xmm5=0xfeb1183150f9ae0cc3723deed83049a7
+pandn xmm13, xmmword ptr [0x50000d90] | 66440fdf2c25900d0050 | xmm13=0xf20d02de5718f46890b18a48bc668ad2 flags=ZO mem=0x50000d90:6a18296ea7f6cdf032077b4a51cd4b99
+pandn xmm0, xmmword ptr [r12 - 0x5d] | 66410fdf4424a3 | xmm0=0xfb48ec9e56f0e32d6486a67259e51adb flags=PAZS r12=0x500009bd mem=0x50000960:8200ba043c9ea6072704bc852b30c29e
+pandn xmm4, xmmword ptr [0x50000938] | 660fdf242538090050 | xmm4=0xb9dcfba627495f6738240108e7113611 flags=CPAZS mem=0x50000938:f08026639760d7689076e4af3cfddf75
+por xmm9, xmm7 | 66440febcf | xmm9=0x8df561628533b484be59243a74ab93ee flags=CS xmm7=0x64bc69e8a3c4165bec906a06216d3f3f
+por xmm6, xmm10 | 66410febf2 | xmm6=0x2f4e0405532eabd8682628695692ffe3 flags=CZ xmm10=0xcbd025af46977547af21ee780879f043
+por xmm9, xmm12 | 66450febcc | xmm9=0xe56eddec2a3b096e976748c947810177 flags=AZS xmm12=0xaebfef1ff8395892bab53081dc707014
+por xmm0, xmmword ptr [r14 + 4*r10 + 0x42] | 66430feb449642 | xmm0=0x46055b126c6682438c596390ca712d9a flags=AZO r10=0xb r14=0x500006a2 mem=0x50000710:83a4478f0d55843d6bf42e07b478cec4
+por xmm10, xmmword ptr [8*r13 + 0x73f90] | 66460feb14ed903f0700 | xmm10=0x137bd4dabf833d01a09f1ac65db68257 flags=AZSO r13=0x9ff183a mem=0x50000160:a23e968f59146923b3aa05f1523970da
+por xmm6, xmmword ptr [r8] | 66410feb30 | xmm6=0x5c71d5f2f77a3ed180c082c600d7065d flags=PAS r8=0x50000a68 mem=0x50000a68:b017b24d6327164c452db2b94f0dc8eb
+pxor xmm2, xmm6 | 660fefd6 | xmm2=0xc6a4f0f1b5c8b7e687eb4f3cb6edc804 flags=CZS xmm6=0x61a089b434b19a29db6984ba90384e0e
+pxor xmm13, xmm1 | 66440fefe9 | xmm13=0x663d1951e56953be1b4daba75db2099f flags=PAZO xmm1=0x788b82e9d995ecfb57e3e49cc64105a5
+pxor xmm2, xmm6 | 660fefd6 | xmm2=0x61ca0f22c4e4a2b260d7f380e8a0774f flags=CAZS xmm6=0xcea9d75223c388178e0f3520894cff24
+pxor xmm0, xmmword ptr [rbx + 2*rbp - 0x73ecf875] | 660fef846b8b07138c | xmm0=0x380f70b36dddf732213033f6e2ff5ed4 flags=PAZO rbp=0x73b4683b422e720b rbx=0x18972f8a3f901a7f mem=0x50000620:2cb8b796f93201cc44ee167e17de1446
+pxor xmm3, xmmword ptr [r15 + r9 - 0x4] | 66430fef5c0ffc | xmm3=0x8445480bcbcd45eb9a32da86e4e77665 flags=AO r9=0x8c1fbf8da97cd408 r15=0x73e04072a68331ac mem=0x500005b0:54aceacf39665d45a9bca6a4ba441906
+pxor xmm10, xmmword ptr [0x50000f98] | 66440fef1425980f0050 | xmm10=0xba5cb43898fe31dd669b8e80d5a858ab flags=ZO mem=0x50000f98:2f6c28ccbf621cfd1ebd5020e483a937
+andpd xmm8, xmm11 | 66450f54c3 | xmm8=0x54619cfc49677519410df30c17e19f1d flags=CPAS xmm11=0x3bea2e6fe026a807385c810a918e9e55
+andpd xmm8, xmm5 | 66440f54c5 | xmm8=0x9bd16a1b41ab4c1833448535830bfc8e flags=O xmm5=0x5aabeff94ce49e5525a5a90f227255d6
+andpd xmm9, xmm9 | 66450f54c9 | xmm9=0x2c61aa499b50afa32c53ade103ba2db1 flags=PAO xmm9=0x83959d9a04496319ae2f924ae45551d9
+andpd xmm15, xmmword ptr [r10 + 0x10d39] | 66460f543c15390d0100 | xmm15=0x28c0ef468f0a8b7f9ed5d928e9a249b5 flags=PAZO r10=0x4fff0197 mem=0x50000ed0:96f42f5f03a0fb3a1e800002bf0760fb
+andpd xmm9, xmmword ptr [rip + 0xffffba7] | 66440f540da7fbff0f | xmm9=0x107dcc9f99fd3e397570220612d649be flags=- mem=0x500003b0:c482e70c1a2d9fa5d0c80c8de14fe70c
+andpd xmm7, xmmword ptr [r9 - 0x392ce1cf] | 66410f54b9311ed3c6 | xmm7=0xc6b028e73b2a82e2ed2ac0065fbc8fc9 flags=PAZS r9=0x892cea77 mem=0x500008a8:ddb1afbc299b4e243f017f8807905583
+andnpd xmm4, xmm0 | 660f55e0 | xmm4=0xb6a629e365de3ea0bfb590129df4f17d flags=CAS xmm0=0x5d0c027e428c0acd3ada164d3a42ff7d
+andnpd xmm1, xmm10 | 66410f55ca | xmm1=0x4778f35bca38910c46c6d395ea31fe4a flags=PAZ xmm10=0xe8039e9df2dbd79e55379e63756a9ff6
+andnpd xmm5, xmm5 | 660f55ed | xmm5=0x39833002f43e66a0064b0205c16eb1bb flags=SO xmm5=0x66f4a47889ce9325ee5c65b54326cb3d
+andnpd xmm12, xmmword ptr [rip + 0x10000417] | 66440f552517040010 | xmm12=0x734c5005f1163bcc55039849fe3a6f8a flags=PA mem=0x50000c20:c1a2d22313332b1967db81e6c73125fe
+andnpd xmm0, xmmword ptr [0x50000e90] | 660f550425900e0050 | xmm0=0xcab3fb6b7a56145d14122aab7b9f52c7 flags=AZ mem=0x50000e90:9aa56be4cb5d31040a684351a27841e2
+andnpd xmm5, xmmword ptr [rip + 0xffffdf0] | 660f552df0fdff0f | xmm5=0x390c19faa4cc6057096074bb44466857 flags=CAZ mem=0x500005f8:683c0943a9373a2ad61a3648fdaf3e27
+orpd xmm7, xmm10 | 66410f56fa | xmm7=0x0f9d730afa93f6f0772a352a46715b8b flags=PAZSO xmm10=0x15e9ea115cef566b0e0eb5aababd30df
+orpd xmm0, xmm1 | 660f56c1 | xmm0=0xc332a91c9fbb2be14ad859b0fe24aca7 flags=ZO xmm1=0xcbb4f34c79720ad2df806cc76a2ea6a1
+orpd xmm0, xmm12 | 66410f56c4 | xmm0=0x6c0030897d8dd379d2a24e6415f6a76f flags=- xmm12=0x6d2932e10fa0103493da5e7ce810d533
+orpd xmm2, xmmword ptr [8*rax + 0x9f9c0] | 660f5614c5c0f90900 | xmm2=0xddc856b777586facd2c2e1f9bdf69dbe flags=CPZ rax=0x9fec272 mem=0x50000d50:4e0f3770fe75ad0d1f47fdc632f356ef
+orpd xmm14, xmmword ptr [8*rcx + 0xb790] | 66440f5634cd90b70000 | xmm14=0x40a37ae10319dcf448a6075d6fc05755 flags=CPAZ rcx=0x9ffead6 mem=0x50000e40:e7367ca7a590678d26393da2489b5b35
+orpd xmm2, xmmword ptr [rbp + r9 - 0x24cbfbdd] | 66420f56940d230434db | xmm2=0xd8f6c7088f5fbdb0cc55e675b8e1b79f flags=CPZ r9=0x3a rbp=0x74cc01cb mem=0x50000628:949dace6a97a72568e2d31d2699127ce
+xorpd xmm13, xmm8 | 66450f57e8 | xmm13=0x0ad9d29139e63b1fb6bf7c036fb00d01 flags=CPZS xmm8=0xe6c2f74f41c722f3e81c2cf27f765b39
+xorpd xmm12, xmm10 | 66450f57e2 | xmm12=0xc9a0ae6c5187699c205bb4035021b478 flags=PAZSO xmm10=0x4e64c5b97853a48c43298ff06dea6fdf
+xorpd xmm1, xmm8 | 66410f57c8 | xmm1=0x79ebdee83a62d896cb7b3b2d4e6cf804 flags=CPAO xmm8=0x9955e1878a23231e3556055b28c73cbd
+xorpd xmm9, xmmword ptr [rip + 0xffff997] | 66440f570d97f9ff0f | xmm9=0xa7257197b3b7f6ede756aedd5385b8b8 flags=CAS mem=0x500001a0:3d96e401e2236d99382a70ed04f3df1d
+xorpd xmm5, xmmword ptr [4*rbx + 0x8a618] | 660f572c9d18a60800 | xmm5=0x60fffe1f5eaa795edaeb10560ef907e5 flags=CO rbx=0x13fdd9ba mem=0x50000d00:63de654d48b58baa6f62deac1f5d4cb4
+xorpd xmm7, xmmword ptr [r9 + 2*r14 - 0x69623cd2] | 66430f57bc712ec39d96 | xmm7=0xb1ceadb7a798ebb541f43265f01b5069 flags=CPO r14=0x1050a184e32bd4b5 r9=0xdf5ebcf6f30a9640 mem=0x500002d8:6dc3f54d92bbe9e8722d4b86a9e422b2
+andps xmm8, xmm12 | 450f54c4 | xmm8=0xcc257ef3f63d80659c32a40b8e979ce9 flags=CAS xmm12=0x33f1233c2d0eb1124fbaad1d41f7c80b
+andps xmm11, xmm9 | 450f54d9 | xmm11=0x2926c14a834310310310b11487a13098 flags=CZ xmm9=0x987a21ac728b065b43dab1ec47f82d83
+andps xmm3, xmm15 | 410f54df | xmm3=0xa9a64cbcdcbcfd12ff42197f67b10667 flags=PZS xmm15=0xabd9823aba6ccf0f05eb47f8314b3a3d
+andps xmm14, xmmword ptr [rcx + 0x5a5a] | 440f54340d5a5a0000 | xmm14=0x462d9b7b2f2dd512cdd3a4fdf1825747 flags=C rcx=0x4fffb3c6 mem=0x50000e20:cf235f0137860f5896cdb56148c6a5c4
+andps xmm2, xmmword ptr [r10 - 0x67] | 410f545299 | xmm2=0x76b135a1bb1dc6287ad4ed5757d4fbe9 flags=Z r10=0x50000fe7 mem=0x50000f80:51dbfaf34631e0c50bc3226e5c6aeee8
+andps xmm13, xmmword ptr [0x50000c78] | 440f542c25780c0050 | xmm13=0xe5c72e7c4ad9a517e0a12aab2e19bc52 flags=PSO mem=0x50000c78:1d7baaee306b46fb9584080afe2c9e18
+andnps xmm13, xmm2 | 440f55ea | xmm13=0x2a9e3f456effac8bfb11057e90a9cb56 flags=CPA xmm2=0xfc234503aba81033385e1724a9f179a9
+andnps xmm13, xmm14 | 450f55ee | xmm13=0xe7af2c60cc650a2fdababef773212d2c flags=CPZO xmm14=0xe73731f977d7c46ebf89959ea90b947a
+andnps xmm4, xmm13 | 410f55e5 | xmm4=0x17ecbdfb6ad8efd7fefc04641de992e2 flags=PAZS xmm13=0xa9b14ca0fa35feb057a727ef193ac465
+andnps xmm8, xmmword ptr [rdx + 0x294a0a85] | 440f5582850a4a29 | xmm8=0x7ccaf4fa01199f23f6330d0358b16d49 flags=CZS rdx=0x26b6045b mem=0x50000ee0:07077d27f48300a474ad77924a0d4480
+andnps xmm6, xmmword ptr [0x50000820] | 0f55342520080050 | xmm6=0x59780b95c62c43d9ae150be0658569c4 flags=CP mem=0x50000820:8acd953c1210b4f9984790a1e52ca88d
+andnps xmm14, xmmword ptr [8*r14 + 0xd77b8] | 460f5534f5b8770d00 | xmm14=0xd8ee94562858d817dced77e2c04e6670 flags=CO r14=0x9fe512a mem=0x50000108:b442ab5cdc59b5a19223fc79e52fc6cc
+orps xmm14, xmm4 | 440f56f4 | xmm14=0x6a6a8e9776a5c4995c85fbd58909298e flags=PZ xmm4=0x5bef00b6a0c732d6640798cda5c57a1c
+orps xmm8, xmm9 | 450f56c1 | xmm8=0x9654b862acc7599c96742fa1f5537969 flags=CPO xmm9=0xd1b9413d6f2cc61a22aa88d146c0e88a
+orps xmm14, xmm4 | 440f56f4 | xmm14=0xd6211f0f67fe5ad7bf552c46515ed433 flags=PZ xmm4=0xc61a6387ce49acab89093d62fc7a0785
+orps xmm10, xmmword ptr [8*r15 - 0xfe0e0] | 460f5614fd201ff0ff | xmm10=0x5c4367400556ac0d69a8276018a1c0e9 flags=CZO r15=0xa01fd7e mem=0x50000b10:5444db300c2f541ed3eba170870693ed
+orps xmm8, xmmword ptr [rsi + rcx] | 440f56040e | xmm8=0xd82bbc7188cd649c02bc0e0bac28eb44 flags=CPS rcx=0xe4cb1dd7a9d965f4 rsi=0x1b34e228a6269cbc mem=0x500002b0:3ab93ce047d54b87a1e16b5dd9cb2616
+orps xmm4, xmmword ptr [8*r10 + 0xf5170] | 420f5624d570510f00 | xmm4=0xacc81b55e6f2a2094cfbcb7481e37a22 flags=PAO r10=0x9fe1621 mem=0x50000278:d76dc781a8914ed6db181b97dc0d76c8
+xorps xmm14, xmm2 | 440f57f2 | xmm14=0x6717cb04c3cf55871f29ed0e529ac06c flags=CAZ xmm2=0x8f5c246f93a870ce1c8475e382e1aff5
+xorps xmm3, xmm1 | 0f57d9 | xmm3=0xc3d35203b983b1df1982a0db3836c2f4 flags=C xmm1=0x4262cdf95163c95c0de852aa27c916aa
+xorps xmm8, xmm7 | 440f57c7 | xmm8=0x658fc0f9bcf8d1b622d12ac7f852e9d5 flags=PAO xmm7=0x6871919f6782031b7dcff69d20d1d069
+xorps xmm7, xmmword ptr [r10 + 8*r15 - 0x5a] | 430f577cfaa6 | xmm7=0x2a946c900a5a3619dda74c6bf141f96a flags=PASO r15=0xbad59fa14c224867 r10=0x295302f5eeedc242 mem=0x50000520:29290c6911f8fe3704b796333d23acfa
+xorps xmm10, xmmword ptr [0x50000140] | 440f57142540010050 | xmm10=0xff93ea916ba6e05811ce78cd2de9515f flags=ZO mem=0x50000140:b9e6208c67e01e18165a9ca63382bc4b
+xorps xmm3, xmmword ptr [rip + 0xffffcf1] | 0f571df1fcff0f | xmm3=0x8f7062630296867a00df1effee55f1c8 flags=P mem=0x500004f8:d20bb23c58df34eff20db35746cde46d
+ptest xmm0, xmm12 | 66410f3817c4 | xmm0=0xc92c1012d5e2d45b9ded91709edaa9c3 flags=CPAO xmm12=0x7914786a7042b361daefce14718b408d
+ptest xmm15, xmm2 | 66440f3817fa | xmm15=0x6c185a2605c1a74d7cb0b5408601c112 flags=PS xmm2=0x160a6ad78ba7e61e12f4310ef6eb55b8
+ptest xmm14, xmm2 | 66440f3817f2 | xmm14=0xd14579c3e26a1aaad3e5ecdd9ce928f7 flags=PAZ xmm2=0x2eba863c1d95e5552c1a13226316d708
+ptest xmm0, xmmword ptr [rdx - 0x3ffef337] | 660f381782c90c01c0 | xmm0=0x50b6f877517e82a283a2a93cf5923776 flags=CPZSO rdx=0x8ffefaa7 mem=0x50000770:2bd3a06e7ea75d54cd5f593f3400c608
+ptest xmm10, xmmword ptr [rdi + 8*r15 - 0x33] | 66460f381754ffcd | xmm10=0x74afb2e0d259d25205b4fb3859e18607 flags=CASO r15=0x2317d24a47cd5345 rdi=0xe7416dae1195674b mem=0x50000140:a7ec927442df3b61026c619b76b31283
+ptest xmm5, xmmword ptr [r14 - 0x6a90bf0b] | 66410f3817aef5406f95 | xmm5=0xee8f420e3e5a84543973caf87e642fb6 flags=CPA r14=0xba90c163 mem=0x50000258:ba14ae86f1323d4d78618a5810916662
+punpckldq xmm8, xmm13 | 66450f62c5 | xmm8=0x88a39f112e073d4207021057bb9725a4 flags=ZS xmm13=0x7f1bb3e6dcccc16cdf14e8663696bdc3
+punpckldq xmm5, xmm12 | 66410f62ec | xmm5=0xba05dc53c9a66a41c107f98246f2830b flags=CAZO xmm12=0x476da4ac3c11e7bf7776cf2bf1bd64ad
+punpckldq xmm0, xmm1 | 660f62c1 | xmm0=0xc49cab553dc5cb6069b213fd89b9f834 flags=PZS xmm1=0x5582193d88fe2fafcc036191201f359c
+punpckldq xmm13, xmmword ptr [rax + rbp - 0x6a56758e] | 66440f62ac28728aa995 | xmm13=0xa3a30ac88873b4a023f87f2b4b999c0e flags=CP rbp=0x267dc424d0badc92 rax=0xd9823bdbe99ba3ac mem=0x50000ab0:c0329ebd03c98d8bdc2b68c1aeb7a33c
+punpckldq xmm8, xmmword ptr [0x50000a40] | 66440f620425400a0050 | xmm8=0x93d07fa019cbc8a864253d5a8fdd035d flags=PSO mem=0x50000a40:7d9a617a6507330d554a9ee6345b2627
+punpckldq xmm10, xmmword ptr [rdi] | 66440f6217 | xmm10=0x316751210497079dab57ee162226bedc flags=CA rdi=0x500004a8 mem=0x500004a8:7b50af88592109e64b58215d30a3a235
+punpcklqdq xmm14, xmm6 | 66440f6cf6 | xmm14=0x0755e2cc24e040f17ee1f9b6d09f4c1d flags=CAZSO xmm6=0xbdb339de36ece0ae5bc5f7596906aabe
+punpcklqdq xmm12, xmm6 | 66440f6ce6 | xmm12=0x53cf15f7b9be30e6a3b15f5350331653 flags=CA xmm6=0x31506b1a27468fdeff6667ae6ff2f322
+punpcklqdq xmm13, xmm4 | 66440f6cec | xmm13=0x50fcf0cc5e13b9f640aaa11cbd6785ab flags=ZO xmm4=0xb0aba174dd864252fe8b4a738779a96e
+punpcklqdq xmm1, xmmword ptr [rip + 0x10000278] | 660f6c0d78020010 | xmm1=0x652bbceb4d1b0fafc762847a9b82c09a flags=CAZS mem=0x50000a80:4070a56e3bb285783f771844910355c0
+punpcklqdq xmm1, xmmword ptr [rip + 0x10000318] | 660f6c0d18030010 | xmm1=0x042ea0432aa256338039d4d3b24f4c6e flags=CAS mem=0x50000b20:5a47edffee5769e54f0458371f241531
+punpcklqdq xmm8, xmmword ptr [r15 + 8*r11 - 0x2c52b8c4] | 66470f6c84df3c47add3 | xmm8=0x1a62e7c94c56e29a00141a89487840ca flags=CAZ r11=0x1c r15=0x7c52bb0c mem=0x50000328:a97f1109436a7b2befaecb8542f166b2
+unpcklpd xmm2, xmm3 | 660f14d3 | xmm2=0xb584781510e6f89ef95eca5096a30f3b flags=CPAS xmm3=0x31594ca8954d4a9335c2c869ae4e0884
+unpcklpd xmm5, xmm3 | 660f14eb | xmm5=0x2cbc92bea0ca9051634a657a12bff40a flags=PAS xmm3=0x4da1a9f472119bb0bd2f0a51e29a4cea
+unpcklpd xmm11, xmm5 | 66440f14dd | xmm11=0xd01547475e985c565c17ad4cda8b6b89 flags=CPS xmm5=0xed815e119530bec0d90fe0606ce79e2e
+unpcklpd xmm9, xmmword ptr [r11 + 0x18] | 66450f144b18 | xmm9=0x1d783491b417a431e27274724a7eb24e flags=AO r11=0x50000f88 mem=0x50000fa0:9075bb765404df0ff7603c05bb041e81
+unpcklpd xmm3, xmmword ptr [4*rcx - 0x5d37c] | 660f141c8d842cfaff | xmm3=0xbb941c0e85a4b5e95d5766387d13b54a flags=CS rcx=0x140177fb mem=0x50000c70:d572527c2e076e36986d82d05e344bef
+unpcklpd xmm13, xmmword ptr [rcx + 2*r13] | 66460f142c69 | xmm13=0x9bba5ba8426632bbda5b298e2ef3a85f flags=PZS r13=0x21 rcx=0x500008e6 mem=0x50000928:ee9db080a3b808326643c78eadc9ab94
+unpckhpd xmm5, xmm0 | 660f15e8 | xmm5=0x37daff9d7abb4b2081c17c3c0ebd2359 flags=CPZSO xmm0=0xc18ceded402a13d4ce8650f2a2087978
+unpckhpd xmm13, xmm1 | 66440f15e9 | xmm13=0xeac8a0710e19e6827632232a7e8cbb3e flags=AZS xmm1=0x2296e2fa1753c758aff41c7c607c59ff
+unpckhpd xmm0, xmm1 | 660f15c1 | xmm0=0x5ace44689bfc7ba8c8085b32fa709e6e flags=PA xmm1=0xef66662b89a51b38c26af9a9ef225dc7
+unpckhpd xmm7, xmmword ptr [0x500006c0] | 660f153c25c0060050 | xmm7=0xbf3235f620e5f9b7f3e971f893ef160c flags=- mem=0x500006c0:134da0d5a45ca089255e211b046b10f3
+unpckhpd xmm15, xmmword ptr [0x50000510] | 66440f153c2510050050 | xmm15=0xaba888aae1c42bf6ee4e571785ad0bf5 flags=PAO mem=0x50000510:690d7b0b4fea699add90f6cf77007e30
+unpckhpd xmm4, xmmword ptr [r11] | 66410f1523 | xmm4=0x80c22af2275d345bb2d2002bcccdc87b flags=CPSO r11=0x50000d98 mem=0x50000d98:279f8f43ca36f1c0ca568f55d4eba773

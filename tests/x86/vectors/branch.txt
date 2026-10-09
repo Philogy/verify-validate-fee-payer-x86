@@ -182,7 +182,17 @@ call qword ptr [r14 - 0x65243a89] | 41ff9677c5db9a | r14=0xb52447f9 mem=0x50000d
 call qword ptr [rcx - 0x18588a9e] | ff916275a7e7 | rcx=0x68588ffe mem=0x50000560:7fab84a8a8240000
 call rbx | ffd3 | rbx=0x1d04dc843fe6
 call qword ptr [r8 + 0xb433] | 42ff140533b40000 | r8=0x4fff5813 mem=0x50000c46:ae5212c683270000
-ret | c3 | rsp=0x6000096c mem=0x6000096c:fe4a873ccf7d0000
-ret | c3 | rsp=0x600000c0 mem=0x600000c0:33ca4794cd010000
-ret | c3 | rsp=0x600004ba mem=0x600004ba:fac82e220febffff
-ret | c3 | rsp=0x60000f3c mem=0x60000f3c:7a4692214a4f0000
+jmp qword ptr [rbp] | ff6500 | rbp=0x5000096c mem=0x5000096c:fac82e220febffff
+jmp qword ptr [r9 + 2*r12] | 43ff2461 | r12=0xa r9=0x50000f28 mem=0x50000f3c:064715b8c94e0000
+jmp qword ptr [8*rdx + 0x4e479] | ff24d579e40400 | rdx=0x9ff64f6 mem=0x50000c29:44e71e37bc740000
+jmp qword ptr [rip + 0x1000001b] | ff251b000010 | mem=0x50000821:b74d60e42e180000
+jmp qword ptr [0x50000aa2] | ff2425a20a0050 | mem=0x50000aa2:22a4ab2c63510000
+call qword ptr [r15 - 0x1e] | 41ff57e2 | r15=0x50000e13 mem=0x50000df5:a0ba7692760f0000
+call qword ptr [r11 + r14 - 0x47] | 43ff5433b9 | r14=0xb8db4289e44f5132 r11=0x4724bd766bb0afb1 mem=0x5000009c:9273b554359effff
+call qword ptr [2*r8 + 0x3b531] | 42ff144531b50300 | r8=0x27fe2ac4 mem=0x50000ab9:99b35bcd2cd2ffff
+call qword ptr [rip + 0xffffbc3] | ff15c3fbff0f | mem=0x500003c9:277435c815b6ffff
+call qword ptr [0x5000031d] | ff14251d030050 | mem=0x5000031d:761314245de3ffff
+ret | c3 | rsp=0x60000a71 mem=0x60000a71:59bc310a01e9ffff
+ret | c3 | rsp=0x6000079f mem=0x6000079f:ccc4346004320000
+ret | c3 | rsp=0x60000f59 mem=0x60000f59:e2359f8e8b4c0000
+ret | c3 | rsp=0x60000025 mem=0x60000025:5f4b2f91c55b0000

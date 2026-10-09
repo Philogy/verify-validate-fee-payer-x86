@@ -448,18 +448,18 @@ sar bh, 0x7 | c0ff07 | flags=AZ rbx=0x6a09dd8f489c850b undef=AO
 sar byte ptr [0x5000001d], 0x7 | c03c251d00005007 | flags=CPS mem=0x5000001d:9a undef=AO
 sar r11b, cl | 41d2fb | flags=CASO r11=0xfa911e0d0a020dff rcx=0xae0f12ddb91c5207 undef=AO
 sar byte ptr [r15 + 2*rsi + 0xc], cl | 41d27c770c | flags=AZO rsi=0x22 r15=0x500002b5 mem=0x50000305:ae rcx=0xa51635825e068a07 undef=AO
-sar r8b, 0x8 | 41c0f808 | flags=PA r8=0xabdf3079a4b608fe undef=AO
-sar byte ptr [r15], 0x8 | 41c03f08 | flags=CPSO r15=0x500003f4 mem=0x500003f4:fe undef=AO
-sar r10b, cl | 41d2fa | flags=CPAZ r10=0x7a161df7deefb520 rcx=0xd19f9a4f1581da08 undef=AO
-sar byte ptr [4*r12 + 0x82fd4], cl | 42d23ca5d42f0800 | flags=CASO r12=0x13fdf7a2 mem=0x50000e5c:e0 rcx=0x78880353be518308 undef=AO
-sar bh, 0x9 | c0ff09 | flags=PO rbx=0x315fd08d0f2efed9 undef=AO
-sar byte ptr [rsi + rbx - 0x7e], 0x9 | c07c1e8209 | flags=A rbx=0x67f2d3acd10727f8 rsi=0x980d2c537ef8dff1 mem=0x5000076b:81 undef=AO
-sar sil, cl | 40d2fe | flags=CPO rsi=0xdd39658d805583a rcx=0x478a6da948504409 undef=AO
-sar byte ptr [4*rax + 0x3cd00], cl | d23c8500cd0300 | flags=CSO rax=0x13ff0d5c mem=0x50000270:2d rcx=0x5342b33e41ff5309 undef=AO
-sar r10b, 0x1f | 41c0fa1f | flags=PO r10=0x4d72bc0b2f5de8b4 undef=AO
-sar byte ptr [rax + 8*r14 + 0x15], 0x1f | 42c07cf0151f | flags=CPAZS r14=0xd3f75181b837ed9a rax=0x604573f28e4094e4 mem=0x500001c9:7f undef=AO
-sar bl, cl | d2fb | flags=AZ rbx=0x80c1e7f6e4fdc17f rcx=0x13a14b7c25c1e01f undef=AO
-sar byte ptr [r11 + 8*rdi], cl | 41d23cfb | flags=CPZ rdi=0x556bcf509d95f42b r11=0x54a1857b63506c28 mem=0x50000d80:00 rcx=0x7be13e4cc860041f undef=AO
+sar r8b, 0x8 | 41c0f808 | flags=PA r8=0xabdf3079a4b608fe known=sar-carry undef=AO
+sar byte ptr [r15], 0x8 | 41c03f08 | flags=CPSO r15=0x500003f4 mem=0x500003f4:fe known=sar-carry undef=AO
+sar r10b, cl | 41d2fa | flags=CPAZ r10=0x7a161df7deefb520 rcx=0xd19f9a4f1581da08 known=sar-carry undef=AO
+sar byte ptr [4*r12 + 0x82fd4], cl | 42d23ca5d42f0800 | flags=CASO r12=0x13fdf7a2 mem=0x50000e5c:e0 rcx=0x78880353be518308 known=sar-carry undef=AO
+sar bh, 0x9 | c0ff09 | flags=PO rbx=0x315fd08d0f2efed9 known=sar-carry undef=AO
+sar byte ptr [rsi + rbx - 0x7e], 0x9 | c07c1e8209 | flags=A rbx=0x67f2d3acd10727f8 rsi=0x980d2c537ef8dff1 mem=0x5000076b:81 known=sar-carry undef=AO
+sar sil, cl | 40d2fe | flags=CPO rsi=0xdd39658d805583a rcx=0x478a6da948504409 known=sar-carry undef=AO
+sar byte ptr [4*rax + 0x3cd00], cl | d23c8500cd0300 | flags=CSO rax=0x13ff0d5c mem=0x50000270:2d rcx=0x5342b33e41ff5309 known=sar-carry undef=AO
+sar r10b, 0x1f | 41c0fa1f | flags=PO r10=0x4d72bc0b2f5de8b4 known=sar-carry undef=AO
+sar byte ptr [rax + 8*r14 + 0x15], 0x1f | 42c07cf0151f | flags=CPAZS r14=0xd3f75181b837ed9a rax=0x604573f28e4094e4 mem=0x500001c9:7f known=sar-carry undef=AO
+sar bl, cl | d2fb | flags=AZ rbx=0x80c1e7f6e4fdc17f rcx=0x13a14b7c25c1e01f known=sar-carry undef=AO
+sar byte ptr [r11 + 8*rdi], cl | 41d23cfb | flags=CPZ rdi=0x556bcf509d95f42b r11=0x54a1857b63506c28 mem=0x50000d80:00 rcx=0x7be13e4cc860041f known=sar-carry undef=AO
 sar r12b, 0x20 | 41c0fc20 | flags=CPAZSO r12=0x8b4a2f94de3e8668
 sar byte ptr [r15 + 4*rbp], 0x20 | 41c03caf20 | flags=CPO rbp=0x7960964c6f674509 r15=0x1a7da6ce9262f007 mem=0x5000042b:02
 sar r8b, cl | 41d2f8 | flags=PAZSO r8=0xe148d41d01f491a0 rcx=0x71d9480974245220
@@ -468,10 +468,10 @@ sar dil, 0x21 | 40c0ff21 | flags=S rdi=0xa1475392b17c1a01 undef=A
 sar byte ptr [rip + 0xffffd38], 0x21 | c03d38fdff0f21 | flags=SO mem=0x5000053f:80 undef=A
 sar r14b, cl | 41d2fe | flags=CS r14=0x39ad20c2d1344281 rcx=0x41a9a7254b74ff21 undef=A
 sar byte ptr [r13], cl | 41d27d00 | flags=PAZS r13=0x50000055 mem=0x50000055:ec rcx=0xda4b2a0c1a269c21 undef=A
-sar bpl, 0x3f | 40c0fd3f | flags=CPAZSO rbp=0xd13015b73354c300 undef=AO
-sar byte ptr [r11 + 2*r12], 0x3f | 43c03c633f | flags=CAZO r12=0x1c r11=0x5000041a mem=0x50000452:da undef=AO
-sar dl, cl | d2fa | flags=PZS rdx=0xf32d74af6f47a504 rcx=0xaaaf054e3857b73f undef=AO
-sar byte ptr [0x500006f1], cl | d23c25f1060050 | flags=PZS mem=0x500006f1:33 rcx=0xf23d35d16f17b23f undef=AO
+sar bpl, 0x3f | 40c0fd3f | flags=CPAZSO rbp=0xd13015b73354c300 known=sar-carry undef=AO
+sar byte ptr [r11 + 2*r12], 0x3f | 43c03c633f | flags=CAZO r12=0x1c r11=0x5000041a mem=0x50000452:da known=sar-carry undef=AO
+sar dl, cl | d2fa | flags=PZS rdx=0xf32d74af6f47a504 rcx=0xaaaf054e3857b73f known=sar-carry undef=AO
+sar byte ptr [0x500006f1], cl | d23c25f1060050 | flags=PZS mem=0x500006f1:33 rcx=0xf23d35d16f17b23f known=sar-carry undef=AO
 sar r9b, 0x40 | 41c0f940 | flags=PAZSO r9=0x1ba453c3de95bf68
 sar byte ptr [rcx + r13 - 0x80], 0x40 | 42c07c298040 | flags=PAZ r13=0x33 rcx=0x50000697 mem=0x5000064a:8d
 sar sil, cl | 40d2fe | flags=CAO rsi=0xcad8a7d5fce4364a rcx=0x4c5907b7a2d82240
@@ -480,10 +480,10 @@ sar ch, 0x41 | c0fd41 | flags=CPAZ rcx=0x6033e76a83effe09 undef=A
 sar byte ptr [r14 + 0x7619acb7], 0x41 | 41c0beb7ac197641 | flags=CPAZSO r14=0xffffffffd9e65593 mem=0x5000024a:d5 undef=A
 sar ah, cl | d2fc | flags=CAZO rax=0x40f443c9d380f979 rcx=0x2856e78754b8ac41 undef=A
 sar byte ptr [4*r9 + 0x9be1b], cl | 42d23c8d1bbe0900 | flags=AO r9=0x13fd9240 mem=0x5000071b:7f rcx=0x165fa791125a7f41 undef=A
-sar r8b, 0xff | 41c0f8ff | flags=CAZO r8=0x2675162cd613f4fa undef=AO
-sar byte ptr [0x500002c0], 0xff | c03c25c0020050ff | flags=CPAZSO mem=0x500002c0:7f undef=AO
-sar sil, cl | 40d2fe | flags=Z rsi=0xf4fbae34f62d2aff rcx=0x277356a617fcc4ff undef=AO
-sar byte ptr [r11 + 2*r12], cl | 43d23c63 | flags=PAO r12=0x2ab4c638fb6c0b2 r11=0xfaa9673930928625 mem=0x50000789:2e rcx=0xfc8864265e98efff undef=AO
+sar r8b, 0xff | 41c0f8ff | flags=CAZO r8=0x2675162cd613f4fa known=sar-carry undef=AO
+sar byte ptr [0x500002c0], 0xff | c03c25c0020050ff | flags=CPAZSO mem=0x500002c0:7f known=sar-carry undef=AO
+sar sil, cl | 40d2fe | flags=Z rsi=0xf4fbae34f62d2aff rcx=0x277356a617fcc4ff known=sar-carry undef=AO
+sar byte ptr [r11 + 2*r12], cl | 43d23c63 | flags=PAO r12=0x2ab4c638fb6c0b2 r11=0xfaa9673930928625 mem=0x50000789:2e rcx=0xfc8864265e98efff known=sar-carry undef=AO
 sar bx, 0x0 | 66c1fb00 | flags=PZO rbx=0x78fbf379590e737d
 sar word ptr [rsp], 0x0 | 66c13c2400 | flags=PO rsp=0x5000054c mem=0x5000054c:0cd2
 sar r10w, cl | 6641d3fa | flags=CAS r10=0x68f2f33d3ac30027 rcx=0x5a4ee25483d61900
@@ -510,18 +510,18 @@ sar r13w, 0xf | 6641c1fd0f | flags=ZSO r13=0x4e946fc56dc5002d undef=AO
 sar word ptr [8*rbx + 0x70394], 0xf | 66c13cdd940307000f | flags=PZ rbx=0x9ff2009 mem=0x500003dc:7f00 undef=AO
 sar r11w, cl | 6641d3fb | flags=AZSO r11=0x9845cdcd7c2400a5 rcx=0x1aac30e8f66e190f undef=AO
 sar word ptr [rdi - 0x33], cl | 66d37fcd | flags=AO rdi=0x50000339 mem=0x50000306:0262 rcx=0x7bbefc906151010f undef=AO
-sar dx, 0x10 | 66c1fa10 | flags=AZ rdx=0xd52db9a899d000a4 undef=AO
-sar word ptr [2*r14 - 0xe8cb7], 0x10 | 6642c13c754973f1ff10 | flags=P r14=0x28074e4e mem=0x50000fe5:8000 undef=AO
-sar sp, cl | 66d3fc | flags=AO rsp=0xf2e6db12dab70000 rcx=0xd65221a1456f5210 undef=AO
-sar word ptr [rbx + 2*r15 + 0x5c], cl | 6642d37c7b5c | flags=ASO r15=0xd4f51d1727b8943f rbx=0x5615c5d2008ee2c7 mem=0x50000ba1:5990 rcx=0xbc105d1b046f0b10 undef=AO
-sar ax, 0x11 | 66c1f811 | flags=PZO rax=0xa09732c8f7810093 undef=AO
-sar word ptr [r10 - 0xfa20087], 0x11 | 6641c1ba79ff5df011 | flags=PAO r10=0x5fa209ab mem=0x50000924:feff undef=AO
-sar bx, cl | 66d3fb | flags=AS rbx=0xedd99b874ce1ffff rcx=0xdba98e6492637b11 undef=AO
-sar word ptr [r8 + 8*r15], cl | 6643d33cf8 | flags=PA r15=0x1e r8=0x50000e4f mem=0x50000f3f:67ee rcx=0xab8966d0c96e4911 undef=AO
-sar bp, 0x1f | 66c1fd1f | flags=Z rbp=0x3cd399f53027ba35 undef=AO
-sar word ptr [rbx + 0x2735cba], 0x1f | 66c1bbba5c73021f | flags=CA rbx=0x4d8caaa9 mem=0x50000763:c805 undef=AO
-sar r8w, cl | 6641d3f8 | flags=CAZO r8=0x52e6aeeea521d5d4 rcx=0x97abbe14b94f871f undef=AO
-sar word ptr [rip + 0xfffff14], cl | 66d33d14ffff0f | flags=PSO mem=0x5000071b:ffff rcx=0xe42f7c4c0b2cb51f undef=AO
+sar dx, 0x10 | 66c1fa10 | flags=AZ rdx=0xd52db9a899d000a4 known=sar-carry undef=AO
+sar word ptr [2*r14 - 0xe8cb7], 0x10 | 6642c13c754973f1ff10 | flags=P r14=0x28074e4e mem=0x50000fe5:8000 known=sar-carry undef=AO
+sar sp, cl | 66d3fc | flags=AO rsp=0xf2e6db12dab70000 rcx=0xd65221a1456f5210 known=sar-carry undef=AO
+sar word ptr [rbx + 2*r15 + 0x5c], cl | 6642d37c7b5c | flags=ASO r15=0xd4f51d1727b8943f rbx=0x5615c5d2008ee2c7 mem=0x50000ba1:5990 rcx=0xbc105d1b046f0b10 known=sar-carry undef=AO
+sar ax, 0x11 | 66c1f811 | flags=PZO rax=0xa09732c8f7810093 known=sar-carry undef=AO
+sar word ptr [r10 - 0xfa20087], 0x11 | 6641c1ba79ff5df011 | flags=PAO r10=0x5fa209ab mem=0x50000924:feff known=sar-carry undef=AO
+sar bx, cl | 66d3fb | flags=AS rbx=0xedd99b874ce1ffff rcx=0xdba98e6492637b11 known=sar-carry undef=AO
+sar word ptr [r8 + 8*r15], cl | 6643d33cf8 | flags=PA r15=0x1e r8=0x50000e4f mem=0x50000f3f:67ee rcx=0xab8966d0c96e4911 known=sar-carry undef=AO
+sar bp, 0x1f | 66c1fd1f | flags=Z rbp=0x3cd399f53027ba35 known=sar-carry undef=AO
+sar word ptr [rbx + 0x2735cba], 0x1f | 66c1bbba5c73021f | flags=CA rbx=0x4d8caaa9 mem=0x50000763:c805 known=sar-carry undef=AO
+sar r8w, cl | 6641d3f8 | flags=CAZO r8=0x52e6aeeea521d5d4 rcx=0x97abbe14b94f871f known=sar-carry undef=AO
+sar word ptr [rip + 0xfffff14], cl | 66d33d14ffff0f | flags=PSO mem=0x5000071b:ffff rcx=0xe42f7c4c0b2cb51f known=sar-carry undef=AO
 sar r15w, 0x20 | 6641c1ff20 | flags=CPZO r15=0xf4c0d96797850083
 sar word ptr [rcx + 4*r15 - 0x36a479d7], 0x20 | 6642c1bcb929865bc920 | flags=PS r15=0x4 rcx=0x86a47e7d mem=0x500004b6:95c3
 sar bx, cl | 66d3fb | flags=CSO rbx=0x8f3bd756ffe173d5 rcx=0x990491417f99f720
@@ -530,10 +530,10 @@ sar r9w, 0x21 | 6641c1f921 | flags=AZSO r9=0x8096ed9b5b79ffff undef=A
 sar word ptr [rbx + r12], 0x21 | 6642c13c2321 | flags=AS r12=0x2f rbx=0x50000816 mem=0x50000845:0180 undef=A
 sar sp, cl | 66d3fc | flags=S rsp=0x618225887b1c389c rcx=0x863d69a264f35021 undef=A
 sar word ptr [r12 + 0x70], cl | 6641d37c2470 | flags=AZ r12=0x500003ad mem=0x5000041d:8000 rcx=0x4d556d68f8b01021 undef=A
-sar r10w, 0x3f | 6641c1fa3f | flags=AO r10=0xa2e2486d4cac7fff undef=AO
-sar word ptr [0x50000340], 0x3f | 66c13c25400300503f | flags=Z mem=0x50000340:8459 undef=AO
-sar r8w, cl | 6641d3f8 | flags=Z r8=0x7efeb53b77929f4 rcx=0x159b83675a22e3f undef=AO
-sar word ptr [0x50000ed1], cl | 66d33c25d10e0050 | flags=PO mem=0x50000ed1:9700 rcx=0x6bd8b40305def63f undef=AO
+sar r10w, 0x3f | 6641c1fa3f | flags=AO r10=0xa2e2486d4cac7fff known=sar-carry undef=AO
+sar word ptr [0x50000340], 0x3f | 66c13c25400300503f | flags=Z mem=0x50000340:8459 known=sar-carry undef=AO
+sar r8w, cl | 6641d3f8 | flags=Z r8=0x7efeb53b77929f4 rcx=0x159b83675a22e3f known=sar-carry undef=AO
+sar word ptr [0x50000ed1], cl | 66d33c25d10e0050 | flags=PO mem=0x50000ed1:9700 rcx=0x6bd8b40305def63f known=sar-carry undef=AO
 sar r14w, 0x40 | 6641c1fe40 | flags=CPAZSO r14=0x5d085dd54874a174
 sar word ptr [r12 - 0x6a278], 0x40 | 6642c13c25885df9ff40 | flags=PAZSO r12=0x5006a476 mem=0x500001fe:b8a8
 sar di, cl | 66d3ff | flags=CPSO rdi=0xb9a3259bc29a00e5 rcx=0x6ee11cac1f8afa40
@@ -542,10 +542,10 @@ sar r13w, 0x41 | 6641c1fd41 | flags=CPAS r13=0x6a01c273a289cdc undef=A
 sar word ptr [r14 + 8*rdi], 0x41 | 6641c13cfe41 | flags=CPAZ rdi=0xd88624f5413daec2 r14=0x3bced8564612985b mem=0x50000e6b:caf3 undef=A
 sar sp, cl | 66d3fc | flags=SO rsp=0xc13362683a740031 rcx=0x6c35a55a954a7f41 undef=A
 sar word ptr [r11 + 0x3b1f9f73], cl | 6641d3bb739f1f3b | flags=CAZS r11=0x14e06cf4 mem=0x50000c67:30d9 rcx=0x88aeecbfbd5f0441 undef=A
-sar ax, 0xff | 66c1f8ff | flags=CPAZ rax=0x2e734dbd5be28001 undef=AO
-sar word ptr [0x50000b81], 0xff | 66c13c25810b0050ff | flags=CPZSO mem=0x50000b81:ff7f undef=AO
-sar r8w, cl | 6641d3f8 | flags=SO r8=0x406e4197ca818000 rcx=0x9ac323116d2465ff undef=AO
-sar word ptr [0x50000ccb], cl | 66d33c25cb0c0050 | flags=P mem=0x50000ccb:0080 rcx=0x10d31118ddc9baff undef=AO
+sar ax, 0xff | 66c1f8ff | flags=CPAZ rax=0x2e734dbd5be28001 known=sar-carry undef=AO
+sar word ptr [0x50000b81], 0xff | 66c13c25810b0050ff | flags=CPZSO mem=0x50000b81:ff7f known=sar-carry undef=AO
+sar r8w, cl | 6641d3f8 | flags=SO r8=0x406e4197ca818000 rcx=0x9ac323116d2465ff known=sar-carry undef=AO
+sar word ptr [0x50000ccb], cl | 66d33c25cb0c0050 | flags=P mem=0x50000ccb:0080 rcx=0x10d31118ddc9baff known=sar-carry undef=AO
 sar dword ptr [rip + 0x10000783], 0x0 | c13d8307001000 | flags=CPSO mem=0x50000f8a:60dcfd39
 sar dword ptr [0x50000c5c], cl | d33c255c0c0050 | flags=O mem=0x50000c5c:01000080 rcx=0x76d91e80487a6900
 sar ebx, 0x1 | c1fb01 | flags=CAS rbx=0x62eb4c100000003c undef=A

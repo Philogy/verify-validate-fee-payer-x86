@@ -445,6 +445,8 @@ def shift_vector(g, op, w, count, form, dest):
         patch = lambda b: b[:-1] + b"\x01"
     else:
         text = f"{op} {d}, {hexn(count)}"
+    if op == "sar" and masked >= w:
+        fields.append(("known", "sar-carry"))
     g.add("shift", Vector(text, fields, source=source, patch=patch,
                           undef=undefined(op, w, masked), rip_target=rip))
 
@@ -518,6 +520,12 @@ def branches(g):
             else:
                 m, f, at, rip = g.memory(64, used)
                 g.add("branch", Vector(f"{op} {m}", f + [("mem", f"{hexn(at)}:{le(target, 8)}")], rip_target=rip))
+    # Every addressing mode of the indirect forms, rip-relative included.
+    for op in ["jmp", "call"]:
+        for shape in ["b", "b+i", "i", "rip", "abs"]:
+            used = {4}
+            m, f, at, rip = g.memory(64, used, shape=shape)
+            g.add("branch", Vector(f"{op} {m}", f + [("mem", f"{hexn(at)}:{le(canonical(g), 8)}")], rip_target=rip))
     for _ in range(4):
         sp = STACK_PAGE + g.rng.randrange(0, 4088)
         g.add("branch", Vector("ret", [("rsp", hexn(sp)), ("mem", f"{hexn(sp)}:{le(canonical(g), 8)}")]))
@@ -607,6 +615,11 @@ def sse(g):
                 x = g.rng.randrange(16)
                 text = f"{op} {m}, xmm{x}" if store else f"{op} xmm{x}, {m}"
                 g.add("sse", Vector(text, f, rip_target=rip))
+    for op in ["movdqa", "movdqu", "movapd", "movupd", "movaps", "movups"]:
+        for shape in ["b", "b+i", "i", "rip", "abs"]:
+            used = set()
+            m, f, _, rip = g.memory(128, used, target=DATA_PAGE + g.rng.randrange(0, 255) * 16, shape=shape)
+            g.add("sse", Vector(f"{op} xmm{g.rng.randrange(16)}, {m}", f, rip_target=rip))
     # movd / movq between general registers and xmm
     for w, mn in [(32, "movd"), (64, "movq")]:
         for _ in range(3):
