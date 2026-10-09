@@ -181,6 +181,8 @@ static int parse_vector(char *line, struct vector *v, int lineno) {
   return 1;
 }
 
+// rosetta/oracle_signals.c reuses everything but the ptrace driver.
+#ifndef ORACLE_SIGNALS
 static void child(const struct vector *v) {
   if (ptrace(PTRACE_TRACEME, 0, 0, 0)) die("PTRACE_TRACEME");
   for (size_t i = 0; i < PAGE_COUNT; i++) {
@@ -236,6 +238,8 @@ static void write_machine(pid_t pid, const struct vector *v) {
   if (ptrace(PTRACE_SETFPREGS, pid, 0, &f)) die("PTRACE_SETFPREGS");
 }
 
+#endif
+
 static void print_hex128(unsigned __int128 x) {
   printf("0x%016llx%016llx", (unsigned long long)(x >> 64), (unsigned long long)x);
 }
@@ -277,6 +281,7 @@ static void print_diff(const struct machine *before, const struct machine *after
     }
 }
 
+#ifndef ORACLE_SIGNALS
 static void run(const struct vector *v) {
   pid_t pid = fork();
   if (pid < 0) die("fork");
@@ -333,3 +338,4 @@ int main(void) {
   }
   return 0;
 }
+#endif

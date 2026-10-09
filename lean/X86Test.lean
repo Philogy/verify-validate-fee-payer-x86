@@ -20,6 +20,9 @@ flags the model leaves undefined.
 
 `lake exe x86-test selftest <dir>`: requires the runner to reject each
 fixture's planted defect (`tests/x86/selftest/`).
+
+`lake exe x86-test rosetta <dir> <outcomes>`: the model against Rosetta's
+outcomes (`tests/x86/rosetta/run.sh`), a quick local check.
 -/
 
 open X86 X86Test
@@ -211,6 +214,61 @@ def same (dir other : System.FilePath) : IO UInt32 := do
   IO.println s!"{differences} outcomes differ beyond flags the model leaves undefined"
   return if differences == 0 then 0 else 1
 
+/-- Whether two outcome lines agree except in the flags at `ignored`
+(`CPAZSO` order), with the model's `?` allowing anything. -/
+def agreesIgnoring (ignored : List Nat) (before : Flags) (model other : String) : Bool :=
+  let (m, mFlags) := splitFlags before model
+  let (c, cFlags) := splitFlags before other
+  m == c && mFlags.length == cFlags.length &&
+    (mFlags.zip cFlags).zipIdx.all fun ((a, b), i) => ignored.contains i || a == '?' || a == b
+
+/-- AF, which Rosetta does not keep. -/
+def auxiliaryCarryIndex : Nat := 2
+
+/-- Which of Rosetta's known errors explains a disagreement, if one does. -/
+def rosettaArtefact (v : Vector) (model rosetta : String) : Option String :=
+  let mKind := outcomeKind model
+  let rKind := outcomeKind rosetta
+  if v.known.isSome then some "known= vector"
+  else if mKind == "pagefault denied" &&
+      agreesIgnoring [auxiliaryCarryIndex] v.state.rflags model (rosetta.replace "pagefault unmapped" "pagefault denied") then
+    some "permission fault reported as unmapped"
+  else if mKind == "gp" && rKind != "gp" then some "no alignment check on SSE operands"
+  else if v.asm.startsWith "ptest" && agreesIgnoring [1, 2, 4, 5] v.state.rflags model rosetta then some "ptest P/S/O"
+  else if v.asm.startsWith "nop" && rKind == "ill" then some "nop with an operand is SIGILL"
+  else none
+
+/-- The model against outcomes from `rosetta/oracle_signals.c`, with AF
+ignored and Rosetta's known errors counted rather than failed. -/
+def rosetta (dir other : System.FilePath) : IO UInt32 := do
+  let mut mismatches := 0
+  let mut total := 0
+  let mut artefacts : Std.HashMap String Nat := {}
+  let files := ((← (dir / "vectors").readDir).filter (·.fileName.endsWith ".txt")).qsort (·.fileName < ·.fileName)
+  for file in files do
+    let inputs ← readLines file.path
+    let outcomes ← readLines (other / file.fileName)
+    if inputs.length != outcomes.length then
+      IO.println s!"{file.fileName}: {inputs.length} vectors but {outcomes.length} outcomes"
+      mismatches := mismatches + 1
+      continue
+    for (line, theirs) in inputs.zip outcomes do
+      total := total + 1
+      let .ok v := parseVector line
+        | mismatches := mismatches + 1
+          IO.println s!"UNPARSED {file.fileName}: {line}"
+          continue
+      let (got, _) := outcome v
+      unless agreesIgnoring [auxiliaryCarryIndex] v.state.rflags got theirs do
+        match rosettaArtefact v got theirs with
+        | some why => artefacts := artefacts.alter why fun n => some (n.getD 0 + 1)
+        | none =>
+          mismatches := mismatches + 1
+          IO.println s!"MISMATCH {file.fileName}: {v.asm}\n  vector:  {line}\n  rosetta: {theirs}\n  model:   {got}"
+  IO.println s!"{total} vectors, {mismatches} mismatches; Rosetta artefacts set aside:"
+  for (why, n) in artefacts.toList do IO.println s!"  {n}\t{why}"
+  return if mismatches == 0 then 0 else 1
+
 /-- A line of the decode file: `address | bytes | length | text`, from
 llvm-objdump; length 0 means it found no instruction. -/
 def decode (file : System.FilePath) : IO UInt32 := do
@@ -275,6 +333,7 @@ def main : List String → IO UInt32
   | ["decode", file] => decode file
   | ["same", dir, other] => same dir other
   | ["selftest", dir] => selftest dir
+  | ["rosetta", dir, other] => rosetta dir other
   | _ => do
-    IO.eprintln "usage: x86-test behaviour <tests/x86> | x86-test decode <file> | x86-test same <tests/x86> <expected dir> | x86-test selftest <fixtures dir>"
+    IO.eprintln "usage: x86-test behaviour <tests/x86> | x86-test decode <file> | x86-test same <tests/x86> <expected dir> | x86-test selftest <fixtures dir> | x86-test rosetta <tests/x86> <outcomes dir>"
     return 2
