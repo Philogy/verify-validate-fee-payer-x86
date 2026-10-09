@@ -32,61 +32,48 @@ inductive PageFault where
   | denied (address : UInt64) (access : Access)
   deriving DecidableEq, Repr
 
-structure Mapping where
-  base : UInt64
-  bytes : ByteArray
+structure Cell where
   permissions : Permissions
+  byte : UInt8
+  deriving DecidableEq, Repr
 
-namespace Mapping
-
--- A `Nat`, so that a mapping that ends at `2^64` does not wrap around to 0.
-def endAddress (mp : Mapping) : Nat := mp.base.toNat + mp.bytes.size
-
-def Contains (mp : Mapping) (address : UInt64) : Prop :=
-  mp.base.toNat ≤ address.toNat ∧ address.toNat < mp.endAddress
-
-instance (mp : Mapping) (address : UInt64) : Decidable (mp.Contains address) := by
-  unfold Contains; infer_instance
-
-def get (mp : Mapping) (address : UInt64) (h : mp.Contains address) : UInt8 :=
-  mp.bytes[address.toNat - mp.base.toNat]'(by unfold Contains endAddress at h; omega)
-
-def set (mp : Mapping) (address : UInt64) (h : mp.Contains address) (v : UInt8) : Mapping :=
-  { mp with bytes := mp.bytes.set (address.toNat - mp.base.toNat) v (by unfold Contains endAddress at h; omega) }
-
-def Disjoint (a b : Mapping) : Prop := a.endAddress ≤ b.base.toNat ∨ b.endAddress ≤ a.base.toNat
-
-end Mapping
-
+/-- What is at each address. One cell per address, so two mappings cannot
+overlap. -/
 structure Memory where
-  mappings : List Mapping
+  cell : UInt64 → Option Cell
 
 namespace Memory
 
+def empty : Memory := ⟨fun _ => none⟩
+
+/-- `m` with `bytes` mapped at `base`, replacing what was there. Bytes that
+would lie past `2^64` are not mapped. -/
+def map (m : Memory) (base : UInt64) (bytes : ByteArray) (permissions : Permissions) : Memory :=
+  ⟨fun a => if h : base.toNat ≤ a.toNat ∧ a.toNat - base.toNat < bytes.size
+    then some ⟨permissions, bytes[a.toNat - base.toNat]⟩ else m.cell a⟩
+
 def byte (m : Memory) (access : Access) (address : UInt64) : Except PageFault UInt8 :=
-  go m.mappings
-where
-  go : List Mapping → Except PageFault UInt8
-    | [] => .error (.unmapped address access)
-    | mp :: rest =>
-      if h : mp.Contains address then
-        if mp.permissions.allows access then .ok (mp.get address h) else .error (.denied address access)
-      else go rest
+  match m.cell address with
+  | none => .error (.unmapped address access)
+  | some c => if c.permissions.allows access then .ok c.byte else .error (.denied address access)
 
 -- Byte by byte, so that an access straddling two adjacent mappings works as
 -- on the CPU.
 def bytes (m : Memory) (access : Access) (address : UInt64) (n : Nat) : Except PageFault (List UInt8) :=
   (List.range n).mapM fun i => m.byte access (address + i.toUInt64)
 
-def setByte (address : UInt64) (v : UInt8) : List Mapping → List Mapping
-  | [] => []
-  | mp :: rest =>
-    if h : mp.Contains address then mp.set address h v :: rest else mp :: setByte address v rest
+/-- Replace the byte at a mapped `address`, whatever its permissions. -/
+def setByte (m : Memory) (address : UInt64) (v : UInt8) : Memory :=
+  ⟨fun a => if a = address then (m.cell a).map ({ · with byte := v }) else m.cell a⟩
+
+/-- `bs` stored from `a + k` on. -/
+def stores (a : UInt64) (bs : List UInt8) (k : Nat) (m : Memory) : Memory :=
+  (bs.zipIdx k).foldl (fun m (b, i) => m.setByte (a + i.toUInt64) b) m
 
 -- Every byte is checked before any is written: a faulting store has no effect.
 def writeBytes (m : Memory) (address : UInt64) (bs : List UInt8) : Except PageFault Memory := do
   let _ ← m.bytes .write address bs.length
-  return ⟨bs.zipIdx.foldl (fun ms (b, i) => setByte (address + i.toUInt64) b ms) m.mappings⟩
+  return stores address bs 0 m
 
 def read (m : Memory) (w : OperandSize) (address : UInt64) : Except PageFault UInt64 := do
   return ofLittleEndian (← m.bytes .read address w.byteCount)
@@ -104,6 +91,9 @@ def write128 (m : Memory) (address : UInt64) (v : BitVec 128) : Except PageFault
 def Holds (m : Memory) (w : OperandSize) (a v : UInt64) : Prop := m.read w a = .ok v
 
 def HoldsBytes (m : Memory) (a : UInt64) (bs : List UInt8) : Prop := m.bytes .read a bs.length = .ok bs
+
+def Readable (m : Memory) (a : UInt64) (n : Nat) : Prop :=
+  ∀ i < n, ∃ b, m.byte .read (a + i.toUInt64) = .ok b
 
 def Writable (m : Memory) (a : UInt64) (n : Nat) : Prop :=
   ∀ i < n, ∃ b, m.byte .write (a + i.toUInt64) = .ok b

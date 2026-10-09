@@ -1,102 +1,69 @@
 import X86.Memory
 
--- No well-formedness is needed: `byte` reads from, and `setByte` writes to,
--- the first mapping containing an address, so they agree even if mappings
--- overlap.
-
 namespace X86
-
-theorem ByteArray.size_set' (bs : ByteArray) (i : Nat) (v : UInt8) (h : i < bs.size) :
-    (bs.set i v h).size = bs.size := by
-  cases bs; exact Array.size_set ..
-
-theorem ByteArray.getElem_set' (bs : ByteArray) (i j : Nat) (v : UInt8) (hi : i < bs.size)
-    (hj : j < (bs.set i v hi).size) :
-    (bs.set i v hi)[j] = if i = j then v else bs[j]'(by rw [ByteArray.size_set'] at hj; exact hj) := by
-  cases bs; exact Array.getElem_set ..
-
-namespace Mapping
-
-@[simp] theorem contains_set {mp : Mapping} {a x : UInt64} {h : mp.Contains a} {v : UInt8} :
-    (mp.set a h v).Contains x ↔ mp.Contains x := by
-  simp [set, Contains, endAddress, ByteArray.size_set']
-
-@[simp] theorem permissions_set {mp : Mapping} {a : UInt64} {h : mp.Contains a} {v : UInt8} :
-    (mp.set a h v).permissions = mp.permissions := rfl
-
-theorem get_set_same {mp : Mapping} {a : UInt64} {h : mp.Contains a} {v : UInt8} (h' : (mp.set a h v).Contains a) :
-    (mp.set a h v).get a h' = v := by
-  simp [get, set, ByteArray.getElem_set']
-
-theorem get_set_ne {mp : Mapping} {a x : UInt64} {h : mp.Contains a} {v : UInt8}
-    (h' : (mp.set a h v).Contains x) (hx : mp.Contains x) (hne : a ≠ x) :
-    (mp.set a h v).get x h' = mp.get x hx := by
-  simp only [get, set, ByteArray.getElem_set']
-  have : a.toNat ≠ x.toNat := fun e => hne (UInt64.toNat_inj.1 e)
-  unfold Contains at h hx
-  simp only [show ¬ a.toNat - mp.base.toNat = x.toNat - mp.base.toNat by omega, ↓reduceIte]
-
-end Mapping
 
 namespace Memory
 
-def Mapped (ms : List Mapping) (x : UInt64) : Prop := ∃ mp ∈ ms, mp.Contains x
+def Mapped (m : Memory) (x : UInt64) : Prop := ∃ c, m.cell x = some c
 
-theorem mapped_of_go {acc : Access} {x : UInt64} {ms : List Mapping} {b : UInt8}
-    (h : byte.go acc x ms = .ok b) : Mapped ms x := by
-  induction ms with
-  | nil => simp [byte.go] at h
-  | cons mp rest ih =>
-    simp only [byte.go] at h
-    split at h
-    · exact ⟨mp, by simp, by assumption⟩
-    · obtain ⟨mp', hm, hc⟩ := ih h
-      exact ⟨mp', by simp [hm], hc⟩
+theorem mapped_of_byte {m : Memory} {acc : Access} {x : UInt64} {b : UInt8}
+    (h : m.byte acc x = .ok b) : m.Mapped x := by
+  unfold byte at h
+  split at h
+  · cases h
+  · exact ⟨_, by assumption⟩
 
-theorem mapped_setByte {a x : UInt64} {v : UInt8} {ms : List Mapping} :
-    Mapped (setByte a v ms) x ↔ Mapped ms x := by
-  induction ms with
-  | nil => simp [setByte]
-  | cons mp rest ih =>
-    simp only [setByte]
-    split <;> simp_all [Mapped]
+theorem cell_setByte {m : Memory} {a x : UInt64} {v : UInt8} :
+    (m.setByte a v).cell x = if x = a then (m.cell x).map ({ · with byte := v }) else m.cell x := rfl
 
-theorem go_setByte_same {acc : Access} {a : UInt64} {v : UInt8} {ms : List Mapping}
-    (hm : Mapped ms a) (hacc : acc = .read) : byte.go acc a (setByte a v ms) = .ok v := by
-  subst hacc
-  induction ms with
-  | nil => obtain ⟨_, h, _⟩ := hm; simp at h
-  | cons mp rest ih =>
-    simp only [setByte]
-    by_cases hc : mp.Contains a
-    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Permissions.allows]
-      simp [Mapping.get_set_same]
-    · simp only [hc, ↓reduceDIte, byte.go]
-      apply ih
-      obtain ⟨mp', h', hc'⟩ := hm
-      simp only [List.mem_cons] at h'
-      rcases h' with rfl | h'
-      · exact absurd hc' hc
-      · exact ⟨mp', h', hc'⟩
+theorem mapped_setByte {m : Memory} {a x : UInt64} {v : UInt8} : (m.setByte a v).Mapped x ↔ m.Mapped x := by
+  simp only [Mapped, cell_setByte]
+  split
+  · cases m.cell x <;> simp
+  · rfl
 
-theorem go_setByte_ne {acc : Access} {a x : UInt64} {v : UInt8} {ms : List Mapping} (hne : a ≠ x) :
-    byte.go acc x (setByte a v ms) = byte.go acc x ms := by
-  induction ms with
-  | nil => rfl
-  | cons mp rest ih =>
-    simp only [setByte]
-    by_cases hc : mp.Contains a
-    · simp only [hc, ↓reduceDIte, byte.go, Mapping.contains_set, Mapping.permissions_set]
-      by_cases hx : mp.Contains x
-      · simp [hx, Mapping.get_set_ne _ hx hne]
-      · simp [hx]
-    · simp only [hc, ↓reduceDIte, byte.go, ih]
+theorem byte_setByte_same {m : Memory} {a : UInt64} {v : UInt8} (hm : m.Mapped a) :
+    (m.setByte a v).byte .read a = .ok v := by
+  obtain ⟨c, hc⟩ := hm
+  simp [byte, cell_setByte, hc, Permissions.allows]
 
-def stores (a : UInt64) (bs : List UInt8) (k : Nat) (ms : List Mapping) : List Mapping :=
-  (bs.zipIdx k).foldl (fun ms (b, i) => setByte (a + i.toUInt64) b ms) ms
+theorem byte_setByte_ne {m : Memory} {acc : Access} {a x : UInt64} {v : UInt8} (hne : a ≠ x) :
+    (m.setByte a v).byte acc x = m.byte acc x := by
+  simp only [byte, cell_setByte, show ¬ x = a from fun e => hne e.symm, ↓reduceIte]
 
-theorem stores_cons {a : UInt64} {b : UInt8} {bs : List UInt8} {k : Nat} {ms : List Mapping} :
-    stores a (b :: bs) k ms = stores a bs (k + 1) (setByte (a + k.toUInt64) b ms) := by
+/-- A store never changes whether an access succeeds, only the byte read. -/
+theorem byte_setByte_ok {m : Memory} {acc : Access} {a x : UInt64} {v : UInt8}
+    (h : ∃ b, m.byte acc x = .ok b) : ∃ b, (m.setByte a v).byte acc x = .ok b := by
+  by_cases hx : x = a
+  · obtain ⟨b, hb⟩ := h
+    unfold byte at hb ⊢
+    simp only [cell_setByte, hx, ↓reduceIte] at hb ⊢
+    cases hc : m.cell a with
+    | none => simp [hc] at hb
+    | some c =>
+      simp only [hc] at hb
+      simp only [Option.map_some]
+      split at hb
+      · rename_i hp; exact ⟨v, by simp [hp]⟩
+      · cases hb
+  · rw [byte_setByte_ne (Ne.symm hx)]; exact h
+
+theorem cell_map_inside {m : Memory} {base : UInt64} {bytes : ByteArray} {p : Permissions} {i : Nat}
+    (hi : i < bytes.size) (hw : base.toNat + bytes.size ≤ 2 ^ 64) :
+    (m.map base bytes p).cell (base + i.toUInt64) = some ⟨p, bytes[i]⟩ := by
+  have : (base + i.toUInt64).toNat = base.toNat + i := by
+    simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat']
+    rw [Nat.mod_eq_of_lt (a := i) (by omega), Nat.mod_eq_of_lt (by omega)]
+  simp only [map, this, Nat.add_sub_cancel_left]
+  rw [dite_eq_left_of_eq_true (eq_true ⟨by omega, hi⟩)]
+
+theorem cell_map_outside {m : Memory} {base a : UInt64} {bytes : ByteArray} {p : Permissions}
+    (h : ¬ (base.toNat ≤ a.toNat ∧ a.toNat < base.toNat + bytes.size)) : (m.map base bytes p).cell a = m.cell a := by
+  simp only [map]
+  rw [dite_eq_right_of_eq_false (eq_false (by omega))]
+
+theorem stores_cons {a : UInt64} {b : UInt8} {bs : List UInt8} {k : Nat} {m : Memory} :
+    stores a (b :: bs) k m = stores a bs (k + 1) (m.setByte (a + k.toUInt64) b) := by
   simp [stores, List.zipIdx_cons]
 
 theorem add_ne {a : UInt64} {i j : Nat} (hi : i < 2 ^ 64) (hj : j < 2 ^ 64) (h : i ≠ j) :
@@ -106,32 +73,38 @@ theorem add_ne {a : UInt64} {i j : Nat} (hi : i < 2 ^ 64) (hj : j < 2 ^ 64) (h :
   simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt hi, Nat.mod_eq_of_lt hj] at this
   exact h this
 
-theorem go_stores_outside {acc : Access} {a : UInt64} {bs : List UInt8} {k : Nat} {ms : List Mapping}
+theorem byte_stores_outside {acc : Access} {a : UInt64} {bs : List UInt8} {k : Nat} {m : Memory}
     {x : UInt64} (hx : ∀ i, k ≤ i → i < k + bs.length → a + i.toUInt64 ≠ x) :
-    byte.go acc x (stores a bs k ms) = byte.go acc x ms := by
-  induction bs generalizing k ms with
+    (stores a bs k m).byte acc x = m.byte acc x := by
+  induction bs generalizing k m with
   | nil => rfl
   | cons b bs ih =>
     rw [stores_cons, ih (fun i h1 h2 => hx i (by omega) (by simp at h2 ⊢; omega)),
-      go_setByte_ne (hx k (by omega) (by simp))]
+      byte_setByte_ne (hx k (by omega) (by simp))]
 
-theorem go_stores {a : UInt64} {bs : List UInt8} {k : Nat} {ms : List Mapping}
-    (hk : k + bs.length ≤ 2 ^ 64) (hm : ∀ i < bs.length, Mapped ms (a + (k + i).toUInt64))
+theorem byte_stores_ok {acc : Access} {a x : UInt64} :
+    ∀ {bs : List UInt8} {k : Nat} {m : Memory},
+      (∃ b, m.byte acc x = .ok b) → ∃ b, (stores a bs k m).byte acc x = .ok b
+  | [], _, _, h => h
+  | _ :: _, _, _, h => by rw [stores_cons]; exact byte_stores_ok (byte_setByte_ok h)
+
+theorem byte_stores {a : UInt64} {bs : List UInt8} {k : Nat} {m : Memory}
+    (hk : k + bs.length ≤ 2 ^ 64) (hm : ∀ i < bs.length, m.Mapped (a + (k + i).toUInt64))
     (j : Nat) (hj : j < bs.length) :
-    byte.go .read (a + (k + j).toUInt64) (stores a bs k ms) = .ok bs[j] := by
-  induction bs generalizing k ms j with
+    (stores a bs k m).byte .read (a + (k + j).toUInt64) = .ok bs[j] := by
+  induction bs generalizing k m j with
   | nil => simp at hj
   | cons b bs ih =>
     rw [stores_cons]
     cases j with
     | zero =>
       simp only [Nat.add_zero, List.getElem_cons_zero]
-      rw [go_stores_outside (fun i h1 h2 => add_ne (by simp only [List.length_cons] at hk; omega)
+      rw [byte_stores_outside (fun i h1 h2 => add_ne (by simp only [List.length_cons] at hk; omega)
         (by simp only [List.length_cons] at hk; omega) (by omega))]
-      exact go_setByte_same (by simpa using hm 0 (by simp)) rfl
+      exact byte_setByte_same (by simpa using hm 0 (by simp))
     | succ j =>
       simp only [List.getElem_cons_succ]
-      have := ih (k := k + 1) (ms := setByte (a + k.toUInt64) b ms) (by simp at hk; omega)
+      have := ih (k := k + 1) (m := m.setByte (a + k.toUInt64) b) (by simp at hk; omega)
         (fun i hi => mapped_setByte.2 (by have := hm (i + 1) (by simp; omega); rwa [show k + (i + 1) = k + 1 + i by omega] at this))
         j (by simpa using hj)
       rwa [show k + 1 + j = k + (j + 1) by omega] at this
@@ -169,11 +142,11 @@ theorem bytes_writeBytes {m m' : Memory} {a : UInt64} {bs : List UInt8}
   · cases h
   rename_i checked hchecked
   cases h
-  have hmapped : ∀ i < bs.length, Mapped m.mappings (a + (0 + i).toUInt64) := by
+  have hmapped : ∀ i < bs.length, m.Mapped (a + (0 + i).toUInt64) := by
     intro i hi
     obtain ⟨b, hb⟩ := ok_of_mapM_ok hchecked i (by simp [hi])
-    exact mapped_of_go (by simpa [byte] using hb)
-  simp only [bytes, byte]
+    exact mapped_of_byte (by simpa using hb)
+  simp only [bytes]
   rw [mapM_ok (g := fun j => bs.getD j 0)]
   · congr 1
     apply List.ext_getElem
@@ -183,7 +156,7 @@ theorem bytes_writeBytes {m m' : Memory} {a : UInt64} {bs : List UInt8}
       rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h₂, Option.getD_some]
   · intro j hj
     have hj : j < bs.length := by simpa using hj
-    have := go_stores (a := a) (bs := bs) (k := 0) (ms := m.mappings) (by omega) hmapped j hj
+    have := byte_stores (a := a) (bs := bs) (k := 0) (m := m) (by omega) hmapped j hj
     simp only [Nat.zero_add] at this
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj, Option.getD_some]
     exact this

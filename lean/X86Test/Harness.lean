@@ -36,14 +36,19 @@ def defaultVector (i : Nat) : BitVec 128 :=
 def pages : List (UInt64 × Permissions) :=
   [(codePage, .readExecute), (dataPage, .readWrite), (readOnlyPage, .readOnly), (stackPage, .readWrite)]
 
-def page (base : UInt64) (permissions : Permissions) : Mapping :=
+def page (m : Memory) (base : UInt64) (permissions : Permissions) : Memory :=
   let bytes := (List.range pageSize).map fun i =>
     if base = codePage then codeFill else fillByte (base + i.toUInt64)
-  { base, bytes := ⟨bytes.toArray⟩, permissions }
+  m.map base ⟨bytes.toArray⟩ permissions
 
 /-- Write bytes regardless of permissions, as the oracle does before it protects the pages. -/
-def poke (m : Memory) (address : UInt64) (bs : List UInt8) : Memory :=
-  ⟨bs.zipIdx.foldl (fun ms (b, i) => Memory.setByte (address + i.toUInt64) b ms) m.mappings⟩
+def poke (m : Memory) (address : UInt64) (bs : List UInt8) : Memory := Memory.stores address bs 0 m
+
+/-- The same memory with one mapping per page: otherwise every lookup walks
+back through each poke, and the memory diff looks up every byte. -/
+def flatten (m : Memory) : Memory :=
+  pages.foldl (init := .empty) fun acc (base, p) =>
+    acc.map base ⟨(Array.range pageSize).map fun i => ((m.cell (base + i.toUInt64)).map (·.byte)).getD 0⟩ p
 
 def hexValue (s : String) : Option Nat :=
   let s := if s.startsWith "0x" then s.drop 2 else s
@@ -79,7 +84,7 @@ def initialState (bytes : List UInt8) (at_ : UInt64) : State :=
     rflags := ⟨some false, some false, some false, some false, some false, some false⟩
     xmm := Vector.ofFn fun i => defaultVector i.val
     mxcsr := defaultMxcsr
-    memory := poke ⟨pages.map fun (b, p) => page b p⟩ (codePage + at_) code }
+    memory := poke (pages.foldl (fun m (b, p) => page m b p) .empty) (codePage + at_) code }
 
 def flagsOf (letters : String) : List Flag :=
   (flagLetters.zip flagOrder).filterMap fun (c, f) => if letters.contains c then some f else none
@@ -123,6 +128,7 @@ def parseVector (line : String) : Except String Vector := do
   let fs := fields rest
   let at_ := ((fs.lookup "at").bind hexValue).getD defaultAt.toNat
   let state ← fs.foldlM (fun s (k, v) => applyField s k v) (initialState bytes at_.toUInt64)
+  let state := { state with memory := flatten state.memory }
   return { asm := asm.trimAscii.toString, bytes, state, known := fs.lookup "known" }
 
 def renderFlags (fs : Flags) : String :=
@@ -156,18 +162,21 @@ def hex (n : Nat) : String := "0x" ++ Print.hexDigits n
 /-- Runs of changed bytes, as `mem=address:bytes`. -/
 def memoryDiff (before after : Memory) : List String := Id.run do
   let mut out := #[]
-  for (b, a) in before.mappings.zip after.mappings do
+  -- Only a writable page can change.
+  for (base, _) in pages.filter (·.2.write) do
+    let byteAt (m : Memory) (i : Nat) := ((m.cell (base + i.toUInt64)).map (·.byte)).getD 0
     let mut run : Option (Nat × Array UInt8) := none
-    for i in [0:b.bytes.size] do
-      if b.bytes[i]! != a.bytes[i]! then
+    for i in [0:pageSize] do
+      let a := byteAt after i
+      if byteAt before i != a then
         run := some (match run with
-          | some (start, bs) => (start, bs.push a.bytes[i]!)
-          | none => (i, #[a.bytes[i]!]))
+          | some (start, bs) => (start, bs.push a)
+          | none => (i, #[a]))
       else if let some (start, bs) := run then
-        out := out.push s!"mem={hex (b.base.toNat + start)}:{bytesHex bs.toList}"
+        out := out.push s!"mem={hex (base.toNat + start)}:{bytesHex bs.toList}"
         run := none
     if let some (start, bs) := run then
-      out := out.push s!"mem={hex (b.base.toNat + start)}:{bytesHex bs.toList}"
+      out := out.push s!"mem={hex (base.toNat + start)}:{bytesHex bs.toList}"
   return out.toList
 
 /-- The fields of `after` that differ from `before`, in the oracle's order. -/
