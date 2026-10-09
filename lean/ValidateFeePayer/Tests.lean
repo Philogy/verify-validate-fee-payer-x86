@@ -1,4 +1,5 @@
 import ValidateFeePayer.Contract
+import ValidateFeePayer.Checks
 import X86.MemoryFacts
 
 /-!
@@ -12,10 +13,10 @@ namespace ValidateFeePayer.Tests
 
 open X86 Abi Image.Layout
 
-def obj (base : UInt64) (size : Nat) (fields : List (Nat × List UInt8)) : Mapping :=
+def obj (base : UInt64) (size : Nat) (fields : List (Nat × List UInt8)) (m : Memory) : Memory :=
   let bytes := fields.foldl (fun (bs : Array UInt8) (offset, v) =>
     v.zipIdx.foldl (fun bs (b, i) => bs.set! (offset + i) b) bs) (Array.replicate size 0)
-  { base, bytes := ⟨bytes⟩, permissions := .readWrite }
+  m.map base ⟨bytes⟩ .readWrite
 
 def u64 (v : UInt64) : List UInt8 := littleEndianBytes 8 v
 def u32 (v : UInt64) : List UInt8 := littleEndianBytes 4 v
@@ -45,15 +46,13 @@ def Case.exits (c : Case) : Exits := ValidateFeePayer.exits c.loadBase c.returnA
 
 def stackTop : UInt64 := 0x7ffffff00000
 
-/-- The caller's state right after its `call`: the image is not mapped yet. -/
-def Case.caller (c : Case) : State :=
+/-- The state right after the caller's `call` into the image. -/
+def Case.state (c : Case) : State :=
   -- SysV: 16-byte aligned before the `call` pushed the return address.
   let sp := stackTop - 72
-  let stack : Mapping :=
-    { base := sp - c.free.toUInt64,
-      bytes := ⟨(List.replicate c.free 0xaa ++ u64 c.returnAddress ++ [if c.relax then 1 else 0] ++
-        List.replicate 55 0xbb).toArray⟩,
-      permissions := .readWrite }
+  let stack (m : Memory) := m.map (sp - c.free.toUInt64)
+    ⟨(List.replicate c.free 0xaa ++ u64 c.returnAddress ++ [if c.relax then 1 else 0] ++
+      List.replicate 55 0xbb).toArray⟩ .readWrite
   let ctr (offset : Nat) := (offset, u64 c.counters)
   let objects := [
     obj resultPtr 16 [],
@@ -80,16 +79,15 @@ def Case.caller (c : Case) : State :=
     |>.set Register.r8.index rentPtr
     |>.set Register.r9.index c.fee
     |>.set Register.rsp.index sp
-  { rip := 0, registers, rflags := .undefined,
+  -- Defined flags, as on a real CPU: the code writes every flag it reads.
+  { rip := entryAddress c.loadBase, registers, rflags := ⟨some true, some false, some true, some false, some true, some false⟩,
     xmm := Vector.replicate 16 0, mxcsr := defaultMxcsr,
-    memory := ⟨stack :: objects⟩ }
-
-def Case.state (c : Case) : State := enter c.loadBase c.caller
+    memory := load c.loadBase (stack (objects.foldl (fun m o => o m) .empty)) }
 
 def Case.account (c : Case) : Spec.Account :=
   { lamports := c.lamports, owner := Vector.ofFn fun i => c.owner.getD i 0, data := c.data }
 
-def Case.run (c : Case) : Outcome := invoke c.loadBase c.returnAddress c.caller
+def Case.run (c : Case) : Outcome := invoke c.loadBase c.returnAddress c.state
 
 def Case.steps (c : Case) : Nat := go fuel c.state 0
 where
@@ -190,7 +188,7 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
   | .badJump s => s.rip == 0x400000 | _ => false
 #guard
   let lb : UInt64 := 0x555555554000
-  let data := (((imageMappings lb).find? (!·.permissions.execute)).map (·.base)).getD 0
+  let data := ((Image.data.head?).map (·.address.at lb)).getD 0
   match runWithReturnExit (returnsTo data) 0x400000 with
   | .badJump s => s.rip == data | _ => false
 
@@ -198,7 +196,7 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
 #guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (Image.panic_msg.at 0x555555554000)) with
   | .error (.unmapped _ _) => true | _ => false
 
-/-! The theorem's hypotheses are satisfiable: they hold of a concrete caller's state. -/
+/-! The theorems' hypotheses are satisfiable: they hold of a concrete state. -/
 deriving instance DecidableEq for Except
 
 theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write a n).toBool = true) :
@@ -212,22 +210,38 @@ def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }
 theorem writable_of_mem {m : Memory} {bs : List Block} (h : (bs.all fun b => (m.bytes .write b.base b.size).toBool) = true) :
     ∀ b ∈ bs, b.Writable m := fun b hb => writable_of_ok (List.all_eq_true.1 h b hb)
 
-example : Called example1.loadBase example1.returnAddress example1.caller where
-  validBase := by decide +kernel
-  spanFree := by unfold SpanFree Block.Apart Block.endAddress; decide +kernel
-  abi := {
-    returnAddress := by unfold Memory.Holds; decide +kernel
-    stackAligned := by decide +kernel
-    rflags := by decide +kernel }
-  returnOutsideImage := by decide +kernel
+example : Loaded example1.loadBase example1.state.memory := loaded_load (by decide +kernel) _
+
+example : Called example1.loadBase example1.returnAddress example1.state where
+  atEntry := rfl
+  abi := { returnAddress := by unfold Memory.Holds; decide +kernel }
+  returnOutsideImage := by unfold Region.block Block.Contains Block.endAddress; decide +kernel
   returnNotPanic := by decide +kernel
 
-example : Footprint example1.loadBase example1.caller heap example1.account.data.length where
+theorem readable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .read a n).toBool = true) :
+    m.Readable a n := by
+  cases hb : m.bytes .read a n with
+  | ok bs => exact fun i hi => Memory.ok_of_mapM_ok hb i (List.mem_range.2 hi)
+  | error e => simp [hb, Except.toBool] at h
+
+theorem readable_of_mem {m : Memory} {bs : List Block} (h : (bs.all fun b => (m.bytes .read b.base b.size).toBool) = true) :
+    ∀ b ∈ bs, b.Readable m := fun b hb => readable_of_ok (List.all_eq_true.1 h b hb)
+
+example : Footprint example1.loadBase example1.state heap example1.account.data.length where
+  arcInner := by unfold PtrAt Memory.Holds; decide +kernel
+  data := by unfold PtrAt Memory.Holds; decide +kernel
+  length := by unfold Memory.Holds; decide +kernel
+  readable := readable_of_mem (by decide +kernel)
+  writable := writable_of_mem (by decide +kernel)
+  relaxIsBool := by unfold Memory.Holds; decide +kernel
   separate := by unfold Block.Separate Block.Apart Block.endAddress; decide +kernel
   noWrap := by unfold Block.NoWrap Block.endAddress; decide +kernel
-  writable := writable_of_mem (by decide +kernel)
 
-example : Encoded example1.caller heap example1.account example1.metrics example1.rent payerIndex example1.fee false where
+example : example1.state.memory.read .bits64 (exemptionThresholdAddress example1.state) ∈
+    [.ok Spec.simd0194ExemptionThreshold, .ok Spec.currentExemptionThreshold] := by decide +kernel
+
+example : Encoded example1.state heap
+    ⟨example1.account, payerIndex, example1.rent, example1.fee, false, example1.metrics⟩ where
   account := by unfold Spec.Account.Encodes PtrAt Memory.Holds Memory.HoldsBytes; decide +kernel
   payerIndex := by decide +kernel
   rent := by unfold Spec.Rent.Encodes Memory.Holds; decide +kernel
@@ -235,10 +249,8 @@ example : Encoded example1.caller heap example1.account example1.metrics example
   relax := by unfold BoolEncodes Memory.Holds; decide +kernel
   metrics := by unfold Spec.ErrorMetrics.Encodes Memory.Holds; decide +kernel
 
-example : IntegerThreshold example1.rent := by unfold IntegerThreshold; decide +kernel
-
 /-! A branch on a flag nobody wrote faults. -/
-#guard match ((execute (.jumpIf .equal 0)).run ({ lamports := 1, fee := 1 } : Case).state) with
+#guard match ((execute (.jumpIf .equal 0)).run { ({ lamports := 1, fee := 1 } : Case).state with rflags := .undefined }) with
   | .error (.undefinedFlagRead .zero) => true | _ => false
 
 /-! F64 against the host's `Float` on random operands, bit-exact, NaN payloads

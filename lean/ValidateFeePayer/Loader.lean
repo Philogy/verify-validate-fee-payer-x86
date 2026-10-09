@@ -3,10 +3,11 @@ import Abi.Block
 import ValidateFeePayer.Image
 
 /-!
-The carved image as the loader maps it at `loadBase`: the carved regions,
-inside the span the source binary's segments reserve. The rest of that span
-is left unmapped, so the code touching anything that was not carved faults
-instead of reading made-up bytes.
+The carved image in memory at `loadBase`: what it means for it to be there
+(`Loaded`), and one memory where it is (`load`). The carved regions sit
+inside the span the source binary's segments reserve; nothing is assumed
+about the rest of that span, so the code touching anything that was not
+carved makes the proof fail rather than read made-up bytes.
 -/
 
 namespace ValidateFeePayer
@@ -23,29 +24,24 @@ def reservedSpan (loadBase : UInt64) : Abi.Block :=
   ⟨reservedStart.at loadBase, reservedEnd - reservedStart.off.toNat⟩
 
 -- The GOT slots are read-only, as after RELRO.
-def Region.mapping (loadBase : UInt64) (r : Region) : X86.Mapping :=
-  { base := r.address.at loadBase, bytes := r.contents.bytesAt loadBase,
-    permissions := if r.contents.isCode then .readExecute else .readOnly }
+def Region.permissions (r : Region) : X86.Permissions :=
+  if r.contents.isCode then .readExecute else .readOnly
 
-def imageMappings (loadBase : UInt64) : List X86.Mapping := regions.map (·.mapping loadBase)
+def Region.block (loadBase : UInt64) (r : Region) : Abi.Block := ⟨r.address.at loadBase, r.size⟩
 
-/-- Nothing in `m` is mapped in the span the image reserves at `loadBase`. -/
-def SpanFree (loadBase : UInt64) (m : X86.Memory) : Prop :=
-  ∀ mp ∈ m.mappings, Abi.Block.Apart ⟨mp.base, mp.bytes.size⟩ (reservedSpan loadBase)
+/-- Every carved byte is in `m` at `loadBase`, with its region's permissions. -/
+structure Loaded (loadBase : UInt64) (m : X86.Memory) : Prop where
+  validBase : ValidLoadBase loadBase
+  bytes : ∀ r ∈ regions, ∀ (i : Nat) (h : i < (r.contents.bytesAt loadBase).size),
+    m.cell (r.address.at loadBase + i.toUInt64) = some ⟨r.permissions, (r.contents.bytesAt loadBase)[i]⟩
 
-/-- `m` with the image mapped in at `loadBase`. -/
-def load (loadBase : UInt64) (m : X86.Memory) : X86.Memory := ⟨imageMappings loadBase ++ m.mappings⟩
+/-- `m` with the carved regions mapped in at `loadBase`. -/
+def load (loadBase : UInt64) (m : X86.Memory) : X86.Memory :=
+  regions.foldr (fun r m => m.map (r.address.at loadBase) (r.contents.bytesAt loadBase) r.permissions) m
 
 def entryAddress (loadBase : UInt64) : UInt64 := validate_fee_payer.address.at loadBase
 
 def panicAddress (loadBase : UInt64) : UInt64 := panicEntry.at loadBase
-
-/-- The caller's state `s` with the image loaded at `loadBase` and control
-at its entry. -/
--- Irreducible: unfolding it would unfold the whole image wherever a proof
--- compares an entry state with the caller's.
-@[irreducible] def enter (loadBase : UInt64) (s : X86.State) : X86.State :=
-  { s with rip := entryAddress loadBase, memory := load loadBase s.memory }
 
 /-- Running the code: it ends when control reaches the caller's return
 address or the (uncarved) panic entry. -/

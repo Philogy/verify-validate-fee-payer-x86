@@ -31,6 +31,8 @@ def Apart (x y : Block) : Prop :=
 /-- No two of the blocks overlap. -/
 def Separate (bs : List Block) : Prop := bs.Pairwise Apart
 
+def Readable (m : Memory) (b : Block) : Prop := m.Readable b.base b.size
+
 def Writable (m : Memory) (b : Block) : Prop := m.Writable b.base b.size
 
 end Block

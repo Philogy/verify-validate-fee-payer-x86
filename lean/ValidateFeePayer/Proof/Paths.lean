@@ -103,11 +103,11 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
 
 /-- The entry state as `vwalk` starts from it. -/
 abbrev entryState (lb S acct res met rnt fee r0 r2 r3 r5 r10 r11 r12 r13 r14 r15 : UInt64)
-    (v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 : BitVec 128) (fc : UInt32) (m : Memory) :
-    State :=
+    (v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 : BitVec 128) (fl : Flags) (fc : UInt32)
+    (m : Memory) : State :=
   State.mk (lb + 0x27f3560)
     #v[r0, met, r2, r3, S + 96, r5, acct, res, rnt, fee, r10, r11, r12, r13, r14, r15]
-    .undefined #v[v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15] fc m
+    fl #v[v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15] fc m
 
 /-- The owner's halves as the code loads them. -/
 def ownerLow (x : Spec.Account) : BitVec 128 :=
@@ -186,7 +186,7 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       Image.Layout.transaction_error_metrics.invalid_account_for_fee] using this
   · have := pre.footprint.writable ⟨off (args s).account Image.Layout.account_shared_data.lamports, 8⟩ (by simp [writes])
     simpa [Abi.Block.Writable, pre.accountPtr, off_eq, Image.Layout.account_shared_data.lamports] using this
-  · rw [hsp]; exact pre.abi.returnAddress
+  · rw [hsp]; exact pre.called.abi.returnAddress
   · have := pre.encoded.relax
     simp only [BoolEncodes, Memory.Holds, args, Abi.ValidateFeePayerEntry.of, Abi.SysV.stackArgument] at this
     rw [show s.rsp - 96 + 104 = s.rsp + 8 by

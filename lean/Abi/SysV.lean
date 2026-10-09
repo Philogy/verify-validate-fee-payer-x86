@@ -31,17 +31,15 @@ def indirectResult (s : State) : UInt64 := argument s 0
 def calleeSaved : List Register := [.rbx, .rbp, .r12, .r13, .r14, .r15]
 
 /-- `s` is the state right after a `call` that will return to `returnAddress`.
-The direction flag, which the convention also requires clear, is not
-modelled: no supported instruction reads it. -/
+Nothing else about the caller's registers is assumed: the stack alignment
+and the direction flag the convention also fixes are only needed by
+instructions this code does not use. -/
 structure Entry (s : State) (returnAddress : UInt64) : Prop where
   returnAddress : s.memory.Holds .bits64 s.rsp returnAddress
-  -- `rsp ≡ 0 (mod 16)` before the `call`, which pushed 8 bytes.
-  stackAligned : s.rsp % 16 = 8
-  -- No flag is passed into a call, so the callee may not read one it did not write.
-  rflags : s.rflags = .undefined
 
-/-- `s'` is a return from the call entered in `s`. -/
-structure Returned (s s' : State) : Prop where
+/-- `s'` is a return to `returnAddress` from the call entered in `s`. -/
+structure Returned (s : State) (returnAddress : UInt64) (s' : State) : Prop where
+  rip : s'.rip = returnAddress
   stackPopped : s'.rsp = s.rsp + 8
   calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r
   -- MXCSR's control bits are callee-saved; its status bits (0–5) are not.

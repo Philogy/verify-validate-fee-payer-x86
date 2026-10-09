@@ -14,7 +14,7 @@ open X86 Memory Lean Elab Tactic Meta
 
 theorem _root_.X86.Memory.Writable.wr {m : Memory} {a b v : UInt64} {n : Nat} {w : OperandSize} (h : Writable m a n) :
     Writable (wr m w b v) a n :=
-  fun i hi => go_stores_ok (h i hi)
+  fun i hi => byte_stores_ok (h i hi)
 
 theorem _root_.X86.Memory.Writable.le {m : Memory} {a : UInt64} {n n' : Nat} (h : Writable m a n) (hn : n' ≤ n) :
     Writable m a n' :=
@@ -44,7 +44,7 @@ def Apart (a : UInt64) (n : Nat) (b : UInt64) (n' : Nat) : Prop :=
 
 theorem byte_wr_other {m : Memory} {w : OperandSize} {a v x : UInt64} {acc : Access}
     (h : ∀ j < w.byteCount, a + j.toUInt64 ≠ x) : (wr m w a v).byte acc x = m.byte acc x :=
-  go_stores_outside fun j _ hj => h j (by rw [length_littleEndianBytes_size] at hj; omega)
+  byte_stores_outside fun j _ hj => h j (by rw [length_littleEndianBytes_size] at hj; omega)
 
 theorem read_wr_other {m : Memory} {w w' : OperandSize} {a b v : UInt64} (h : Apart a w.byteCount b w'.byteCount) :
     (wr m w a v).read w' b = m.read w' b :=

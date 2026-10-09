@@ -11,48 +11,16 @@ namespace ValidateFeePayer.Proof
 
 open X86 Memory
 
-theorem go_of_mem {acc : Access} {y : UInt64} :
-    ∀ {ms : List Mapping} (rest : List Mapping) {mp : Mapping},
-      ms.Pairwise Mapping.Disjoint → mp ∈ ms → (h : mp.Contains y) →
-      byte.go acc y (ms ++ rest) =
-        if mp.permissions.allows acc then .ok (mp.get y h) else .error (.denied y acc)
-  | [], _, _, _, hm, _ => by simp at hm
-  | mp' :: ms, rest, mp, hd, hm, h => by
-    simp only [List.cons_append, byte.go]
-    rcases List.mem_cons.1 hm with rfl | hm
-    · simp [h]
-    · have hdisj := (List.pairwise_cons.1 hd).1 mp hm
-      have : ¬ mp'.Contains y := by
-        unfold Mapping.Disjoint at hdisj; unfold Mapping.Contains at h ⊢; omega
-      simp only [this, ↓reduceDIte]
-      exact go_of_mem rest (List.pairwise_cons.1 hd).2 hm h
-
-/-- Byte `i` of a carved region, as the loader maps it at `lb`. -/
-theorem byte_image {lb : UInt64} (hBase : ValidLoadBase lb) {rest : List Mapping} {r : Region}
+/-- Byte `i` of a carved region, in a memory the image is loaded in. -/
+theorem byte_loaded {lb : UInt64} {m : Memory} (hl : Loaded lb m) {r : Region}
     (hr : r ∈ Image.regions) {bytes : ByteArray} (hb : r.contents.bytesAt lb = bytes) {i : Nat}
     (hi : i < bytes.size) (acc : Access) :
-    byte ⟨imageMappings lb ++ rest⟩ acc (lb + r.address.off + i.toUInt64) =
-      if (if r.contents.isCode then Permissions.readExecute else Permissions.readOnly).allows acc
-      then .ok bytes[i] else .error (.denied (lb + r.address.off + i.toUInt64) acc) := by
-  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hr (loadBase := lb)
-  have hs := Contents.size_bytesAt hb
-  have hwithin := List.all_eq_true.1 regions_within_reserved r hr
-  simp only [decide_eq_true_eq] at hwithin
-  unfold ValidLoadBase at hBase
-  unfold Region.endAddress Region.size at hend hwithin
-  simp only [Mapping.endAddress, Region.mapping, ImageOffset.at, hb] at hend hbase
-  have hy : (lb + r.address.off + i.toUInt64).toNat = lb.toNat + r.address.off.toNat + i := by
-    simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat']
-    rw [Nat.mod_eq_of_lt (a := i) (by omega), Nat.mod_eq_of_lt (a := lb.toNat + r.address.off.toNat) (by omega),
-      Nat.mod_eq_of_lt (by omega)]
-  have hc : Mapping.Contains (r.mapping lb) (lb + r.address.off + i.toUInt64) := by
-    unfold Mapping.Contains Mapping.endAddress; simp only [Region.mapping, ImageOffset.at, hb]; omega
-  have hmem : r.mapping lb ∈ imageMappings lb := List.mem_map_of_mem hr
-  simp only [byte]
-  rw [go_of_mem rest (imageMappings_disjoint hBase) hmem hc]
-  simp only [Mapping.get, Region.mapping, ImageOffset.at, hb]
-  simp only [Nat.toUInt64_eq] at hy ⊢
-  simp only [show (lb + r.address.off + UInt64.ofNat i).toNat - (lb + r.address.off).toNat = i by omega]
+    m.byte acc (lb + r.address.off + i.toUInt64) =
+      if r.permissions.allows acc then .ok bytes[i] else .error (.denied (lb + r.address.off + i.toUInt64) acc) := by
+  subst hb
+  have := hl.bytes r hr i hi
+  simp only [ImageOffset.at] at this
+  simp only [byte, this]
 
 /-- The code of the carved functions at `lb`, as the decoder fetches it, and
 not writable. -/
@@ -84,8 +52,7 @@ theorem codeByte_ok {x : UInt64} {b : UInt8} (h : codeByte x = .ok b) :
     · cases h
   · cases h
 
-theorem codeAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mapping) :
-    CodeAt lb ⟨imageMappings lb ++ rest⟩ := by
+theorem codeAt_of_loaded {lb : UInt64} {m : Memory} (hl : Loaded lb m) : CodeAt lb m := by
   intro x b h
   obtain ⟨r, hr, bytes, hcode, hi, hle, hb⟩ := codeByte_ok h
   have hreg : r ∈ Image.regions := List.mem_append_left _ hr
@@ -97,18 +64,19 @@ theorem codeAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mappi
     have := x.toNat_lt; omega
   have hcodeb : r.contents.isCode = true := by simp [hcode, Contents.isCode]
   refine ⟨?_, fun v => ?_⟩
-  · rw [hx, byte_image hBase hreg hbytes hi]; simp [hcodeb, Permissions.allows, Permissions.readExecute, hb]
-  · rw [hx, byte_image hBase hreg hbytes hi]; simp [hcodeb, Permissions.allows, Permissions.readExecute]
+  · rw [hx, byte_loaded hl hreg hbytes hi]
+    simp [Region.permissions, hcodeb, Permissions.allows, Permissions.readExecute, hb]
+  · rw [hx, byte_loaded hl hreg hbytes hi]
+    simp [Region.permissions, hcodeb, Permissions.allows, Permissions.readExecute]
 
-theorem dataAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mapping) :
-    DataAt lb ⟨imageMappings lb ++ rest⟩ := by
+theorem dataAt_of_loaded {lb : UInt64} {m : Memory} (hl : Loaded lb m) : DataAt lb m := by
   intro r hr bytes hb i hi
   have hreg : r ∈ Image.regions := List.mem_append_right _ hr
   have hdata : r.contents.isCode = false := by
     simp [Image.data] at hr
     rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
   refine ⟨?_, fun v => ?_⟩
-  · rw [byte_image hBase hreg hb hi]; simp [Permissions.allows]
-  · rw [byte_image hBase hreg hb hi]; simp [hdata, Permissions.allows, Permissions.readOnly]
+  · rw [byte_loaded hl hreg hb hi]; simp [Permissions.allows]
+  · rw [byte_loaded hl hreg hb hi]; simp [Region.permissions, hdata, Permissions.allows, Permissions.readOnly]
 
 end ValidateFeePayer.Proof

@@ -100,6 +100,6 @@ theorem Finishes.walk {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {n 
 
 /-- A store that is known to succeed. -/
 def wr (m : Memory) (w : OperandSize) (a v : UInt64) : Memory :=
-  ⟨Memory.stores a (littleEndianBytes w.byteCount v) 0 m.mappings⟩
+  Memory.stores a (littleEndianBytes w.byteCount v) 0 m
 
 end ValidateFeePayer.Proof

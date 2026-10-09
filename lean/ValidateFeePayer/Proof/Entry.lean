@@ -18,28 +18,30 @@ theorem codeByte_in_regions {x : UInt64} {b : UInt8} (h : codeByte x = .ok b) :
   simp only [Region.endAddress, Region.size, hcode, Contents.size]
   omega
 
-theorem codeByte_mapped {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b : UInt8}
-    (h : codeByte x = .ok b) : ∃ mp ∈ imageMappings lb, mp.Contains (lb + x) := by
+theorem codeByte_block {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b : UInt8}
+    (h : codeByte x = .ok b) : ∃ r ∈ Image.regions, (r.block lb).Contains (lb + x) := by
   obtain ⟨r, hr, bytes, hcode, hi, hle, -⟩ := codeByte_ok h
   have hreg : r ∈ Image.regions := List.mem_append_left _ hr
-  have hbytes : r.contents.bytesAt lb = bytes := by simp [hcode, Contents.bytesAt]
-  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hreg (loadBase := lb)
-  refine ⟨r.mapping lb, List.mem_map_of_mem hreg, ?_⟩
-  have hs := Contents.size_bytesAt hbytes
+  refine ⟨r, hreg, ?_⟩
+  have hsize : r.size = bytes.size := by simp [Region.size, hcode, Contents.size]
+  have hat := Region.toNat_at hBase hreg (i := 0) (by omega)
+  simp only [Nat.toUInt64_eq, UInt64.reduceOfNat, UInt64.add_zero, Nat.add_zero] at hat
   have hx : (lb + x).toNat = lb.toNat + x.toNat := by
     unfold ValidLoadBase at hBase
-    have := List.all_eq_true.1 regions_within_reserved r hreg
-    simp only [decide_eq_true_eq, Region.endAddress, Region.size, hcode, Contents.size] at this
+    have hle := List.all_eq_true.1 regions_within_reserved r hreg
+    simp only [decide_eq_true_eq] at hle
+    unfold Region.endAddress at hle
+    have : Image.reservedEnd = 0x3a423d4 := rfl
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-  unfold Mapping.Contains Mapping.endAddress
-  simp only [Region.mapping, ImageOffset.at, hbytes] at hbase hend ⊢
-  rw [hx]; omega
+  unfold Abi.Block.Contains Abi.Block.endAddress Region.block
+  simp only [hat, hx, hsize]
+  omega
 
 theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeExits c.loadBase c.exits where
   notReturn x b hx e := by
-    obtain ⟨mp, hmp, hc⟩ := codeByte_mapped pre.entered.validBase hx
-    refine pre.entered.returnOutsideImage mp hmp ?_
+    obtain ⟨r, hr, hc⟩ := codeByte_block pre.loaded.validBase hx
+    refine pre.called.returnOutsideImage r hr ?_
     have : c.returnAddress = c.exits.returnAddress := rfl
     rw [this, ← e]; exact hc
   notPanic x b hx e := by
@@ -53,13 +55,11 @@ theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c 
     exact absurd (hxp ▸ hc) this
 
 theorem codeAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
-    CodeAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest, -⟩ := pre.entered.image
-  rw [hrest]; exact codeAt_image pre.entered.validBase rest.mappings
+    CodeAt c.loadBase s.memory :=
+  codeAt_of_loaded pre.loaded
 
 theorem dataAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
-    DataAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest, -⟩ := pre.entered.image
-  rw [hrest]; exact dataAt_image pre.entered.validBase rest.mappings
+    DataAt c.loadBase s.memory :=
+  dataAt_of_loaded pre.loaded
 
 end ValidateFeePayer.Proof

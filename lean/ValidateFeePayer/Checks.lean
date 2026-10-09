@@ -1,5 +1,6 @@
 import ValidateFeePayer.Loader
 import ValidateFeePayer.Code
+import X86.MemoryFacts
 
 -- A regenerated `Image.lean` that breaks one of these fails the build here.
 
@@ -29,30 +30,53 @@ theorem regions_nonempty : regions.all (0 < ·.size) := by
 theorem regions_within_reserved : regions.all fun r => reservedStart.off ≤ r.address.off ∧ r.endAddress ≤ reservedEnd := by
   set_option maxRecDepth 5000 in decide
 
-theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region}
-    (hr : r ∈ regions) :
-    (r.mapping loadBase).base.toNat = loadBase.toNat + r.address.off.toNat ∧
-      (r.mapping loadBase).endAddress = loadBase.toNat + r.endAddress := by
-  have hne := List.all_eq_true.1 regions_nonempty r hr
+theorem Region.toNat_at {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region} (hr : r ∈ regions)
+    {i : Nat} (hi : i < r.size) :
+    (r.address.at loadBase + i.toUInt64).toNat = loadBase.toNat + r.address.off.toNat + i := by
   have hle := List.all_eq_true.1 regions_within_reserved r hr
-  simp only [decide_eq_true_eq] at hne hle
-  have hs := Contents.size_bytesAt (c := r.contents) (loadBase := loadBase) rfl
+  simp only [decide_eq_true_eq] at hle
+  have hne := List.all_eq_true.1 regions_nonempty r hr
+  simp only [decide_eq_true_eq] at hne
+  have : reservedEnd = 0x3a423d4 := rfl
   unfold ValidLoadBase at hBase
-  unfold Region.endAddress Region.size at *
-  have : loadBase.toNat + r.address.off.toNat < 2 ^ 64 := by omega
-  simp only [Region.mapping, ImageOffset.at, Mapping.endAddress, UInt64.toNat_add, Nat.mod_eq_of_lt this]
-  exact ⟨trivial, by omega⟩
+  unfold Region.endAddress at hle
+  simp only [ImageOffset.at, UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat']
+  rw [Nat.mod_eq_of_lt (a := i) (by omega), Nat.mod_eq_of_lt (a := loadBase.toNat + r.address.off.toNat) (by omega),
+    Nat.mod_eq_of_lt (by omega)]
 
-theorem imageMappings_disjoint {loadBase : UInt64} (hBase : ValidLoadBase loadBase) :
-    (imageMappings loadBase).Pairwise Mapping.Disjoint := by
-  unfold imageMappings
-  rw [List.pairwise_map]
-  refine regions_disjoint.imp_of_mem ?_
-  intro r₁ r₂ h₁ h₂ hd
-  obtain ⟨b₁, e₁⟩ := Region.mapping_bounds hBase h₁
-  obtain ⟨b₂, e₂⟩ := Region.mapping_bounds hBase h₂
-  unfold Disjoint at hd
-  unfold Mapping.Disjoint
-  omega
+/-- The image can be loaded at any valid base: `Loaded` is satisfiable. -/
+theorem loaded_load {loadBase : UInt64} (hBase : ValidLoadBase loadBase) (m : X86.Memory) :
+    Loaded loadBase (load loadBase m) := by
+  refine ⟨hBase, fun r hr i hi => ?_⟩
+  have hs := Contents.size_bytesAt (c := r.contents) (loadBase := loadBase) rfl
+  suffices ∀ L : List Region, L.Pairwise Disjoint → (∀ r' ∈ L, r' ∈ regions) → r ∈ L →
+      (L.foldr (fun r m => m.map (r.address.at loadBase) (r.contents.bytesAt loadBase) r.permissions) m).cell
+        (r.address.at loadBase + i.toUInt64) = some ⟨r.permissions, (r.contents.bytesAt loadBase)[i]⟩ from
+    this regions regions_disjoint (fun _ h => h) hr
+  intro L
+  induction L with
+  | nil => intro _ _ h; simp at h
+  | cons r' L ih =>
+    intro hd hsub hmem
+    simp only [List.foldr_cons]
+    have hr' := hsub r' (List.mem_cons_self ..)
+    have hs' := Contents.size_bytesAt (c := r'.contents) (loadBase := loadBase) rfl
+    have hat := Region.toNat_at hBase hr (i := i) (by unfold Region.size; omega)
+    have hat' := Region.toNat_at hBase hr' (i := 0)
+      (by have := List.all_eq_true.1 regions_nonempty r' hr'; simpa using this)
+    simp only [Nat.toUInt64_eq, UInt64.reduceOfNat, UInt64.add_zero, Nat.add_zero] at hat'
+    rcases List.mem_cons.1 hmem with rfl | hmem
+    · have hw : (r.address.at loadBase).toNat + (r.contents.bytesAt loadBase).size ≤ 2 ^ 64 := by
+        have hle := List.all_eq_true.1 regions_within_reserved r hr
+        simp only [decide_eq_true_eq] at hle
+        unfold ValidLoadBase at hBase; unfold Region.endAddress Region.size at hle
+        omega
+      exact X86.Memory.cell_map_inside hi hw
+    · have hdis := (List.pairwise_cons.1 hd).1 r hmem
+      rw [X86.Memory.cell_map_outside]
+      · exact ih (List.pairwise_cons.1 hd).2 (fun x hx => hsub x (List.mem_cons_of_mem _ hx)) hmem
+      · unfold Disjoint Region.endAddress Region.size at hdis
+        rw [hat, hat', hs']
+        unfold Region.size at hi; omega
 
 end ValidateFeePayer

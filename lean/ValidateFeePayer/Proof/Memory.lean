@@ -48,7 +48,7 @@ theorem bytes_ok {m : Memory} {acc : Access} {a : UInt64} :
     rfl
 
 theorem writeBytes_eq {m m' : Memory} {a : UInt64} {bs : List UInt8} (h : m.writeBytes a bs = .ok m') :
-    (∃ checked, m.bytes .write a bs.length = .ok checked) ∧ m' = ⟨stores a bs 0 m.mappings⟩ := by
+    (∃ checked, m.bytes .write a bs.length = .ok checked) ∧ m' = stores a bs 0 m := by
   simp only [writeBytes, bind, Except.bind] at h
   split at h
   · cases h
@@ -56,7 +56,7 @@ theorem writeBytes_eq {m m' : Memory} {a : UInt64} {bs : List UInt8} (h : m.writ
 
 theorem writeBytes_ok {m : Memory} {a : UInt64} {bs : List UInt8}
     (h : ∀ i < bs.length, ∃ b, m.byte .write (a + i.toUInt64) = .ok b) :
-    m.writeBytes a bs = .ok ⟨stores a bs 0 m.mappings⟩ := by
+    m.writeBytes a bs = .ok (stores a bs 0 m) := by
   obtain ⟨checked, hc⟩ := bytes_ok h
   simp only [writeBytes, bind, Except.bind, hc]
   rfl
@@ -65,39 +65,12 @@ theorem writeBytes_byte_outside {m m' : Memory} {a : UInt64} {bs : List UInt8} {
     (h : m.writeBytes a bs = .ok m') (hx : ∀ i < bs.length, a + i.toUInt64 ≠ x) :
     m'.byte acc x = m.byte acc x := by
   obtain ⟨_, rfl⟩ := writeBytes_eq h
-  exact go_stores_outside fun i _ hi => hx i (by omega)
-
-theorem go_setByte_ok {acc : Access} {a x : UInt64} {v : UInt8} :
-    ∀ {ms : List Mapping}, (∃ b, byte.go acc x ms = .ok b) → ∃ b, byte.go acc x (setByte a v ms) = .ok b
-  | [], h => h
-  | mp :: rest, h => by
-    simp only [setByte]
-    by_cases ha : mp.Contains a
-    · simp only [ha, ↓reduceDIte, byte.go, Mapping.contains_set, Mapping.permissions_set]
-      simp only [byte.go] at h
-      split at h
-      · rename_i hx
-        simp only [hx, ↓reduceDIte]
-        split at h
-        · rename_i hp; simp [hp]
-        · obtain ⟨_, h⟩ := h; cases h
-      · rename_i hx; simp only [hx, ↓reduceDIte]; exact h
-    · simp only [ha, ↓reduceDIte, byte.go]
-      simp only [byte.go] at h
-      split at h
-      · rename_i hx; simp only [hx, ↓reduceDIte]; exact h
-      · rename_i hx; simp only [hx, ↓reduceDIte]; exact go_setByte_ok h
-
-theorem go_stores_ok {acc : Access} {a x : UInt64} :
-    ∀ {bs : List UInt8} {k : Nat} {ms : List Mapping},
-      (∃ b, byte.go acc x ms = .ok b) → ∃ b, byte.go acc x (stores a bs k ms) = .ok b
-  | [], _, _, h => h
-  | _ :: _, _, _, h => by rw [stores_cons]; exact go_stores_ok (go_setByte_ok h)
+  exact byte_stores_outside fun i _ hi => hx i (by omega)
 
 theorem writeBytes_byte_ok {m m' : Memory} {a : UInt64} {bs : List UInt8} {acc : Access} {x : UInt64}
     (h : m.writeBytes a bs = .ok m') (hx : ∃ b, m.byte acc x = .ok b) : ∃ b, m'.byte acc x = .ok b := by
   obtain ⟨_, rfl⟩ := writeBytes_eq h
-  exact go_stores_ok hx
+  exact byte_stores_ok hx
 
 /-! ## Reads after a store -/
 
