@@ -72,8 +72,6 @@ structure Memory where
 
 namespace Memory
 
-def WellFormed (m : Memory) : Prop := m.mappings.Pairwise Mapping.Disjoint
-
 def byte (m : Memory) (access : Access) (address : UInt64) : Except PageFault UInt8 :=
   go m.mappings
 where

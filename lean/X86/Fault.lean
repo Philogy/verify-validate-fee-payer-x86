@@ -12,8 +12,7 @@ inductive DecodeError where
   | unsupported (what : String)
   deriving DecidableEq, Repr
 
-/-- Why an instruction could not complete. The instruction
-has no effect. -/
+/-- Why an instruction could not complete. The instruction has no effect. -/
 inductive Fault where
   | pageFault (f : PageFault)
   | undecodable (why : DecodeError)

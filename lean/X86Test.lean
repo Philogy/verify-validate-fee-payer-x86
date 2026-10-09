@@ -1,5 +1,6 @@
 import X86Test.Harness
 import X86Test.Form
+import X86Test.Decode
 import ValidateFeePayer.Code
 
 /-!

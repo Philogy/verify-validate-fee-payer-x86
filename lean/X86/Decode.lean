@@ -188,7 +188,12 @@ def shiftOp : UInt8 → Decoder ShiftOp
   | 7 => pure .rightArithmetic
   | _ => throw (.unsupported "rotate or sal (group 2)")
 
+-- REX.W overrides `0x66` on integer operations.
+def operandSize (p : Prefixes) : Decoder Unit :=
+  require (!(p.rex.wide && p.operandSizeOverride)) "0x66 with REX.W"
+
 def oneByte (p : Prefixes) (opcode : UInt8) : Decoder Instruction := do
+  operandSize p
   let rex := p.rex
   let size := p.size
   if opcode < 0x40 && opcode &&& 7 < 6 then
@@ -275,7 +280,7 @@ def oneByte (p : Prefixes) (opcode : UInt8) : Decoder Instruction := do
     return .pop (o.rm rex .bits64)
   | 0x90 =>
     -- With REX.B this is `xchg r8, rax`, and with `0xf3` it is `pause`.
-    require (!rex.present) "REX on nop"
+    require (!rex.present && !p.operandSizeOverride) "REX or 0x66 on nop"
     return .noOperation none
   | 0x98 => accumulatorForm p; return .signExtendAccumulator size
   | 0x99 => accumulatorForm p; return .signExtendIntoData size
@@ -429,7 +434,9 @@ def vector (p : Prefixes) (mandatory : MandatoryPrefix) (opcode : UInt8) : Decod
 
 def twoByte (p : Prefixes) (opcode : UInt8) : Decoder Instruction := do
   if p.repeatPrefix.isNone then
-    if let some d := twoByteInteger p opcode then return ← d
+    if let some d := twoByteInteger p opcode then
+      operandSize p
+      return ← d
   require (!(p.operandSizeOverride && p.repeatPrefix.isSome)) "0x66 with 0xf2/0xf3"
   let mandatory : MandatoryPrefix := match p.repeatPrefix with
     | some 0xf2 => .f2 | some _ => .f3 | none => if p.operandSizeOverride then .operandSize else .none

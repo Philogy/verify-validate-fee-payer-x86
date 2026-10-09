@@ -12,7 +12,7 @@ machine does not record those flags (see `State.floatControl`).
 Arithmetic is exact: every finite double is an integer multiple of `2^-1074`
 (`scaled`), so a sum or product is an exact integer times a power of two,
 and `round` rounds that once. Rules taken from the Intel SDM, vol. 1 §4.8–4.9
-and §11.5, which the hardware comparison (`x86-state.md`) should confirm:
+and §11.5, which the hardware comparison (`tests/x86/`) checks:
 
 - NaN operand: the result is the first NaN operand (destination first),
   quieted; `invalid` only if some operand is a signalling NaN.

@@ -103,10 +103,8 @@ def requireDefaultFloatControl : Exec Unit := do
   unless (← get).floatControl &&& ~~~0x3f == defaultFloatControl do
     throw (.unsupported "MXCSR control bits")
 
-def DoubleOp.eval : DoubleOp → UInt64 → UInt64 → UInt64
-  | .add, a, b => (F64.add a b).1
-  | .subtract, a, b => (F64.sub a b).1
-  | .multiply, a, b => (F64.mul a b).1
+def DoubleOp.eval : DoubleOp → UInt64 → UInt64 → UInt64 × F64.Exceptions
+  | .add => F64.add | .subtract => F64.sub | .multiply => F64.mul
 
 def jumpBy (offset : UInt64) : Exec Unit :=
   modify fun s => { s with instructionPointer := s.instructionPointer + offset }
@@ -224,12 +222,12 @@ def execute (i : Instruction) : Exec Unit := do
     requireDefaultFloatControl
     let a ← readVector d
     let b ← readVector128 true s
-    writeVector d (ofHalves (op.eval (lowHalf a) (lowHalf b)) (op.eval (highHalf a) (highHalf b)))
+    writeVector d (ofHalves (op.eval (lowHalf a) (lowHalf b)).1 (op.eval (highHalf a) (highHalf b)).1)
   | .scalarDouble op d s =>
     requireDefaultFloatControl
     let a ← readVector d
     let b ← readVector64 s
-    writeVector d (ofHalves (op.eval (lowHalf a) b) (highHalf a))
+    writeVector d (ofHalves (op.eval (lowHalf a) b).1 (highHalf a))
   | .compareDoubles d s =>
     requireDefaultFloatControl
     let a ← readVector d

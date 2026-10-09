@@ -174,18 +174,15 @@ def diff (before after : State) (completed : Bool) (floatControl : UInt32) : Lis
   let mxcsr := if floatControl != before.floatControl then [s!"mxcsr={hex floatControl.toNat}"] else []
   rip ++ registers ++ flags ++ vectors ++ mxcsr ++ memoryDiff before.memory after.memory
 
-def withExceptions : DoubleOp → UInt64 → UInt64 → UInt64 × F64.Exceptions
-  | .add => F64.add | .subtract => F64.sub | .multiply => F64.mul
-
 open Exec in
 /-- The MXCSR exception flags `i` raises. The machine does not keep them
 (nothing reads them), but `F64` computes them, so they are compared too. -/
 def floatExceptions : Instruction → Exec F64.Exceptions
-  | .scalarDouble op d s => do return (withExceptions op (lowHalf (← readVector d)) (← readVector64 s)).2
+  | .scalarDouble op d s => do return (op.eval (lowHalf (← readVector d)) (← readVector64 s)).2
   | .packedDouble op d s => do
     let a ← readVector d
     let b ← readVector128 true s
-    return (withExceptions op (lowHalf a) (lowHalf b)).2.merge (withExceptions op (highHalf a) (highHalf b)).2
+    return (op.eval (lowHalf a) (lowHalf b)).2.merge (op.eval (highHalf a) (highHalf b)).2
   | .compareDoubles d s => do return (F64.compareUnordered (lowHalf (← readVector d)) (← readVector64 s)).2
   | .truncateDoubleToInt64 _ s => do return (F64.truncateToInt64 (← readVector64 s)).2
   | _ => pure {}

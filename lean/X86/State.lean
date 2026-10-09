@@ -28,8 +28,7 @@ structure State where
   flags : Flags
   vectorRegisters : Vector (BitVec 128) 16
   -- Only the control bits are modelled. The sticky exception bits (0–5) are
-  -- not: no supported instruction reads them, so they cannot affect a run,
-  -- and the hardware comparison masks them.
+  -- not: no supported instruction reads them, so they cannot affect a run.
   floatControl : UInt32
   memory : Memory
 
