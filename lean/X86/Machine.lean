@@ -69,7 +69,7 @@ def shift (op : ShiftOp) (size : OperandSize) (destination : RegisterOrMemory) (
     if size = .bits32 && destination matches .register _ then
       throw (.unsupported "32-bit shift of a register by 0")
     return
-  let w := size.bits
+  let w := size.bits.toUInt64
   let r := match op with
     | .left => (a <<< c) &&& size.mask
     | .rightLogical => a >>> c
@@ -191,10 +191,10 @@ def execute (i : Instruction) : Exec Unit := do
   | .moveVectorToInteger size d s => writeOperand size d (lowHalf (← readVector s))
   | .moveScalarDouble d s =>
     match d, s with
-    | .register d, .memory a => writeVector d (ofHalves (← load .bytes8 (← effectiveAddress a)) 0)
+    | .register d, .memory a => writeVector d (ofHalves (← load .bits64 (← effectiveAddress a)) 0)
     | .register d, .register s =>
       writeVector d (ofHalves (lowHalf (← readVector s)) (highHalf (← readVector d)))
-    | .memory a, .register s => store .bytes8 (← effectiveAddress a) (lowHalf (← readVector s))
+    | .memory a, .register s => store .bits64 (← effectiveAddress a) (lowHalf (← readVector s))
     | .memory _, .memory _ => throw (.unsupported "memory-to-memory movsd")
   | .vectorBitwise op _ d s =>
     let a ← readVector d

@@ -22,8 +22,8 @@ theorem bytes_congr {m m' : Memory} {acc : Access} {a : UInt64} {n : Nat}
     m'.bytes acc a n = m.bytes acc a n :=
   mapM_congr fun i hi => h i (List.mem_range.1 hi)
 
-theorem read_congr {m m' : Memory} {w : Width} {a : UInt64}
-    (h : ∀ i < w.size, m'.byte .read (a + i.toUInt64) = m.byte .read (a + i.toUInt64)) :
+theorem read_congr {m m' : Memory} {w : OperandSize} {a : UInt64}
+    (h : ∀ i < w.byteCount, m'.byte .read (a + i.toUInt64) = m.byte .read (a + i.toUInt64)) :
     m'.read w a = m.read w a := by
   simp only [Memory.read, bytes_congr h]
 
@@ -101,7 +101,7 @@ theorem writeBytes_byte_ok {m m' : Memory} {a : UInt64} {bs : List UInt8} {acc :
 
 /-! ## Reads after a store -/
 
-theorem length_littleEndianBytes_size (w : Width) (v : UInt64) : (littleEndianBytes w.size v).length = w.size :=
+theorem length_littleEndianBytes_size (w : OperandSize) (v : UInt64) : (littleEndianBytes w.byteCount v).length = w.byteCount :=
   length_littleEndianBytes _ _
 
 theorem length_of_mapM_ok {α β ε : Type} {f : α → Except ε β} :
@@ -130,12 +130,12 @@ theorem bytes_take {m : Memory} {acc : Access} {a : UInt64} {n k : Nat} {bs : Li
       subst this
       simpa using hl
 
-theorem read_low_byte {m m' : Memory} {a v : UInt64} (h : m.write .bytes4 a v = .ok m') :
-    m'.read .bytes1 a = .ok (v &&& 0xff) := by
-  have := bytes_writeBytes h (by simp [length_littleEndianBytes, Width.size])
+theorem read_low_byte {m m' : Memory} {a v : UInt64} (h : m.write .bits32 a v = .ok m') :
+    m'.read .bits8 a = .ok (v &&& 0xff) := by
+  have := bytes_writeBytes h (by simp [length_littleEndianBytes, OperandSize.byteCount])
   rw [length_littleEndianBytes] at this
   have h1 := bytes_take this (k := 1) (by decide)
-  simp only [Memory.read, Width.size, h1, bind, Except.bind, pure, Except.pure]
+  simp only [Memory.read, OperandSize.byteCount, h1, bind, Except.bind, pure, Except.pure]
   simp only [littleEndianBytes, List.take, ofLittleEndian]
   congr 1
   bits64
@@ -153,8 +153,8 @@ structure Stored (m0 m : Memory) (ws : List (UInt64 × Nat)) : Prop where
 theorem Stored.refl (m : Memory) (ws : List (UInt64 × Nat)) : Stored m m ws :=
   ⟨fun _ _ _ => rfl, fun _ _ _ => rfl, fun _ v h => ⟨v, h⟩⟩
 
-theorem Stored.write {m0 m m' : Memory} {ws : List (UInt64 × Nat)} {w : Width} {a v : UInt64}
-    (h : Stored m0 m ws) (hw : m.write w a v = .ok m') : Stored m0 m' ((a, w.size) :: ws) where
+theorem Stored.write {m0 m m' : Memory} {ws : List (UInt64 × Nat)} {w : OperandSize} {a v : UInt64}
+    (h : Stored m0 m ws) (hw : m.write w a v = .ok m') : Stored m0 m' ((a, w.byteCount) :: ws) where
   outside acc x hx := by
     rw [writeBytes_byte_outside hw fun i hi e => hx ⟨_, List.mem_cons_self, i,
       by rwa [length_littleEndianBytes_size] at hi, e⟩]

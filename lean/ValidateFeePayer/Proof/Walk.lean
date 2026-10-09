@@ -12,7 +12,7 @@ namespace ValidateFeePayer.Proof
 
 open X86 Memory Lean Elab Tactic Meta
 
-theorem _root_.X86.Memory.Writable.wr {m : Memory} {a b v : UInt64} {n : Nat} {w : Width} (h : Writable m a n) :
+theorem _root_.X86.Memory.Writable.wr {m : Memory} {a b v : UInt64} {n : Nat} {w : OperandSize} (h : Writable m a n) :
     Writable (wr m w b v) a n :=
   fun i hi => go_stores_ok (h i hi)
 
@@ -34,7 +34,7 @@ theorem _root_.X86.Memory.Writable.sub {m : Memory} {a k : UInt64} {n n' : Nat} 
     omega
   rw [e]; exact hb
 
-theorem write_eq_wr {m : Memory} {w : Width} {a v : UInt64} (h : Writable m a w.size) :
+theorem write_eq_wr {m : Memory} {w : OperandSize} {a v : UInt64} (h : Writable m a w.byteCount) :
     m.write w a v = .ok (wr m w a v) :=
   writeBytes_ok (by rw [length_littleEndianBytes_size]; exact h)
 
@@ -42,28 +42,28 @@ theorem write_eq_wr {m : Memory} {w : Width} {a v : UInt64} (h : Writable m a w.
 def Apart (a : UInt64) (n : Nat) (b : UInt64) (n' : Nat) : Prop :=
   ∀ i < n, ∀ j < n', a + i.toUInt64 ≠ b + j.toUInt64
 
-theorem byte_wr_other {m : Memory} {w : Width} {a v x : UInt64} {acc : Access}
-    (h : ∀ j < w.size, a + j.toUInt64 ≠ x) : (wr m w a v).byte acc x = m.byte acc x :=
+theorem byte_wr_other {m : Memory} {w : OperandSize} {a v x : UInt64} {acc : Access}
+    (h : ∀ j < w.byteCount, a + j.toUInt64 ≠ x) : (wr m w a v).byte acc x = m.byte acc x :=
   go_stores_outside fun j _ hj => h j (by rw [length_littleEndianBytes_size] at hj; omega)
 
-theorem read_wr_other {m : Memory} {w w' : Width} {a b v : UInt64} (h : Apart a w.size b w'.size) :
+theorem read_wr_other {m : Memory} {w w' : OperandSize} {a b v : UInt64} (h : Apart a w.byteCount b w'.byteCount) :
     (wr m w a v).read w' b = m.read w' b :=
   read_congr fun i hi => byte_wr_other fun j hj => h j hj i hi
 
-theorem read128_wr_other {m : Memory} {w : Width} {a b v : UInt64} (h : Apart a w.size b 16) :
+theorem read128_wr_other {m : Memory} {w : OperandSize} {a b v : UInt64} (h : Apart a w.byteCount b 16) :
     (wr m w a v).read128 b = m.read128 b :=
   read128_congr fun i hi => byte_wr_other fun j hj => h j hj i hi
 
-theorem bytes_wr_other {m : Memory} {w : Width} {a b v : UInt64} {n : Nat} (h : Apart a w.size b n) :
+theorem bytes_wr_other {m : Memory} {w : OperandSize} {a b v : UInt64} {n : Nat} (h : Apart a w.byteCount b n) :
     (wr m w a v).bytes .read b n = m.bytes .read b n :=
   bytes_congr fun i hi => byte_wr_other fun j hj => h j hj i hi
 
-theorem read_wr_same {m : Memory} {w : Width} {a v : UInt64} (h : Writable m a w.size) :
+theorem read_wr_same {m : Memory} {w : OperandSize} {a v : UInt64} (h : Writable m a w.byteCount) :
     (wr m w a v).read w a = .ok (v &&& w.mask) :=
   read_write_same (write_eq_wr h)
 
-theorem read_wr_lowByte {m : Memory} {a v : UInt64} (h : Writable m a Width.bytes4.size) :
-    (wr m .bytes4 a v).read .bytes1 a = .ok (v &&& 0xff) :=
+theorem read_wr_lowByte {m : Memory} {a v : UInt64} (h : Writable m a OperandSize.bits32.byteCount) :
+    (wr m .bits32 a v).read .bits8 a = .ok (v &&& 0xff) :=
   read_low_byte (write_eq_wr h)
 
 /-- `m'` is `m` after stores that all succeeded. -/
@@ -71,8 +71,8 @@ def Evolved (m m' : Memory) : Prop := ∃ ws, Stored m m' ws
 
 theorem Evolved.refl (m : Memory) : Evolved m m := ⟨[], Stored.refl m []⟩
 
-theorem Evolved.wr {m m' : Memory} {w : Width} {a v : UInt64} (h : Evolved m m')
-    (hw : Writable m' a w.size) : Evolved m (wr m' w a v) := by
+theorem Evolved.wr {m m' : Memory} {w : OperandSize} {a v : UInt64} (h : Evolved m m')
+    (hw : Writable m' a w.byteCount) : Evolved m (wr m' w a v) := by
   obtain ⟨ws, h⟩ := h
   exact ⟨_, h.write (write_eq_wr hw)⟩
 
@@ -147,7 +147,7 @@ elab "apart" : tactic => do
     with_unfolding_all intro e
     replace e := congrArg UInt64.toNat e
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat,
-      Width.size, Nat.reducePow, Nat.reduceMod] at e hi hj)))
+      OperandSize.byteCount, Nat.reducePow, Nat.reduceMod] at e hi hj)))
   if let some h := direct then
     if ← tryTactic (evalTactic (← `(tactic| (have h' := $h; unfold Separate at h'; omega)))) then return
   withMainContext do
@@ -188,7 +188,7 @@ in general: the register lemmas match `Fin 16` indices as they are. -/
 @[vexec] theorem scale_one (x : UInt64) : x <<< UInt64.ofNat ((1 : Fin 4) : Nat) = x <<< 1 := rfl
 @[vexec] theorem scale_two (x : UInt64) : x <<< UInt64.ofNat ((2 : Fin 4) : Nat) = x <<< 2 := rfl
 @[vexec] theorem scale_three (x : UInt64) : x <<< UInt64.ofNat ((3 : Fin 4) : Nat) = x <<< 3 := rfl
-attribute [vexec] UInt64.add_zero UInt64.and_self Width.mask VectorMove.aligned BitVec.xor_zero
+attribute [vexec] UInt64.add_zero UInt64.and_self OperandSize.mask VectorMove.aligned BitVec.xor_zero
   BitVec.zero_xor beq_eq_false_iff_ne
 
 /-- `cmp x, c` sets the zero flag on `x - c`, which the walk sees as `x + (-c)`. -/

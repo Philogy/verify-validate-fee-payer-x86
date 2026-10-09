@@ -208,13 +208,13 @@ macro "bits64" : tactic => `(tactic| (
 theorem length_littleEndianBytes (n : Nat) (v : UInt64) : (littleEndianBytes n v).length = n := by
   induction n generalizing v <;> simp_all [littleEndianBytes]
 
-theorem ofLittleEndian_littleEndianBytes (w : Width) (v : UInt64) :
-    ofLittleEndian (littleEndianBytes w.size v) = v &&& w.mask := by
-  cases w <;> simp only [Width.size, Width.mask, littleEndianBytes, ofLittleEndian] <;> bits64
+theorem ofLittleEndian_littleEndianBytes (w : OperandSize) (v : UInt64) :
+    ofLittleEndian (littleEndianBytes w.byteCount v) = v &&& w.mask := by
+  cases w <;> simp only [OperandSize.byteCount, OperandSize.mask, littleEndianBytes, ofLittleEndian] <;> bits64
 
-theorem read_write_same {m m' : Memory} {w : Width} {a : UInt64} {v : UInt64}
+theorem read_write_same {m m' : Memory} {w : OperandSize} {a : UInt64} {v : UInt64}
     (h : m.write w a v = .ok m') : m'.read w a = .ok (v &&& w.mask) := by
-  have hlen := length_littleEndianBytes w.size v
+  have hlen := length_littleEndianBytes w.byteCount v
   have := bytes_writeBytes h (by rw [hlen]; cases w <;> decide)
   rw [hlen] at this
   simp [read, this, bind, Except.bind, pure, Except.pure, ofLittleEndian_littleEndianBytes]

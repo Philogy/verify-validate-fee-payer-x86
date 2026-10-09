@@ -36,9 +36,6 @@ def State.register (s : State) (r : Register) : UInt64 := s.registers[r.index]
 
 def State.stackPointer (s : State) : UInt64 := s.register .stackPointer
 
-def OperandSize.width : OperandSize → Width
-  | .bits8 => .bytes1 | .bits16 => .bytes2 | .bits32 => .bytes4 | .bits64 => .bytes8
-
 abbrev Exec := StateT State (Except Fault)
 
 namespace Exec
@@ -69,22 +66,22 @@ def effectiveAddress : Address → Exec UInt64
       | none => pure 0
     return b + i + d
 
-def load (w : Width) (a : UInt64) : Exec UInt64 := do liftPageFault ((← get).memory.read w a)
+def load (w : OperandSize) (a : UInt64) : Exec UInt64 := do liftPageFault ((← get).memory.read w a)
 
-def store (w : Width) (a : UInt64) (v : UInt64) : Exec Unit := do
+def store (w : OperandSize) (a : UInt64) (v : UInt64) : Exec Unit := do
   let m ← liftPageFault ((← get).memory.write w a v)
   modify fun s => { s with memory := m }
 
 def readOperand (size : OperandSize) : RegisterOrMemory → Exec UInt64
   | .register r => do return (← readRegister r) &&& size.mask
   | .highByte r => do return ((← readRegister r) >>> 8) &&& 0xff
-  | .memory a => do load size.width (← effectiveAddress a)
+  | .memory a => do load size (← effectiveAddress a)
 
 def writeOperand (size : OperandSize) : RegisterOrMemory → UInt64 → Exec Unit
   | .register r, v => writeRegister size r v
   | .highByte r, v => do
     writeRegister64 r (((← readRegister r) &&& ~~~(0xff00 : UInt64)) ||| ((v &&& 0xff) <<< 8))
-  | .memory a, v => do store size.width (← effectiveAddress a) v
+  | .memory a, v => do store size (← effectiveAddress a) v
 
 def readSource (size : OperandSize) : Source → Exec UInt64
   | .operand x => readOperand size x
@@ -138,16 +135,16 @@ def writeVector128 (aligned : Bool) : VectorOrMemory → BitVec 128 → Exec Uni
 -- Scalar (64-bit) vector operands have no alignment requirement.
 def readVector64 : VectorOrMemory → Exec UInt64
   | .register v => do return lowHalf (← readVector v)
-  | .memory a => do load .bytes8 (← effectiveAddress a)
+  | .memory a => do load .bits64 (← effectiveAddress a)
 
 def push (v : UInt64) : Exec Unit := do
   let sp := (← readRegister .stackPointer) - 8
-  store .bytes8 sp v
+  store .bits64 sp v
   writeRegister64 .stackPointer sp
 
 def pop : Exec UInt64 := do
   let sp ← readRegister .stackPointer
-  let v ← load .bytes8 sp
+  let v ← load .bits64 sp
   writeRegister64 .stackPointer (sp + 8)
   return v
 

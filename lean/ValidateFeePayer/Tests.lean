@@ -93,7 +93,7 @@ where
       | .running s' => go k s' (n + 1)
       | _ => n + 1
 
-def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read w a).toOption
+def read (s : State) (w : OperandSize) (a : UInt64) : Option UInt64 := (s.memory.read w a).toOption
 
 def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.counters⟩
 
@@ -106,13 +106,13 @@ def Case.expected (c : Case) : Except Spec.Error Spec.Account × Spec.ErrorMetri
 def Case.agrees (c : Case) : Bool :=
   let call := c.call
   let returned (s : State) (r : Except Spec.TransactionError Spec.Account) (metrics : Spec.ErrorMetrics) :=
-    let counter (offset : Nat) := read s .bytes8 (off call.errorMetrics offset)
-    read s .bytes4 call.result == some (resultTag (r.map fun _ => ())).toUInt64 &&
+    let counter (offset : Nat) := read s .bits64 (off call.errorMetrics offset)
+    read s .bits32 call.result == some (resultTag (r.map fun _ => ())).toUInt64 &&
     (match r with
-     | .error (.insufficientFundsForRent i) => read s .bytes1 (off call.result result.account_index) == some i.toUInt64
+     | .error (.insufficientFundsForRent i) => read s .bits8 (off call.result result.account_index) == some i.toUInt64
      | _ => true) &&
     (match r with
-     | .ok account => read s .bytes8 (off call.account.account account_shared_data.lamports) == some account.lamports
+     | .ok account => read s .bits64 (off call.account.account account_shared_data.lamports) == some account.lamports
      | .error _ => true) &&
     counter transaction_error_metrics.account_not_found == some metrics.accountNotFound &&
     counter transaction_error_metrics.invalid_account_for_fee == some metrics.invalidAccountForFee &&

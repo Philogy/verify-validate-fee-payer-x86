@@ -196,7 +196,7 @@ macro_rules
     repeat rw [byte_wr_other (by
       intro j hj eq
       replace eq := congrArg UInt64.toNat eq
-      simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat, Width.size,
+      simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat, OperandSize.byteCount,
         Nat.reducePow, Nat.reduceMod, UInt64.toNat_sub] at eq hj ha
       omega)]))
 

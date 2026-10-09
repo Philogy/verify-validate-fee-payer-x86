@@ -42,26 +42,26 @@ theorem read128_systemProgramId_high {lb : UInt64} {m : Memory} (hd : DataAt lb 
 
 theorem read_got {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
     {target : UInt64} (ht : r.contents = .pointer target) :
-    m.read .bytes8 (lb + r.address) = .ok (lb + target) := by
+    m.read .bits64 (lb + r.address) = .ok (lb + target) := by
   have hb : r.contents.bytesAt lb = some ⟨(littleEndianBytes 8 (lb + target)).toArray⟩ := by
     simp [ht, Contents.bytesAt]
   have := bytes_data hd hr hb (k := 0) (n := 8) (by simp [ByteArray.size, length_littleEndianBytes])
-  rw [show lb + r.address = lb + r.address + (0 : Nat).toUInt64 by simp, Memory.read, Width.size, this]
+  rw [show lb + r.address = lb + r.address + (0 : Nat).toUInt64 by simp, Memory.read, OperandSize.byteCount, this]
   simp only [bind, Except.bind, pure, Except.pure, Except.ok.injEq]
   have e : ((List.range 8).map fun i => (littleEndianBytes 8 (lb + target)).toArray[0 + i]!) =
       littleEndianBytes 8 (lb + target) := by
     simp [littleEndianBytes, List.range_succ]
   rw [e]
-  have := ofLittleEndian_littleEndianBytes .bytes8 (lb + target)
-  simp only [Width.size, Width.mask] at this
+  have := ofLittleEndian_littleEndianBytes .bits64 (lb + target)
+  simp only [OperandSize.byteCount, OperandSize.mask] at this
   rw [this, ValidateFeePayer.Proof.and_allOnes]
 
 theorem read_got_expectFailed {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read .bytes8 (lb + 0x37e9378) = .ok (lb + 0x12be100) :=
+    m.read .bits64 (lb + 0x37e9378) = .ok (lb + 0x12be100) :=
   read_got hd (r := Image.got_expect_failed) (by simp [Image.data]) rfl
 
 theorem read_got_rentCheck {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read .bytes8 (lb + 0x37f5120) = .ok (lb + 0x27f3790) :=
+    m.read .bits64 (lb + 0x37f5120) = .ok (lb + 0x27f3790) :=
   read_got hd (r := Image.got_check_static_account_rent_state_transition) (by simp [Image.data]) rfl
 
 attribute [vexec] read128_systemProgramId_low read128_systemProgramId_high read_got_expectFailed

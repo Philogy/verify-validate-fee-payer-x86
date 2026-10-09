@@ -26,21 +26,21 @@ structure AccountAt where
   data : UInt64
 
 def Spec.Account.Encodes (m : Memory) (p : AccountAt) (x : Spec.Account) : Prop :=
-  m.Holds .bytes8 (off p.account account_shared_data.data_arc) p.arcInner ∧
-  m.Holds .bytes8 (off p.account account_shared_data.lamports) x.lamports ∧
+  m.Holds .bits64 (off p.account account_shared_data.data_arc) p.arcInner ∧
+  m.Holds .bits64 (off p.account account_shared_data.lamports) x.lamports ∧
   m.HoldsBytes (off p.account account_shared_data.owner) x.owner.toList ∧
-  m.Holds .bytes8 (off p.arcInner account_shared_data.arc_inner.data_ptr) p.data ∧
-  m.Holds .bytes8 (off p.arcInner account_shared_data.arc_inner.data_len) x.data.length.toUInt64 ∧
+  m.Holds .bits64 (off p.arcInner account_shared_data.arc_inner.data_ptr) p.data ∧
+  m.Holds .bits64 (off p.arcInner account_shared_data.arc_inner.data_len) x.data.length.toUInt64 ∧
   m.HoldsBytes p.data x.data
 
 def Spec.Rent.Encodes (m : Memory) (p : UInt64) (x : Spec.Rent) : Prop :=
-  m.Holds .bytes8 (off p rent.lamports_per_byte) x.lamportsPerByte ∧
-  m.Holds .bytes8 (off p rent.exemption_threshold) x.exemptionThreshold
+  m.Holds .bits64 (off p rent.lamports_per_byte) x.lamportsPerByte ∧
+  m.Holds .bits64 (off p rent.exemption_threshold) x.exemptionThreshold
 
 def Spec.ErrorMetrics.Encodes (m : Memory) (p : UInt64) (x : Spec.ErrorMetrics) : Prop :=
-  m.Holds .bytes8 (off p transaction_error_metrics.account_not_found) x.accountNotFound ∧
-  m.Holds .bytes8 (off p transaction_error_metrics.invalid_account_for_fee) x.invalidAccountForFee ∧
-  m.Holds .bytes8 (off p transaction_error_metrics.insufficient_funds) x.insufficientFunds
+  m.Holds .bits64 (off p transaction_error_metrics.account_not_found) x.accountNotFound ∧
+  m.Holds .bits64 (off p transaction_error_metrics.invalid_account_for_fee) x.invalidAccountForFee ∧
+  m.Holds .bits64 (off p transaction_error_metrics.insufficient_funds) x.insufficientFunds
 
 def resultTag : Except Spec.TransactionError Unit → Nat
   | .ok () => result.tags.Ok
@@ -54,14 +54,14 @@ for `InsufficientFundsForRent`, its `u8` account index are defined: Rust
 promises nothing about the other bytes (padding and other variants'
 payloads), and the code does not write them. -/
 def ResultEncodes (m : Memory) (p : UInt64) (x : Except Spec.TransactionError Unit) : Prop :=
-  m.Holds .bytes4 p (resultTag x).toUInt64 ∧
+  m.Holds .bits32 p (resultTag x).toUInt64 ∧
   match x with
-  | .error (.insufficientFundsForRent i) => m.Holds .bytes1 (off p result.account_index) i.toUInt64
+  | .error (.insufficientFundsForRent i) => m.Holds .bits8 (off p result.account_index) i.toUInt64
   | _ => True
 
 /-- A `bool` must be 0 or 1 (Rust's validity invariant); the code relies on it. -/
 def BoolEncodes (m : Memory) (p : UInt64) (x : Bool) : Prop :=
-  m.Holds .bytes1 p (if x then 1 else 0)
+  m.Holds .bits8 p (if x then 1 else 0)
 
 /-- Everything about one call that is not a Lean value of the Rust program:
 where things are. -/
@@ -121,7 +121,7 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   metricsRegister : s.register .counter = c.errorMetrics
   rentRegister : s.register .r8 = c.rent
   feeRegister : s.register .r9 = c.fee
-  returnAddress : s.memory.Holds .bytes8 s.stackPointer c.returnAddress
+  returnAddress : s.memory.Holds .bits64 s.stackPointer c.returnAddress
   relaxArgument : BoolEncodes s.memory (s.stackPointer + 8) relax
   -- SysV: `rsp ≡ 0 (mod 16)` before the `call`, which pushed 8 bytes.
   stackAligned : s.stackPointer % 16 = 8

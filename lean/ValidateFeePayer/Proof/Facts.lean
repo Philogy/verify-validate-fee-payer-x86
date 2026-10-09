@@ -33,8 +33,8 @@ theorem read128_of_bytes {m : Memory} {a : UInt64} {bs : List UInt8} (h : m.byte
     m.read128 a = .ok (ofHalves (ofLittleEndian (bs.take 8)) (ofLittleEndian (bs.drop 8))) := by
   simp [Memory.read128, h, bind, Except.bind, pure, Except.pure]
 
-theorem read_of_bytes {m : Memory} {w : Width} {a : UInt64} {bs : List UInt8}
-    (h : m.bytes .read a w.size = .ok bs) : m.read w a = .ok (ofLittleEndian bs) := by
+theorem read_of_bytes {m : Memory} {w : OperandSize} {a : UInt64} {bs : List UInt8}
+    (h : m.bytes .read a w.byteCount = .ok bs) : m.read w a = .ok (ofLittleEndian bs) := by
   simp [Memory.read, h, bind, Except.bind, pure, Except.pure]
 
 theorem ofLittleEndian_lt : ∀ (l : List UInt8), l.length ≤ 8 → (ofLittleEndian l).toNat < 2 ^ (8 * l.length)
@@ -107,17 +107,17 @@ theorem ownerHalves_eq_zero (v : Spec.Pubkey) :
 theorem off_eq (a : UInt64) (n : Nat) : off a n = a + n.toUInt64 := rfl
 
 theorem Spec.Account.reads {m : Memory} {p : AccountAt} {x : Spec.Account} (h : x.Encodes m p) :
-    m.read .bytes8 p.account = .ok p.arcInner ∧
-    m.read .bytes8 (p.account + 8) = .ok x.lamports ∧
+    m.read .bits64 p.account = .ok p.arcInner ∧
+    m.read .bits64 (p.account + 8) = .ok x.lamports ∧
     m.read128 (p.account + 16) = .ok (ofHalves (ofLittleEndian ((x.owner.toList.take 16).take 8))
       (ofLittleEndian ((x.owner.toList.take 16).drop 8))) ∧
     m.read128 (p.account + 32) = .ok (ofHalves (ofLittleEndian ((x.owner.toList.drop 16).take 8))
       (ofLittleEndian ((x.owner.toList.drop 16).drop 8))) ∧
-    m.read .bytes8 (p.arcInner + 24) = .ok p.data ∧
-    m.read .bytes8 (p.arcInner + 32) = .ok x.data.length.toUInt64 ∧
+    m.read .bits64 (p.arcInner + 24) = .ok p.data ∧
+    m.read .bits64 (p.arcInner + 32) = .ok x.data.length.toUInt64 ∧
     (x.data.length = 80 →
-      m.read .bytes4 p.data = .ok (ofLittleEndian (x.data.take 4)) ∧
-      m.read .bytes4 (p.data + 4) = .ok (ofLittleEndian ((x.data.drop 4).take 4))) := by
+      m.read .bits32 p.data = .ok (ofLittleEndian (x.data.take 4)) ∧
+      m.read .bits32 (p.data + 4) = .ok (ofLittleEndian ((x.data.drop 4).take 4))) := by
   obtain ⟨harc, hlam, hown, hdat, hlen, hbytes⟩ := h
   simp only [Memory.Holds, Memory.HoldsBytes, off_eq, account_shared_data.data_arc,
     account_shared_data.lamports, account_shared_data.owner, account_shared_data.arc_inner.data_ptr,
@@ -131,7 +131,7 @@ theorem Spec.Account.reads {m : Memory} {p : AccountAt} {x : Spec.Account} (h : 
     exact read_of_bytes (bytes_take hbytes (by decide))
   · rw [h80] at hbytes
     have h76 : m.bytes .read p.data (4 + 76) = .ok x.data := hbytes
-    have := bytes_take (bytes_drop h76) (k := Width.bytes4.size) (by decide)
+    have := bytes_take (bytes_drop h76) (k := OperandSize.bits32.byteCount) (by decide)
     simp only [Nat.toUInt64_eq, UInt64.reduceOfNat] at this
     exact read_of_bytes this
 

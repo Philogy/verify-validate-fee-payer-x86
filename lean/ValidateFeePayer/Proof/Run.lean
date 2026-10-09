@@ -99,7 +99,7 @@ theorem Finishes.walk {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {n 
   exact Finishes.exec hx hc hip hdec hexec h
 
 /-- A store that is known to succeed. -/
-def wr (m : Memory) (w : Width) (a v : UInt64) : Memory :=
-  ⟨Memory.stores a (littleEndianBytes w.size v) 0 m.mappings⟩
+def wr (m : Memory) (w : OperandSize) (a v : UInt64) : Memory :=
+  ⟨Memory.stores a (littleEndianBytes w.byteCount v) 0 m.mappings⟩
 
 end ValidateFeePayer.Proof

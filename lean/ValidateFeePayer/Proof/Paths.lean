@@ -50,24 +50,24 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   insufficientFundsWritable : Memory.Writable m (met + 80) 8
   invalidAccountForFeeWritable : Memory.Writable m (met + 88) 8
   lamportsWritable : Memory.Writable m (acct + 8) 8
-  readReturn : m.read .bytes8 (S + 96) = .ok ra
-  readRelax : m.read .bytes1 (S + 104) = .ok (if relax then 1 else 0)
-  readArc : m.read .bytes8 acct = .ok arc
-  readLamports : m.read .bytes8 (acct + 8) = .ok account.lamports
+  readReturn : m.read .bits64 (S + 96) = .ok ra
+  readRelax : m.read .bits8 (S + 104) = .ok (if relax then 1 else 0)
+  readArc : m.read .bits64 acct = .ok arc
+  readLamports : m.read .bits64 (acct + 8) = .ok account.lamports
   readOwnerLow : m.read128 (acct + 16) = .ok o1
   readOwnerHigh : m.read128 (acct + 32) = .ok o2
   owner : o2 ||| o1 = 0 ↔ account.owner = Spec.systemProgramId
-  readData : m.read .bytes8 (arc + 24) = .ok dat
-  readLength : m.read .bytes8 (arc + 32) = .ok account.data.length.toUInt64
+  readData : m.read .bits64 (arc + 24) = .ok dat
+  readLength : m.read .bits64 (arc + 32) = .ok account.data.length.toUInt64
   readVersions : account.data.length.toUInt64 = 80 →
-    m.read .bytes4 dat = .ok (ofLittleEndian (account.data.take 4))
+    m.read .bits32 dat = .ok (ofLittleEndian (account.data.take 4))
   readState : account.data.length.toUInt64 = 80 →
-    m.read .bytes4 (dat + 4) = .ok (ofLittleEndian ((account.data.drop 4).take 4))
-  readLamportsPerByte : m.read .bytes8 rnt = .ok rent.lamportsPerByte
-  readThreshold : m.read .bytes8 (rnt + 8) = .ok rent.exemptionThreshold
-  readAccountNotFound : m.read .bytes8 (met + 32) = .ok metrics.accountNotFound
-  readInvalidAccountForFee : m.read .bytes8 (met + 88) = .ok metrics.invalidAccountForFee
-  readInsufficientFunds : m.read .bytes8 (met + 80) = .ok metrics.insufficientFunds
+    m.read .bits32 (dat + 4) = .ok (ofLittleEndian ((account.data.drop 4).take 4))
+  readLamportsPerByte : m.read .bits64 rnt = .ok rent.lamportsPerByte
+  readThreshold : m.read .bits64 (rnt + 8) = .ok rent.exemptionThreshold
+  readAccountNotFound : m.read .bits64 (met + 32) = .ok metrics.accountNotFound
+  readInvalidAccountForFee : m.read .bits64 (met + 88) = .ok metrics.invalidAccountForFee
+  readInsufficientFunds : m.read .bits64 (met + 80) = .ok metrics.insufficientFunds
   accountEncoded : account.Encodes m c.account
   dataLength : account.data.length < 2 ^ 64
   stackBound : S.toNat + 112 ≤ 2 ^ 64

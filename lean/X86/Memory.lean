@@ -1,4 +1,5 @@
 import X86.Bytes
+import X86.OperandSize
 
 namespace X86
 
@@ -57,16 +58,6 @@ def Disjoint (a b : Mapping) : Prop := a.endAddress ≤ b.base.toNat ∨ b.endAd
 
 end Mapping
 
-inductive Width where
-  | bytes1 | bytes2 | bytes4 | bytes8
-  deriving DecidableEq, Repr
-
-def Width.size : Width → Nat
-  | .bytes1 => 1 | .bytes2 => 2 | .bytes4 => 4 | .bytes8 => 8
-
-def Width.mask : Width → UInt64
-  | .bytes1 => 0xff | .bytes2 => 0xffff | .bytes4 => 0xffffffff | .bytes8 => 0xffffffffffffffff
-
 structure Memory where
   mappings : List Mapping
 
@@ -97,11 +88,11 @@ def writeBytes (m : Memory) (address : UInt64) (bs : List UInt8) : Except PageFa
   let _ ← m.bytes .write address bs.length
   return ⟨bs.zipIdx.foldl (fun ms (b, i) => setByte (address + i.toUInt64) b ms) m.mappings⟩
 
-def read (m : Memory) (w : Width) (address : UInt64) : Except PageFault UInt64 := do
-  return ofLittleEndian (← m.bytes .read address w.size)
+def read (m : Memory) (w : OperandSize) (address : UInt64) : Except PageFault UInt64 := do
+  return ofLittleEndian (← m.bytes .read address w.byteCount)
 
-def write (m : Memory) (w : Width) (address : UInt64) (v : UInt64) : Except PageFault Memory :=
-  m.writeBytes address (littleEndianBytes w.size v)
+def write (m : Memory) (w : OperandSize) (address : UInt64) (v : UInt64) : Except PageFault Memory :=
+  m.writeBytes address (littleEndianBytes w.byteCount v)
 
 def read128 (m : Memory) (address : UInt64) : Except PageFault (BitVec 128) := do
   let bs ← m.bytes .read address 16
@@ -110,7 +101,7 @@ def read128 (m : Memory) (address : UInt64) : Except PageFault (BitVec 128) := d
 def write128 (m : Memory) (address : UInt64) (v : BitVec 128) : Except PageFault Memory :=
   m.writeBytes address (littleEndianBytes 8 (lowHalf v) ++ littleEndianBytes 8 (highHalf v))
 
-def Holds (m : Memory) (w : Width) (a v : UInt64) : Prop := m.read w a = .ok v
+def Holds (m : Memory) (w : OperandSize) (a v : UInt64) : Prop := m.read w a = .ok v
 
 def HoldsBytes (m : Memory) (a : UInt64) (bs : List UInt8) : Prop := m.bytes .read a bs.length = .ok bs
 
