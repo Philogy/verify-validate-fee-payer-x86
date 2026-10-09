@@ -24,23 +24,26 @@ structure Case where
   owner : List UInt8 := List.replicate 32 0
   data : List UInt8 := []
   lamportsPerByte : UInt64 := 3480
-  threshold : Float := 2.0
+  /-- The `f64`'s bits. -/
+  threshold : UInt64 := Spec.currentExemptionThreshold
   fee : UInt64
   relax : Bool := false
   loadBase : UInt64 := 0x555555554000
   free : Nat := 4096
   counters : UInt64 := 0
+  returnAddress : UInt64 := 0x400000
 
 def Case.call (c : Case) : Call :=
   { loadBase := c.loadBase, result := 0x10000,
     account := { account := 0x20000, arcInner := 0x30000, data := 0x40000 },
-    errorMetrics := 0x50000, rent := 0x60000, payerIndex := 7, fee := c.fee, returnAddress := 0x400000 }
+    errorMetrics := 0x50000, rent := 0x60000, payerIndex := 7, fee := c.fee, returnAddress := c.returnAddress }
 
 def stackTop : UInt64 := 0x7ffffff00000
 
 def Case.state (c : Case) : State :=
   let call := c.call
-  let sp := stackTop - 64
+  -- SysV: 16-byte aligned before the `call` pushed the return address.
+  let sp := stackTop - 72
   let stack : Mapping :=
     { base := sp - c.free.toUInt64,
       bytes := ⟨(List.replicate c.free 0xaa ++ u64 call.returnAddress ++ [if c.relax then 1 else 0] ++
@@ -63,7 +66,7 @@ def Case.state (c : Case) : State :=
        ctr transaction_error_metrics.insufficient_funds],
     obj call.rent rent.size
       [(rent.lamports_per_byte, u64 c.lamportsPerByte),
-       (rent.exemption_threshold, u64 c.threshold.toBits)]]
+       (rent.exemption_threshold, u64 c.threshold)]]
   let registers := (Vector.replicate 16 (0x1234567890abcdef : UInt64))
     |>.set Register.destinationIndex.index call.result
     |>.set Register.sourceIndex.index call.account.account
@@ -93,8 +96,10 @@ def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read 
 
 def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.counters⟩
 
+def Case.rent (c : Case) : Spec.Rent := ⟨c.lamportsPerByte, c.threshold⟩
+
 def Case.expected (c : Case) : Except Spec.Error Spec.Account × Spec.ErrorMetrics :=
-  Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax c.metrics
+  Spec.validateFeePayer c.account 7 c.rent c.fee c.relax c.metrics
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
@@ -138,16 +143,16 @@ def cases : List Case := [
   { lamports := 10, fee := 5, data := u32 2 ++ u32 1 ++ List.replicate 72 0 },
   { lamports := 208 * 3480 * 2 + 5000, fee := 5000, data := nonceData },
   { lamports := 208 * 3480 * 2 + 4999, fee := 5000, data := nonceData },
-  { lamports := 208 * 3480 + 5000, fee := 5000, data := nonceData, threshold := 1.0 },
-  { lamports := minBalance 3480 3.3 + 5000, fee := 5000, data := nonceData, threshold := 3.3 },
-  { lamports := minBalance 3480 3.3 + 4999, fee := 5000, data := nonceData, threshold := 3.3 },
+  { lamports := 208 * 3480 + 5000, fee := 5000, data := nonceData, threshold := Spec.simd0194ExemptionThreshold },
+  { lamports := minBalance 3480 3.3 + 5000, fee := 5000, data := nonceData, threshold := (3.3 : Float).toBits },
+  { lamports := minBalance 3480 3.3 + 4999, fee := 5000, data := nonceData, threshold := (3.3 : Float).toBits },
   { lamports := 900000, fee := 10000 },
   { lamports := 900000, fee := 10000, relax := true },
   { lamports := 900000, fee := 900000 },
   { lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646 },
-  { lamports := 1000, fee := 100, lamportsPerByte := 1759197129868, threshold := 1.0 },
+  { lamports := 1000, fee := 100, lamportsPerByte := 1759197129868, threshold := Spec.simd0194ExemptionThreshold },
   { lamports := 10 ^ 18, fee := 100, data := nonceData, lamportsPerByte := 0xcccc28f646 },
-  { lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, threshold := 3.3 }]
+  { lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, threshold := (3.3 : Float).toBits }]
 
 #guard cases.all Case.agrees
 #guard (cases.map Case.outcome).count "panicked" == 3
@@ -161,19 +166,75 @@ path, 96 to the panic from the callee (`stackUse`). One byte less faults. -/
 #guard (({ lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, free := stackUse - 1 } : Case).outcome).startsWith "faulted X86.Fault.pageFault"
 
 /-! At a base that is only 8-aligned the f64 constants are misaligned for
-`interleaveLow32` (x86: `punpckldq`), hence `Pre.alignedBase`. -/
+`interleaveLow32` (x86: `punpckldq`). The theorem excludes the `f64` path, so
+`Pre` does not need an aligned base. -/
 def floatPathAt (loadBase : UInt64) : Case :=
-  { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := 3.3, loadBase }
+  { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := (3.3 : Float).toBits, loadBase }
 #guard ((floatPathAt 0x555555554008).outcome).startsWith "faulted X86.Fault.misaligned"
 #guard (floatPathAt 0x555555554000).agrees
+
+/-! A return to an address that is neither exit is `badJump`: unmapped, or
+mapped but not executable. -/
+def returnsTo (returnAddress : UInt64) : Case := { lamports := 1000, fee := 100, returnAddress }
+
+def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
+  X86.run { c.call.exits with returnAddress := exit } fuel c.state
+
+#guard match runWithReturnExit (returnsTo 0x400000) 0x500000 with
+  | .badJump s => s.instructionPointer == 0x400000 | _ => false
+#guard
+  let lb : UInt64 := 0x555555554000
+  let data := (((imageMappings lb).find? (!·.permissions.execute)).map (·.base)).getD 0
+  match runWithReturnExit (returnsTo data) 0x400000 with
+  | .badJump s => s.instructionPointer == data | _ => false
+
+/-! `Pre` is satisfiable: it holds of a concrete entry state. -/
+deriving instance DecidableEq for Except
+
+theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write a n).toBool = true) :
+    m.Writable a n := by
+  unfold Memory.Writable
+  cases hb : m.bytes .write a n with
+  | ok bs => exact ⟨bs, rfl⟩
+  | error e => simp [hb, Except.toBool] at h
+
+def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }
+
+example : Pre example1.call example1.account example1.metrics example1.rent false example1.state where
+  image := ⟨_, rfl⟩
+  validBase := by decide +kernel
+  returnOutsideImage := by decide +kernel
+  returnNotPanic := by decide +kernel
+  entry := by decide +kernel
+  resultRegister := by decide +kernel
+  accountRegister := by decide +kernel
+  payerIndexRegister := by decide +kernel
+  metricsRegister := by decide +kernel
+  rentRegister := by decide +kernel
+  feeRegister := by decide +kernel
+  returnAddress := by unfold Memory.Holds; decide +kernel
+  relaxArgument := by unfold BoolEncodes Memory.Holds; decide +kernel
+  stackAligned := by decide +kernel
+  stackFree := writable_of_ok (by decide +kernel)
+  flags := by decide +kernel
+  integerThreshold := by decide +kernel
+  accountEncoded := by unfold Spec.Account.Encodes Memory.Holds Memory.HoldsBytes; decide +kernel
+  metricsEncoded := by unfold Spec.ErrorMetrics.Encodes Memory.Holds; decide +kernel
+  rentEncoded := by unfold Spec.Rent.Encodes Memory.Holds; decide +kernel
+  resultWritable := writable_of_ok (by decide +kernel)
+  lamportsWritable := writable_of_ok (by decide +kernel)
+  accountNotFoundWritable := writable_of_ok (by decide +kernel)
+  invalidAccountForFeeWritable := writable_of_ok (by decide +kernel)
+  insufficientFundsWritable := writable_of_ok (by decide +kernel)
+  disjoint := by unfold IntervalsDisjoint; decide +kernel
+  noWrap := by decide +kernel
 
 /-! A branch on a flag nobody wrote faults. -/
 #guard match ((execute (.jumpIf .equal 0)).run ({ lamports := 1, fee := 1 } : Case).state) with
   | .error (.undefinedFlagRead .zero) => true | _ => false
 
-/-! F64 against the host's `Float` on random operands (a stand-in until the
-per-instruction hardware harness exists : bit-exact, NaN payloads compared
-only as NaN). -/
+/-! F64 against the host's `Float` on random operands, bit-exact, NaN payloads
+compared only as NaN: more operands than `tests/x86/` runs on the CPU. -/
 def xorshift (x : UInt64) : UInt64 :=
   let x := x ^^^ (x <<< 13); let x := x ^^^ (x >>> 7); x ^^^ (x <<< 17)
 
