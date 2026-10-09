@@ -94,4 +94,4 @@ jobs:
 
       - name: No sorry
         working-directory: lean
-        run: "! grep -rnw sorry --include='*.lean' X86 X86Test ValidateFeePayer scripts"
+        run: "! grep -rnw sorry --include='*.lean' X86 X86Test Abi ValidateFeePayer scripts"
