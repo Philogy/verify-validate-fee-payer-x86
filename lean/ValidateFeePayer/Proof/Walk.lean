@@ -704,9 +704,14 @@ def refute? (e : Expr) : TacticM (Option Expr) := do
   let paths := (← getLCtx).foldl (init := #[]) fun acc d =>
     if d.userName == `path && !d.isImplementationDetail then acc.push d.fvarId else acc
   let (_, g') ← g.mvarId!.revert paths (preserveOrder := true)
+  -- `contradiction` compares hypotheses pairwise; the path conditions and
+  -- `e` are the ones that can contradict each other.
+  let entryFacts ← g'.withContext do
+    (← getLCtx).foldlM (init := #[]) fun acc d => do
+      if !d.isImplementationDetail && (← isProp d.type) then return acc.push d.fvarId else return acc
   let saved ← saveState
-  for tac in [← `(tactic| (intros; contradiction)), ← `(tactic| uomega)] do
-    setGoals [g']
+  for (tac, clear) in [(← `(tactic| (intros; contradiction)), true), (← `(tactic| uomega), false)] do
+    setGoals [← if clear then g'.tryClearMany entryFacts else pure g']
     let ok ← tryCatchRuntimeEx (do withoutRecover (evalTactic tac); pure (← getGoals).isEmpty) fun ex => do
       trace[debug] "refute {e}: {tac} failed: {ex.toMessageData}\n{g'}"
       pure false
