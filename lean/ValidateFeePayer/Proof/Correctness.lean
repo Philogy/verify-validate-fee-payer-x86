@@ -55,7 +55,9 @@ theorem post_of_call {c : Call} {account metrics rent relax s} (pre : Pre c acco
     {metrics' : Spec.ErrorMetrics} {r : Except Spec.TransactionError Spec.Account} {s' : State}
     (h : CallPost c s metrics' r s') : Post s c.heap metrics' r s' where
   returned := ⟨h.stackPopped, h.calleeSavedKept, h.floatControlKept⟩
-  returnsResultPointer := by rw [pre.result]; exact h.returnsResultPointer
+  returnsResultPointer := by
+    show _ = (args s).result
+    rw [pre.result]; exact h.returnsResultPointer
   frame := frame_of_call pre h.frame
   resultEncoded := by rw [pre.result]; exact h.resultEncoded
   accountEncoded := by rw [pre.accountAt_eq]; exact h.accountEncoded

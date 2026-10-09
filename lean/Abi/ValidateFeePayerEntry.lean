@@ -25,7 +25,7 @@ structure ValidateFeePayerEntry where
   relax : UInt64
 
 def ValidateFeePayerEntry.of (s : State) : ValidateFeePayerEntry where
-  result := SysV.argument s 0
+  result := SysV.indirectResult s
   account := SysV.argument s 1
   payerIndex := SysV.argument s 2
   errorMetrics := SysV.argument s 3

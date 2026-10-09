@@ -163,8 +163,7 @@ bound by the frame: the code may have written the lamports already. -/
 structure Post (s : State) (heap : AccountHeap) (metrics : Spec.ErrorMetrics)
     (result : Except Spec.TransactionError Spec.Account) (s' : State) : Prop where
   returned : SysV.Returned s s'
-  -- The hidden result pointer comes back in `rax`.
-  returnsResultPointer : s'.register .accumulator = (args s).result
+  returnsResultPointer : SysV.ReturnsIndirectly s s'
   frame : Frame s s'
   resultEncoded : ResultEncodes s'.memory (args s).result (result.map fun _ => ())
   accountEncoded : ∀ account, result = .ok account → account.Encodes s'.memory (accountAt s heap)
