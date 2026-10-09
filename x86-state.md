@@ -1,8 +1,8 @@
 # Comparing the model with hardware
 
 The model (`lean/X86/`) is only as good as its agreement with a real CPU.
-The plan is a CI job that checks every supported instruction form, the `F64`
-operations included, one instruction at a time. Not built yet.
+The plan below is built in `tests/x86/` (see its README); this file keeps
+the reasoning for what the comparison ignores.
 
 ## Harness
 
