@@ -5,9 +5,10 @@ import X86.Bytes
 `validate_fee_payer` (`svm/src/account_loader.rs` at the pinned Agave commit)
 and what it calls, as Lean functions over the values its arguments point to.
 Names follow the Rust source; `Option` is Rust's `Option`. A Rust panic and a
-returned `TransactionError` are the two kinds of `Error`. The `&mut` error
-metrics are state that survives an error; the `&mut` account is returned on
-success only, since after an error the caller drops it.
+returned `TransactionError` are the two kinds of `Error`. `chargeFeePayer` is
+the function without its error metrics, which `validateFeePayer` updates from
+the error; the `&mut` account is returned on success only, since after an
+error the caller drops it.
 
 Arithmetic is on `UInt64` with wrapping, as in a release build (no overflow
 checks); the Rust source uses `checked_sub` where it needs checking.
@@ -173,25 +174,30 @@ def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UIn
 
 /-! ## `svm/src/account_loader.rs` -/
 
-def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
-    (relax : Bool) : ExceptT Error (StateM ErrorMetrics) Account := do
-  if account.lamports = 0 then
-    modify fun m => { m with accountNotFound := saturatingIncrement m.accountNotFound }
-    throw (.tx .accountNotFound)
-  let some kind := systemAccountKind account
-    | modify fun m => { m with invalidAccountForFee := saturatingIncrement m.invalidAccountForFee }
-      throw (.tx .invalidAccountForFee)
+def chargeFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
+    (relax : Bool) : Except Error Account := do
+  if account.lamports = 0 then throw (.tx .accountNotFound)
+  let some kind := systemAccountKind account | throw (.tx .invalidAccountForFee)
   let minBalance ← match kind with
     | .system => pure 0
     | .nonce => minimumBalance rent nonceStateSize.toUInt64
-  if account.lamports.toNat < fee.toNat + minBalance.toNat then
-    modify fun m => { m with insufficientFunds := saturatingIncrement m.insufficientFunds }
-    throw (.tx .insufficientFundsForFee)
-  let preBalance := account.lamports
-  if preBalance < fee then throw (.tx .insufficientFundsForFee)
-  let postBalance := preBalance - fee
-  checkStaticAccountRentStateTransition preBalance postBalance account.data.length.toUInt64 rent
-    payerIndex relax
+  if account.lamports.toNat < fee.toNat + minBalance.toNat then throw (.tx .insufficientFundsForFee)
+  let postBalance := account.lamports - fee
+  checkStaticAccountRentStateTransition account.lamports postBalance account.data.length.toUInt64
+    rent payerIndex relax
   return { account with lamports := postBalance }
+
+def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
+    (relax : Bool) (metrics : ErrorMetrics) : Except Error Account × ErrorMetrics :=
+  let result := chargeFeePayer account payerIndex rent fee relax
+  let metrics := match result with
+    | .error (.tx .accountNotFound) =>
+      { metrics with accountNotFound := saturatingIncrement metrics.accountNotFound }
+    | .error (.tx .invalidAccountForFee) =>
+      { metrics with invalidAccountForFee := saturatingIncrement metrics.invalidAccountForFee }
+    | .error (.tx .insufficientFundsForFee) =>
+      { metrics with insufficientFunds := saturatingIncrement metrics.insufficientFunds }
+    | _ => metrics
+  (result, metrics)
 
 end ValidateFeePayer.Spec

@@ -85,8 +85,8 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   generic decoder, used only by checks and proofs), `Checks` (kernel-checked
   facts: regions disjoint, sweep equals llvm-objdump's disassembly, decoding
   from memory equals the sweep), `Spec` (the Rust functions in Lean:
-  a panic or a `TransactionError` is an `Error`, the `&mut` error metrics
-  state that survives errors), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
+  a panic or a `TransactionError` is an `Error`; `chargeFeePayer` does the
+  checks, `validateFeePayer` updates the error metrics from its error), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
   theorem; its proof is the package's only `sorry`), `Tests` (machine
   against `Spec` on concrete inputs).
 

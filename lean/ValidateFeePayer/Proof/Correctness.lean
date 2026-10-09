@@ -14,8 +14,8 @@ namespace ValidateFeePayer
 open X86 ValidateFeePayer.Proof
 
 /-- `checked_sub_lamports(fee)` cannot fail once the balance covers the fee
-and the minimum balance, so `Spec.validateFeePayer`'s second
-`insufficientFundsForFee` is dead. -/
+and the minimum balance, so the code's branch for it is dead and
+`Spec.chargeFeePayer` subtracts unchecked. -/
 theorem checkedSubLamports_ok {lamports fee minBalance : UInt64}
     (h : ¬ lamports.toNat < fee.toNat + minBalance.toNat) : ¬ lamports < fee := by
   rw [UInt64.lt_iff_toNat_lt]; omega
@@ -24,7 +24,7 @@ theorem checkedSubLamports_ok {lamports fee minBalance : UInt64}
 panics, and otherwise returns in a state satisfying `Post`. -/
 def Spec.Outcome (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) (o : X86.Outcome) : Prop :=
-  match (Spec.validateFeePayer account c.payerIndex rent c.fee relax).run.run metrics, o with
+  match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics, o with
   | (.error (.panic _), _), .panicked _ => True
   | (.error (.tx e), metrics'), .returned s' => Post c s metrics' (.error e) s'
   | (.ok account', metrics'), .returned s' => Post c s metrics' (.ok account') s'
@@ -42,7 +42,7 @@ theorem symbolicRun (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMet
 
 theorem correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
-    match (Spec.validateFeePayer account c.payerIndex rent c.fee relax).run.run metrics with
+    match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics with
     | (.error (.panic _), _) => ∃ s', run c.exits fuel s = .panicked s'
     | (.error (.tx e), metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.error e) s'
     | (.ok account', metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.ok account') s' := by

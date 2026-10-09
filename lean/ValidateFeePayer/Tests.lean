@@ -94,7 +94,7 @@ def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read 
 def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.counters⟩
 
 def Case.expected (c : Case) : Except Spec.Error Spec.Account × Spec.ErrorMetrics :=
-  (Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax).run.run c.metrics
+  Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax c.metrics
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
