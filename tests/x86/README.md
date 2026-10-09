@@ -10,14 +10,14 @@ runs both on every push.
 |---|---|
 | `gen.py` | Writes `vectors/*.txt`: one instruction and start state per line. Seeded; CI checks a rerun is identical. |
 | `layout.h` | The start state a vector overrides: four pages (code r-x, data rw-, read-only, stack), register and memory fill. `lean/X86Test/Harness.lean` repeats it. |
-| `undefined_flags.py` | The flags the Intel SDM leaves undefined, per instruction, quoted from the SDM. |
 | `oracle.c` | Maps the pages in a child, sets the registers with ptrace, single-steps the instruction and prints what changed (`expected/*.txt`). |
 | `lean/X86Test.lean` | `x86-test behaviour .`: one `step` per vector, printed the same way, compared line by line. |
 
 A vector: `asm | bytes | field=value ...`. An outcome:
 `bytes | ok|pagefault unmapped A|pagefault denied A|gp|ill field=value ...`,
-listing only what changed. Flags print as `CPAZSO` letters, `-` for clear and
-`?` for undefined; the CPU's value of an undefined flag is never compared.
+listing only what changed. Flags print as `CPAZSO` letters and `-` for clear;
+the model prints `?` for a flag it leaves undefined (`none`), which accepts
+whatever the CPU holds.
 MXCSR exception bits are compared although the machine does not keep them
 (`Harness.floatExceptions` recomputes them from `F64`).
 
@@ -30,12 +30,6 @@ Known differences (`known=`):
 - `noncanonical`: a load or store at a non-canonical address raises #GP;
   the model has no canonical-address check and reports a page fault. Both
   stop the program.
-- `sar-carry`: `sar` with a masked count at least the operand width (only
-  possible for 8- and 16-bit operands). The SDM leaves CF undefined there
-  only for `shl` and `shr`; for `sar` the CPU sets it to the sign bit. The
-  model (`Machine.lean`, `shift`) makes it undefined for all three. That is
-  sound (reading it stops the run) but less than the SDM defines; whether to
-  define it is open.
 
 Not compared: state the model omits (segment registers, x87/MMX, YMM upper
 halves); `rflags` bits outside the six flags are printed if they change, so

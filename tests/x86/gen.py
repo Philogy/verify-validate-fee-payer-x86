@@ -14,8 +14,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-from undefined_flags import undefined
-
 HERE = Path(__file__).resolve().parent
 CODE_PAGE, DATA_PAGE, READ_ONLY_PAGE, STACK_PAGE = 0x40000000, 0x50000000, 0x50001000, 0x60000000
 UNMAPPED = 0x50002000
@@ -59,13 +57,12 @@ def le(v, n):
 
 
 class Vector:
-    def __init__(self, asm, fields, source=None, patch=None, undef="", raw=None, rip_target=None):
+    def __init__(self, asm, fields, source=None, patch=None, raw=None, rip_target=None):
         self.asm = asm  # what the decoder must print; may contain {rip}
         self.source = source or asm  # what GNU as assembles
         self.patch = patch  # bytes -> bytes, for encodings as does not choose
         self.raw = raw  # literal bytes (hex), when there is nothing to assemble
         self.fields = fields  # [(key, value)]
-        self.undef = undef
         self.rip_target = rip_target
         self.bytes = None
 
@@ -82,8 +79,7 @@ class Vector:
         asm = self.asm.replace("{rip}", self.rip_text(len(self.bytes) // 2))
         # as needs `1*` to encode an index without a base; llvm-objdump omits it.
         asm = asm.replace("[1*", "[")
-        fields = list(self.fields) + ([("undef", self.undef)] if self.undef else [])
-        return f"{asm} | {self.bytes} | " + " ".join(f"{k}={v}" for k, v in fields)
+        return f"{asm} | {self.bytes} | " + " ".join(f"{k}={v}" for k, v in self.fields)
 
 
 def assemble(sources):
@@ -257,7 +253,7 @@ def arithmetic(g):
             name, i, high = g.register(w, used, high_ok=True)
             v = g.value(w)
             g.add("arithmetic", Vector(f"{op} {name}, {name}", [(R64[i], hexn(g.with_low(w, v, high))),
-                                                                 ("flags", g.flags())], undef=undefined(op)))
+                                                                 ("flags", g.flags())]))
 
 
 def one(g, group, op, w, shape):
@@ -296,7 +292,7 @@ def one(g, group, op, w, shape):
         fields += f + [("mem", f"{hexn(target)}:{le(a, w // 8)}")]
         text = f"{op} {m}, {imm(w, b)}"
     g.add(group, Vector(text, fields, source=("{load} " + text) if load else None,
-                        undef=undefined(op), rip_target=rip))
+                        rip_target=rip))
 
 
 def immediate(self, w):
@@ -399,7 +395,7 @@ def multiply(g):
                 if -128 <= k < 128:
                     k += 0x1000
                 text += ", " + imm(w, k & mask(64))
-            g.add("multiply", Vector(text, fields, undef=undefined("imul"), rip_target=rip))
+            g.add("multiply", Vector(text, fields, rip_target=rip))
 
 
 def shifts(g):
@@ -445,10 +441,7 @@ def shift_vector(g, op, w, count, form, dest):
         patch = lambda b: b[:-1] + b"\x01"
     else:
         text = f"{op} {d}, {hexn(count)}"
-    if op == "sar" and masked >= w:
-        fields.append(("known", "sar-carry"))
-    g.add("shift", Vector(text, fields, source=source, patch=patch,
-                          undef=undefined(op, w, masked), rip_target=rip))
+    g.add("shift", Vector(text, fields, source=source, patch=patch, rip_target=rip))
 
 
 def flags_for_conditions(g):

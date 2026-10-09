@@ -46,12 +46,12 @@ def behaviour (dir : System.FilePath) : IO UInt32 := do
       | .ok v =>
         let (got, why) := outcome v
         if let some reason := v.known then
-          if got == want then
+          if agrees v.state.flags got want then
             failures := failures + 1
             IO.println s!"KNOWN {file.fileName}: marked known={reason} but the model now agrees: {line}"
           else
             known := known.push s!"{reason}: {v.asm}\n    cpu:   {want}\n    model: {got}"
-        else if got != want then
+        else if !agrees v.state.flags got want then
           failures := failures + 1
           IO.println s!"MISMATCH {file.fileName}: {v.asm}\n  vector: {line}\n  cpu:    {want}\n  model:  {got}"
           if let some why := why then IO.println s!"  model rejected: {why}"

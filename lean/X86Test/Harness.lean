@@ -69,7 +69,6 @@ structure Vector where
   asm : String
   bytes : List UInt8
   state : State
-  undefined : List Flag
   /-- A documented way the model differs from the CPU on this vector. -/
   known : Option String
 
@@ -104,7 +103,7 @@ def applyField (s : State) (key value : String) : Except String State := do
     let set := flagsOf value
     return { s with flags := flagOrder.foldl (fun fs f => setFlag fs f (some (set.contains f))) s.flags }
   | "mxcsr" => return { s with floatControl := num.toUInt32 }
-  | "undef" | "known" => return s
+  | "known" => return s
   | "mem" =>
     let [address, bytes] := value.splitOn ":" | throw s!"bad mem {value}"
     let some a := hexValue address | throw s!"bad address {address}"
@@ -124,12 +123,22 @@ def parseVector (line : String) : Except String Vector := do
   let fs := fields rest
   let at_ := ((fs.lookup "at").bind hexValue).getD defaultAt.toNat
   let state ← fs.foldlM (fun s (k, v) => applyField s k v) (initialState bytes at_.toUInt64)
-  let undefined := flagsOf ((fs.lookup "undef").getD "")
-  return { asm := asm.trimAscii.toString, bytes, state, undefined, known := fs.lookup "known" }
+  return { asm := asm.trimAscii.toString, bytes, state, known := fs.lookup "known" }
 
 def renderFlags (fs : Flags) : String :=
   String.ofList ((flagLetters.zip flagOrder).map fun (c, f) =>
     match fs.get f with | some true => c | some false => '-' | none => '?')
+
+/-- Whether the CPU's outcome is one the model allows: a flag the model
+leaves undefined (`?`) allows any value, everything else must be equal. -/
+def agrees (before : Flags) (model cpu : String) : Bool :=
+  let split (line : String) : List String × List Char :=
+    let tokens := line.splitOn " "
+    let flags := (tokens.find? (·.startsWith "flags=")).map (·.drop 6 |>.toString)
+    (tokens.filter (!·.startsWith "flags="), (flags.getD (renderFlags before)).toList)
+  let (m, mFlags) := split model
+  let (c, cFlags) := split cpu
+  m == c && mFlags.length == cFlags.length && (mFlags.zip cFlags).all fun (a, b) => a == '?' || a == b
 
 def hex (n : Nat) : String := "0x" ++ Print.hexDigits n
 

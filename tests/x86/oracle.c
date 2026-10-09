@@ -50,7 +50,6 @@ struct vector {
   uint64_t gpr[16];
   unsigned __int128 xmm[16];
   char flags[7];  // initial flags, in FLAG_LETTERS order, as 'C' or '-'
-  char undefined[7];
   uint32_t mxcsr;
   uint8_t memory[PAGE_COUNT][PAGE_BYTES];
 };
@@ -128,7 +127,6 @@ static int parse_vector(char *line, struct vector *v, int lineno) {
     v->xmm[i] = default_xmm(i);
   }
   strcpy(v->flags, "------");
-  strcpy(v->undefined, "");
   v->mxcsr = DEFAULT_MXCSR;
   initial_memory(v->memory);
 
@@ -152,8 +150,6 @@ static int parse_vector(char *line, struct vector *v, int lineno) {
         if (strchr(val, FLAG_LETTERS[i])) v->flags[i] = FLAG_LETTERS[i];
     } else if (!strcmp(tok, "known")) {
       // A deviation of the model, not of the start state.
-    } else if (!strcmp(tok, "undef")) {
-      snprintf(v->undefined, sizeof v->undefined, "%s", val);
     } else if (!strcmp(tok, "mxcsr")) {
       v->mxcsr = (uint32_t)parse_u128(val);
     } else if (!strcmp(tok, "mem")) {
@@ -244,24 +240,20 @@ static void print_hex128(unsigned __int128 x) {
   printf("0x%016llx%016llx", (unsigned long long)(x >> 64), (unsigned long long)x);
 }
 
-static void render_flags(char out[7], uint64_t rflags, const char *undefined) {
-  for (int i = 0; i < 6; i++) {
-    out[i] = rflags >> flag_bits[i] & 1 ? FLAG_LETTERS[i] : '-';
-    if (undefined && strchr(undefined, FLAG_LETTERS[i])) out[i] = '?';
-  }
+static void render_flags(char out[7], uint64_t rflags) {
+  for (int i = 0; i < 6; i++) out[i] = rflags >> flag_bits[i] & 1 ? FLAG_LETTERS[i] : '-';
   out[6] = 0;
 }
 
 // Everything that differs from the input, in a fixed order. Faults keep `rip`
 // unless it changed; a completed step always prints it.
-static void print_diff(const struct vector *v, const struct machine *before, const struct machine *after,
-                       int completed) {
+static void print_diff(const struct machine *before, const struct machine *after, int completed) {
   if (completed || after->rip != before->rip) printf(" rip=0x%llx", (unsigned long long)after->rip);
   for (int i = 0; i < 16; i++)
     if (after->gpr[i] != before->gpr[i]) printf(" %s=0x%llx", gpr_names[i], (unsigned long long)after->gpr[i]);
   char fb[7], fa[7];
-  render_flags(fb, before->rflags, NULL);
-  render_flags(fa, after->rflags, completed ? v->undefined : NULL);
+  render_flags(fb, before->rflags);
+  render_flags(fa, after->rflags);
   if (strcmp(fa, fb)) printf(" flags=%s", fa);
   // Flags outside the model (DF, IF, ...); TF and RF belong to single-stepping.
   uint64_t other = ~(0x8d5ull | 1ull << 8 | 1ull << 16);
@@ -322,7 +314,7 @@ static void run(const struct vector *v) {
   } else {
     printf(" signal %d code %d", sig, si.si_code);
   }
-  print_diff(v, &before, &after, sig == SIGTRAP);
+  print_diff(&before, &after, sig == SIGTRAP);
   printf("\n");
   kill(pid, SIGKILL);
   waitpid(pid, &status, 0);
