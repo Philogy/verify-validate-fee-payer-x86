@@ -12,33 +12,26 @@ inductive Contents where
   | constant (bytes : ByteArray)
   /-- A GOT slot, which the dynamic loader fills with `loadBase + target`. -/
   | pointer (target : UInt64)
-  /-- An object whose address the code only passes to the panic. The panic
-  is terminal, so its contents can never matter; only its size is kept and
-  it is left unmapped. This includes the panic `Location`, whose file-name
-  pointer is relocated but only read by the panic runtime. -/
-  | addressOnly (size : Nat)
 
 namespace Contents
 
 def size : Contents → Nat
   | code bytes | constant bytes => bytes.size
   | pointer _ => 8
-  | addressOnly size => size
 
 -- Code and constants contain no relocated words, so their bytes are the same
 -- at every base.
-def bytesAt (loadBase : UInt64) : Contents → Option ByteArray
-  | code bytes | constant bytes => some bytes
-  | pointer target => some ⟨(X86.littleEndianBytes 8 (loadBase + target)).toArray⟩
-  | addressOnly _ => none
+def bytesAt (loadBase : UInt64) : Contents → ByteArray
+  | code bytes | constant bytes => bytes
+  | pointer target => ⟨(X86.littleEndianBytes 8 (loadBase + target)).toArray⟩
 
 def isCode : Contents → Bool
   | code _ => true
   | _ => false
 
 theorem size_bytesAt {c : Contents} {loadBase : UInt64} {bytes : ByteArray}
-    (h : c.bytesAt loadBase = some bytes) : bytes.size = c.size := by
-  cases c <;> simp [bytesAt] at h <;> subst h <;> rfl
+    (h : c.bytesAt loadBase = bytes) : bytes.size = c.size := by
+  subst h; cases c <;> rfl
 
 end Contents
 

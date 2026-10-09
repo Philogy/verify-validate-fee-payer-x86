@@ -110,6 +110,20 @@ impl Image {
         }
     }
 
+    /// `[start, end)` from the lowest `p_vaddr` to the highest `p_vaddr +
+    /// p_memsz` over the `PT_LOAD` segments: everything the loader reserves.
+    pub fn loaded_span(&self) -> Result<(u64, u64)> {
+        let spans: Vec<(u64, u64)> = self
+            .file
+            .segments()
+            .map(|s| (s.address(), s.address() + s.size()))
+            .collect();
+        ensure!(!spans.is_empty(), "no PT_LOAD segments");
+        let start = spans.iter().map(|s| s.0).min().unwrap_or_default();
+        let end = spans.iter().map(|s| s.1).max().unwrap_or_default();
+        Ok((start, end))
+    }
+
     pub fn is_relocated(&self, vaddr: u64) -> bool {
         self.relocations.contains_key(&vaddr)
     }

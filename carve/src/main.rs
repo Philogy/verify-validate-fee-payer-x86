@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     let source_sha256 = manifest::sha256(image.bytes);
     fs::write(
         lean_module,
-        lean::module(&source_sha256, &code, &data, &layout)?,
+        lean::module(&source_sha256, &code, &data, &layout, image.loaded_span()?)?,
     )?;
     Ok(())
 }

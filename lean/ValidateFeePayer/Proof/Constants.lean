@@ -7,7 +7,7 @@ namespace ValidateFeePayer.Proof
 open X86 Memory
 
 theorem bytes_data {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
-    {bytes : ByteArray} (hb : r.contents.bytesAt lb = some bytes) {k n : Nat} (hn : k + n ≤ bytes.size) :
+    {bytes : ByteArray} (hb : r.contents.bytesAt lb = bytes) {k n : Nat} (hn : k + n ≤ bytes.size) :
     m.bytes .read (lb + r.address + k.toUInt64) n = .ok ((List.range n).map fun i => bytes.data[k + i]!) := by
   unfold Memory.bytes
   apply mapM_ok
@@ -24,12 +24,16 @@ theorem bytes_data {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (h
   rw [getElem!_pos bytes.data (k + i) (by simpa using (show k + i < bytes.size by omega))]
   rfl
 
+theorem bytesAt_constant {c : Contents} {lb : UInt64} {bytes : ByteArray} (h : c = .constant bytes) :
+    c.bytesAt lb = bytes := by
+  subst h; rfl
+
 /-- A constant region read at byte `k`. -/
 macro "constant_read" r:term:max a:num k:num : tactic => `(tactic| (
   rw [show ($a : UInt64) = ($r).address + (($k : Nat).toUInt64) from rfl, ← UInt64.add_assoc]
   first
-    | rw [Memory.read128, bytes_data ‹DataAt _ _› (by simp [Image.data]) rfl (by decide)]
-    | rw [Memory.read, bytes_data ‹DataAt _ _› (by simp [Image.data]) rfl (by decide)]
+    | rw [Memory.read128, bytes_data ‹DataAt _ _› (by simp [Image.data]) (bytesAt_constant rfl) (by decide)]
+    | rw [Memory.read, bytes_data ‹DataAt _ _› (by simp [Image.data]) (bytesAt_constant rfl) (by decide)]
   decide))
 
 theorem read128_systemProgramId_low {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
@@ -43,7 +47,7 @@ theorem read128_systemProgramId_high {lb : UInt64} {m : Memory} (hd : DataAt lb 
 theorem read_got {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
     {target : UInt64} (ht : r.contents = .pointer target) :
     m.read .bits64 (lb + r.address) = .ok (lb + target) := by
-  have hb : r.contents.bytesAt lb = some ⟨(littleEndianBytes 8 (lb + target)).toArray⟩ := by
+  have hb : r.contents.bytesAt lb = ⟨(littleEndianBytes 8 (lb + target)).toArray⟩ := by
     simp [ht, Contents.bytesAt]
   have := bytes_data hd hr hb (k := 0) (n := 8) (by simp [ByteArray.size, length_littleEndianBytes])
   rw [show lb + r.address = lb + r.address + (0 : Nat).toUInt64 by simp, Memory.read, OperandSize.byteCount, this]

@@ -12,7 +12,7 @@ namespace ValidateFeePayer.Proof
 open X86 Memory
 
 theorem codeByte_in_regions {x : UInt64} {b : UInt8} (h : codeByte x = .ok b) :
-    ∃ r ∈ regions, r.Contains x := by
+    ∃ r ∈ Image.regions, r.Contains x := by
   obtain ⟨r, hr, bytes, hcode, hi, hle, -⟩ := codeByte_ok h
   refine ⟨r, List.mem_append_left _ hr, hle, ?_⟩
   simp only [Region.endAddress, Region.size, hcode, Contents.size]
@@ -21,20 +21,18 @@ theorem codeByte_in_regions {x : UInt64} {b : UInt8} (h : codeByte x = .ok b) :
 theorem codeByte_mapped {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b : UInt8}
     (h : codeByte x = .ok b) : ∃ mp ∈ imageMappings lb, mp.Contains (lb + x) := by
   obtain ⟨r, hr, bytes, hcode, hi, hle, -⟩ := codeByte_ok h
-  have hreg : r ∈ regions := List.mem_append_left _ hr
-  have hbytes : r.contents.bytesAt lb = some bytes := by simp [hcode, Contents.bytesAt]
-  have hm : r.mapping lb = some (mappingOf lb r bytes) := by simp [Region.mapping, hbytes, mappingOf]
-  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hreg hm
-  simp only [mappingOf] at hbase hend
-  refine ⟨mappingOf lb r bytes, List.mem_filterMap.2 ⟨r, hreg, hm⟩, ?_⟩
+  have hreg : r ∈ Image.regions := List.mem_append_left _ hr
+  have hbytes : r.contents.bytesAt lb = bytes := by simp [hcode, Contents.bytesAt]
+  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hreg (loadBase := lb)
+  refine ⟨r.mapping lb, List.mem_map_of_mem hreg, ?_⟩
   have hs := Contents.size_bytesAt hbytes
   have hx : (lb + x).toNat = lb.toNat + x.toNat := by
     unfold ValidLoadBase at hBase
-    have := List.all_eq_true.1 regions_within_image r hreg
+    have := List.all_eq_true.1 regions_within_reserved r hreg
     simp only [decide_eq_true_eq, Region.endAddress, Region.size, hcode, Contents.size] at this
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   unfold Mapping.Contains Mapping.endAddress
-  simp only [mappingOf] at hbase hend ⊢
+  simp only [Region.mapping, hbytes] at hbase hend ⊢
   rw [hx]; omega
 
 theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :

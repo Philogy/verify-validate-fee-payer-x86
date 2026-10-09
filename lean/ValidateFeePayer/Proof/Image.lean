@@ -27,38 +27,30 @@ theorem go_of_mem {acc : Access} {y : UInt64} :
       simp only [this, ↓reduceDIte]
       exact go_of_mem rest (List.pairwise_cons.1 hd).2 hm h
 
-def mappingOf (lb : UInt64) (r : Region) (bytes : ByteArray) : Mapping where
-  base := lb + r.address
-  bytes := bytes
-  permissions := if r.contents.isCode then .readExecute else .readOnly
-
 /-- Byte `i` of a carved region, as the loader maps it at `lb`. -/
 theorem byte_image {lb : UInt64} (hBase : ValidLoadBase lb) {rest : List Mapping} {r : Region}
-    (hr : r ∈ regions) {bytes : ByteArray} (hb : r.contents.bytesAt lb = some bytes) {i : Nat}
+    (hr : r ∈ Image.regions) {bytes : ByteArray} (hb : r.contents.bytesAt lb = bytes) {i : Nat}
     (hi : i < bytes.size) (acc : Access) :
     byte ⟨imageMappings lb ++ rest⟩ acc (lb + r.address + i.toUInt64) =
       if (if r.contents.isCode then Permissions.readExecute else Permissions.readOnly).allows acc
       then .ok bytes[i] else .error (.denied (lb + r.address + i.toUInt64) acc) := by
-  have hm : r.mapping lb = some (mappingOf lb r bytes) := by
-    simp [Region.mapping, hb, mappingOf]
-  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hr hm
+  obtain ⟨hbase, hend⟩ := Region.mapping_bounds hBase hr (loadBase := lb)
   have hs := Contents.size_bytesAt hb
-  have hwithin := List.all_eq_true.1 regions_within_image r hr
+  have hwithin := List.all_eq_true.1 regions_within_reserved r hr
   simp only [decide_eq_true_eq] at hwithin
   unfold ValidLoadBase at hBase
   unfold Region.endAddress Region.size at hend hwithin
-  simp only [Mapping.endAddress, mappingOf] at hend hbase
+  simp only [Mapping.endAddress, Region.mapping, hb] at hend hbase
   have hy : (lb + r.address + i.toUInt64).toNat = lb.toNat + r.address.toNat + i := by
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat']
     rw [Nat.mod_eq_of_lt (a := i) (by omega), Nat.mod_eq_of_lt (a := lb.toNat + r.address.toNat) (by omega),
       Nat.mod_eq_of_lt (by omega)]
-  have hc : Mapping.Contains (mappingOf lb r bytes) (lb + r.address + i.toUInt64) := by
-    unfold Mapping.Contains Mapping.endAddress; simp only [mappingOf]; omega
-  have hmem : mappingOf lb r bytes ∈ imageMappings lb :=
-    List.mem_filterMap.2 ⟨r, hr, hm⟩
+  have hc : Mapping.Contains (r.mapping lb) (lb + r.address + i.toUInt64) := by
+    unfold Mapping.Contains Mapping.endAddress; simp only [Region.mapping, hb]; omega
+  have hmem : r.mapping lb ∈ imageMappings lb := List.mem_map_of_mem hr
   simp only [byte]
   rw [go_of_mem rest (imageMappings_disjoint hBase) hmem hc]
-  simp only [Mapping.get, mappingOf]
+  simp only [Mapping.get, Region.mapping, hb]
   simp only [Nat.toUInt64_eq] at hy ⊢
   simp only [show (lb + r.address + UInt64.ofNat i).toNat - (lb + r.address).toNat = i by omega]
 
@@ -70,7 +62,7 @@ def CodeAt (lb : UInt64) (m : Memory) : Prop :=
 /-- The carved constants and pointer slots at `lb`: readable as in the
 binary and not writable. -/
 def DataAt (lb : UInt64) (m : Memory) : Prop :=
-  ∀ r ∈ Image.data, ∀ bytes, r.contents.bytesAt lb = some bytes → ∀ i (h : i < bytes.size),
+  ∀ r ∈ Image.data, ∀ bytes, r.contents.bytesAt lb = bytes → ∀ i (h : i < bytes.size),
     m.byte .read (lb + r.address + i.toUInt64) = .ok bytes[i] ∧
     ∀ v, m.byte .write (lb + r.address + i.toUInt64) ≠ .ok v
 
@@ -96,8 +88,8 @@ theorem codeAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mappi
     CodeAt lb ⟨imageMappings lb ++ rest⟩ := by
   intro x b h
   obtain ⟨r, hr, bytes, hcode, hi, hle, hb⟩ := codeByte_ok h
-  have hreg : r ∈ regions := List.mem_append_left _ hr
-  have hbytes : r.contents.bytesAt lb = some bytes := by simp [hcode, Contents.bytesAt]
+  have hreg : r ∈ Image.regions := List.mem_append_left _ hr
+  have hbytes : r.contents.bytesAt lb = bytes := by simp [hcode, Contents.bytesAt]
   have hx : lb + x = lb + r.address + (x.toNat - r.address.toNat).toUInt64 := by
     rw [UInt64.add_assoc]; congr 1
     apply UInt64.toNat_inj.1
@@ -111,10 +103,10 @@ theorem codeAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mappi
 theorem dataAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mapping) :
     DataAt lb ⟨imageMappings lb ++ rest⟩ := by
   intro r hr bytes hb i hi
-  have hreg : r ∈ regions := List.mem_append_right _ hr
+  have hreg : r ∈ Image.regions := List.mem_append_right _ hr
   have hdata : r.contents.isCode = false := by
     simp [Image.data] at hr
-    rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+    rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
   refine ⟨?_, fun v => ?_⟩
   · rw [byte_image hBase hreg hb hi]; simp [Permissions.allows]
   · rw [byte_image hBase hreg hb hi]; simp [hdata, Permissions.allows, Permissions.readOnly]

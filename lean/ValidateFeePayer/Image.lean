@@ -78,12 +78,6 @@ def check_static_account_rent_state_transition : Region where
     0x00, 0xbe, 0x26, 0x00, 0x00, 0x00, 0xff, 0x15, 0x4c, 0x5a, 0xff, 0x00
   ]⟩
 
-/-- file name referenced by panic_location -/
-def panic_location_file : Region where
-  name := "panic_location_file"
-  address := 0x2b5e4d
-  contents := .addressOnly 0x5b
-
 /-- u64 -> f64: subtracted to recover each half as an f64 -/
 def u64_to_f64_bias : Region where
   name := "u64_to_f64_bias"
@@ -125,18 +119,6 @@ def f64_2pow63 : Region where
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x43
   ]⟩
 
-/-- message of the expect() in Rent::minimum_balance; passed to expect_failed -/
-def panic_msg : Region where
-  name := "panic_msg"
-  address := 0x60cd1c
-  contents := .addressOnly 0x26
-
-/-- core::panic::Location { /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-rent-4.5.0/src/lib.rs, line 120, col 14 }; passed to expect_failed -/
-def panic_location : Region where
-  name := "panic_location"
-  address := 0x3759860
-  contents := .addressOnly 0x18
-
 /-- pointer slot, loaded with B + 0x12be100 (core::option::expect_failed) -/
 def got_expect_failed : Region where
   name := "got_expect_failed"
@@ -149,9 +131,25 @@ def got_check_static_account_rent_state_transition : Region where
   address := 0x37f5120
   contents := .pointer 0x27f3790
 
+/-- file name referenced by panic_location -/
+def panic_location_file : UInt64 := 0x2b5e4d
+
+/-- message of the expect() in Rent::minimum_balance; passed to expect_failed -/
+def panic_msg : UInt64 := 0x60cd1c
+
+/-- core::panic::Location { /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-rent-4.5.0/src/lib.rs, line 120, col 14 }; passed to expect_failed -/
+def panic_location : UInt64 := 0x3759860
+
 def functions : List Region := [validate_fee_payer, check_static_account_rent_state_transition]
 
-def data : List Region := [panic_location_file, u64_to_f64_bias, u64_to_f64_exponents, system_program_id, f64_max_below_2pow64, f64_2pow63, panic_msg, panic_location, got_expect_failed, got_check_static_account_rent_state_transition]
+def data : List Region := [u64_to_f64_bias, u64_to_f64_exponents, system_program_id, f64_max_below_2pow64, f64_2pow63, got_expect_failed, got_check_static_account_rent_state_transition]
+
+def regions : List Region := functions ++ data
+
+/-- From the lowest `p_vaddr` to the highest `p_vaddr + p_memsz` of the source
+binary's `PT_LOAD` segments. -/
+def reservedStart : UInt64 := 0x0
+def reservedEnd : Nat := 0x3a423d4
 
 /-- `_RNvNtCsgxBkk5gSRhY_4core6option13expect_failed`, not carved. -/
 def panicEntry : UInt64 := 0x12be100
