@@ -4,7 +4,7 @@ import ValidateFeePayer.Image
 /-!
 A linear sweep of the carved functions with the generic decoder. The machine
 does not use it (it decodes from memory at the instruction pointer); it
-exists so `Checks.lean` can compare the decoder with llvm-objdump and so
+exists so `DecoderChecks.lean` can compare the decoder with llvm-objdump and so
 proofs have the instruction at each address at hand.
 -/
 
@@ -36,7 +36,7 @@ def sweepRegion (r : Region) : Except (UInt64 × DecodeError) (List Decoded) :=
 def sweepImage : Except (UInt64 × DecodeError) (List Decoded) := do
   return (← Image.functions.mapM sweepRegion).flatten
 
-/-- `Checks.lean` proves `sweepImage = .ok listing`, so the fallback is never taken. -/
+/-- `DecoderChecks.lean` proves `sweepImage = .ok listing`, so the fallback is never taken. -/
 def listing : List Decoded :=
   match sweepImage with
   | .ok t => t

@@ -3,6 +3,7 @@ import ValidateFeePayer.Image
 import ValidateFeePayer.Loader
 import ValidateFeePayer.Code
 import ValidateFeePayer.Checks
+import ValidateFeePayer.DecoderChecks
 import ValidateFeePayer.Spec
 import ValidateFeePayer.Reference
 import ValidateFeePayer.ReferenceAgrees
