@@ -1,5 +1,5 @@
 import ValidateFeePayer.Proof.Vexec
-import ValidateFeePayer.Contract
+import ValidateFeePayer.Proof.Call
 
 /-!
 Memory during a symbolic walk is the block's entry memory under a chain of

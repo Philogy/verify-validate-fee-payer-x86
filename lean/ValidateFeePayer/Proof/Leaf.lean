@@ -152,7 +152,7 @@ syntax "vaccount" term : tactic
 macro_rules
   | `(tactic| vaccount $e) => `(tactic| (
     have henc := ($e).accountEncoded
-    simp only [Spec.Account.Encodes, Memory.Holds, Memory.HoldsBytes, off_eq, ($e).accountPtr,
+    simp only [Spec.Account.Encodes, Abi.PtrAt, Memory.Holds, Memory.HoldsBytes, off_eq, ($e).accountPtr,
       ($e).arcInnerPtr, ($e).dataPtr, ($e).memory, Image.Layout.account_shared_data.data_arc,
       Image.Layout.account_shared_data.lamports, Image.Layout.account_shared_data.owner,
       Image.Layout.account_shared_data.arc_inner.data_ptr, Image.Layout.account_shared_data.arc_inner.data_len,
@@ -241,10 +241,10 @@ macro_rules
   | `(tactic| vleaf $e, $account, $minimumBalance_eq) => `(tactic| (
     first
       | (refine (Finishes.returned ?_ ?_).mono (by omega)
-         · simp only [Call.exits, ($e).returnAddress])
+         · simp only [Call.exits, exits, ($e).returnAddress])
       | (refine (Finishes.panicked ?_ ?_ ?_).mono (by omega)
-         · simp only [Call.exits, ($e).returnAddress]; exact fun h => ($e).notPanic h.symm
-         · simp only [Call.exits, panicAddress, ImageOffset.at, Image.panicEntry, ($e).loadBase]; rfl)
+         · simp only [Call.exits, exits, ($e).returnAddress]; exact fun h => ($e).notPanic h.symm
+         · simp only [Call.exits, exits, panicAddress, ImageOffset.at, Image.panicEntry, ($e).loadBase]; rfl)
     have path := ($e).dataLength
     have := ($e).result_data
     have := ($e).account_data

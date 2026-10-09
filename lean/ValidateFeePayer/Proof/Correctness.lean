@@ -33,19 +33,64 @@ theorem symbolicRun (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMet
     Proof.Finishes c.exits fuel s (Spec.Outcome c account metrics rent relax s) := by
   refine Finishes.of_eq (entryState_of_pre pre) ?_
   rcases pre.integerThreshold with h | h
-  · exact walk_simd0194 (entry_of_pre pre pre.returnNotPanic) h
-  · exact walk_current (entry_of_pre pre pre.returnNotPanic) h
+  · exact walk_simd0194 (entry_of_pre pre pre.called.returnNotPanic) h
+  · exact walk_current (entry_of_pre pre pre.called.returnNotPanic) h
 
-theorem correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+theorem frame_of_call {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s)
+    {s' : State} (h : c.Frame s s') : Frame s s' := by
+  intro access a ha
+  apply h
+  simp only [writes, List.mem_cons, forall_eq_or_imp] at ha
+  obtain ⟨h0, h1, h2, h3, h4, h5, -⟩ := ha
+  rw [← pre.ofState]
+  rintro (hw | hw | hw | hw | hw | hw)
+  · exact h0 hw
+  · exact h1 hw
+  · exact h2 hw
+  · exact h3 hw
+  · exact h4 hw
+  · exact h5 hw
+
+theorem post_of_call {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s)
+    {metrics' : Spec.ErrorMetrics} {r : Except Spec.TransactionError Spec.Account} {s' : State}
+    (h : CallPost c s metrics' r s') : Post s c.heap metrics' r s' where
+  returned := ⟨h.stackPopped, h.calleeSavedKept, h.floatControlKept⟩
+  returnsResultPointer := by rw [pre.result]; exact h.returnsResultPointer
+  frame := frame_of_call pre h.frame
+  resultEncoded := by rw [pre.result]; exact h.resultEncoded
+  accountEncoded := by rw [pre.accountAt_eq]; exact h.accountEncoded
+  metricsEncoded := by rw [pre.errorMetrics]; exact h.metricsEncoded
+
+theorem correctCall (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
     ∀ n ≥ fuel, match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics with
     | (.error (.panic _), _) => ∃ s', run c.exits n s = .panicked s' ∧ c.Frame s s'
-    | (.error (.tx e), metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post c s metrics' (.error e) s'
-    | (.ok account', metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post c s metrics' (.ok account') s' := by
+    | (.error (.tx e), metrics') => ∃ s', run c.exits n s = .returned s' ∧ CallPost c s metrics' (.error e) s'
+    | (.ok account', metrics') => ∃ s', run c.exits n s = .returned s' ∧ CallPost c s metrics' (.ok account') s' := by
   intro n hn
   have hfin := (symbolicRun c account metrics rent relax s pre).run_eq hn
   unfold Spec.Outcome at hfin
   split
   all_goals rename_i h; rw [h] at hfin; split at hfin <;> simp_all
+
+theorem correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+    (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
+    ∀ n ≥ fuel, match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics with
+    | (.error (.panic _), _) => ∃ s', run c.exits n s = .panicked s' ∧ Frame s s'
+    | (.error (.tx e), metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post s c.heap metrics' (.error e) s'
+    | (.ok account', metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post s c.heap metrics' (.ok account') s' := by
+  intro n hn
+  have h := correctCall c account metrics rent relax s pre n hn
+  generalize Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics = r at h ⊢
+  obtain ⟨(e | a), m⟩ := r
+  · cases e with
+    | panic p =>
+      obtain ⟨s', hr, hf⟩ := h
+      exact ⟨s', hr, frame_of_call pre hf⟩
+    | tx e =>
+      obtain ⟨s', hr, hp⟩ := h
+      exact ⟨s', hr, post_of_call pre hp⟩
+  · obtain ⟨s', hr, hp⟩ := h
+    exact ⟨s', hr, post_of_call pre hp⟩
 
 end ValidateFeePayer

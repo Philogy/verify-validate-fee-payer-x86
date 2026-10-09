@@ -119,7 +119,7 @@ theorem Spec.Account.reads {m : Memory} {p : AccountAt} {x : Spec.Account} (h : 
       m.read .bits32 p.data = .ok (ofLittleEndian (x.data.take 4)) ∧
       m.read .bits32 (p.data + 4) = .ok (ofLittleEndian ((x.data.drop 4).take 4))) := by
   obtain ⟨harc, hlam, hown, hdat, hlen, hbytes⟩ := h
-  simp only [Memory.Holds, Memory.HoldsBytes, off_eq, account_shared_data.data_arc,
+  simp only [Abi.PtrAt, Memory.Holds, Memory.HoldsBytes, off_eq, account_shared_data.data_arc,
     account_shared_data.lamports, account_shared_data.owner, account_shared_data.arc_inner.data_ptr,
     account_shared_data.arc_inner.data_len, Nat.toUInt64_eq, UInt64.reduceOfNat, UInt64.add_zero] at *
   have hown32 : m.bytes .read (p.account + 16) (16 + 16) = .ok x.owner.toList := by simpa using hown
@@ -167,24 +167,16 @@ structure Separation (c : Call) (S : UInt64) (n : Nat) : Prop where
   metrics_stack : Separate c.errorMetrics 192 S 112
   rent_stack : Separate c.rent 24 S 112
 
-theorem Separate.of_interval {a b : UInt64} {n n' : Nat}
-    (h : a.toNat = a.toNat + n ∨ b.toNat = b.toNat + n' ∨ a.toNat + n ≤ b.toNat ∨ b.toNat + n' ≤ a.toNat) :
-    Separate a n b n' := by
-  unfold Separate; omega
-
 theorem separation_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     Separation c (s.stackPointer - 96) account.data.length := by
-  have hdis := pre.disjoint
-  have hnw := pre.noWrap
-  simp only [IntervalsDisjoint, Call.footprint, interval, List.pairwise_cons, List.mem_cons, forall_eq_or_imp,
-    result.size, account_shared_data.size, account_shared_data.arc_inner.data_len, transaction_error_metrics.size,
-    Image.Layout.rent.size, stackUse, Nat.toUInt64_eq, UInt64.reduceOfNat, Nat.reduceAdd] at hdis hnw
+  have hdis := pre.footprint.separate
+  have hnw := pre.footprint.noWrap
+  simp only [objects, Abi.Block.Separate, List.pairwise_cons, List.mem_cons, forall_eq_or_imp] at hdis hnw
   obtain ⟨⟨h01, h02, h03, h04, h05, h06, -⟩, ⟨h12, h13, h14, h15, h16, -⟩, ⟨h23, h24, h25, h26, -⟩,
     ⟨h34, h35, h36, -⟩, ⟨h45, h46, -⟩, ⟨h56, -⟩, -⟩ := hdis
   obtain ⟨n0, n1, n2, n3, n4, n5, n6, -⟩ := hnw
-  exact ⟨n6, n0, n1, n2, n3, n4, n5, .of_interval h01, .of_interval h02, .of_interval h03, .of_interval h04,
-    .of_interval h05, .of_interval h06, .of_interval h12, .of_interval h13, .of_interval h14, .of_interval h15,
-    .of_interval h16, .of_interval h23, .of_interval h24, .of_interval h25, .of_interval h26, .of_interval h34,
-    .of_interval h35, .of_interval h36, .of_interval h45, .of_interval h46, .of_interval h56⟩
+  rw [← pre.ofState]
+  exact ⟨n6, n0, n1, n2, n3, n4, n5, h01, h02, h03, h04, h05, h06, h12, h13, h14, h15, h16, h23, h24, h25, h26,
+    h34, h35, h36, h45, h46, h56⟩
 
 end ValidateFeePayer.Proof

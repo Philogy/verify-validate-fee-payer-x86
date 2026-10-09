@@ -168,19 +168,27 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       stackFree := ?_, resultWritable := ?_, lamportsWritable := ?_, accountNotFoundWritable := ?_,
       insufficientFundsWritable := ?_, invalidAccountForFeeWritable := ?_,
       readReturn := ?_, readRelax := ?_ }
-  · have := pre.stackFree
-    simpa [stackUse] using this
-  · simpa [Image.Layout.result.size] using pre.resultWritable
-  · simpa [off_eq, Image.Layout.transaction_error_metrics.account_not_found] using
-      pre.accountNotFoundWritable
-  · simpa [off_eq, Image.Layout.transaction_error_metrics.insufficient_funds] using
-      pre.insufficientFundsWritable
-  · simpa [off_eq, Image.Layout.transaction_error_metrics.invalid_account_for_fee] using
-      pre.invalidAccountForFeeWritable
-  · simpa [off_eq, Image.Layout.account_shared_data.lamports] using pre.lamportsWritable
-  · rw [hsp]; exact pre.returnAddress
-  · have := pre.relaxArgument
-    simp only [BoolEncodes, Memory.Holds] at this
+  · have := pre.footprint.writable ⟨s.stackPointer - stackUse.toUInt64, stackUse⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, stackUse] using this
+  · have := pre.footprint.writable ⟨(args s).result, Image.Layout.result.size⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, pre.result, Image.Layout.result.size] using this
+  · have := pre.footprint.writable
+      ⟨off (args s).errorMetrics Image.Layout.transaction_error_metrics.account_not_found, 8⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, pre.errorMetrics, off_eq, Image.Layout.transaction_error_metrics.account_not_found]
+      using this
+  · have := pre.footprint.writable
+      ⟨off (args s).errorMetrics Image.Layout.transaction_error_metrics.insufficient_funds, 8⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, pre.errorMetrics, off_eq, Image.Layout.transaction_error_metrics.insufficient_funds]
+      using this
+  · have := pre.footprint.writable
+      ⟨off (args s).errorMetrics Image.Layout.transaction_error_metrics.invalid_account_for_fee, 8⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, pre.errorMetrics, off_eq,
+      Image.Layout.transaction_error_metrics.invalid_account_for_fee] using this
+  · have := pre.footprint.writable ⟨off (args s).account Image.Layout.account_shared_data.lamports, 8⟩ (by simp [writes])
+    simpa [Abi.Block.Writable, pre.accountPtr, off_eq, Image.Layout.account_shared_data.lamports] using this
+  · rw [hsp]; exact pre.abi.returnAddress
+  · have := pre.encoded.relax
+    simp only [BoolEncodes, Memory.Holds, args, Abi.ValidateFeePayerEntry.of, Abi.SysV.stackArgument] at this
     rw [show s.stackPointer - 96 + 104 = s.stackPointer + 8 by
       rw [show (104 : UInt64) = 96 + 8 from rfl, ← UInt64.add_assoc, hsp]]
     simpa using this

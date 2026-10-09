@@ -10,7 +10,7 @@ and the spec against each other; they are not proofs.
 
 namespace ValidateFeePayer.Tests
 
-open X86 Image.Layout
+open X86 Abi Image.Layout
 
 def obj (base : UInt64) (size : Nat) (fields : List (Nat × List UInt8)) : Mapping :=
   let bytes := fields.foldl (fun (bs : Array UInt8) (offset, v) =>
@@ -34,47 +34,50 @@ structure Case where
   counters : UInt64 := 0
   returnAddress : UInt64 := 0x400000
 
-def Case.call (c : Case) : Call :=
-  { loadBase := c.loadBase, result := 0x10000,
-    account := { account := 0x20000, arcInner := 0x30000, data := 0x40000 },
-    errorMetrics := 0x50000, rent := 0x60000, payerIndex := 7, fee := c.fee, returnAddress := c.returnAddress }
+def resultPtr : UInt64 := 0x10000
+def accountPtr : UInt64 := 0x20000
+def heap : AccountHeap := ⟨0x30000, 0x40000⟩
+def metricsPtr : UInt64 := 0x50000
+def rentPtr : UInt64 := 0x60000
+def payerIndex : UInt16 := 7
+
+def Case.exits (c : Case) : Exits := ValidateFeePayer.exits c.loadBase c.returnAddress
 
 def stackTop : UInt64 := 0x7ffffff00000
 
 def Case.state (c : Case) : State :=
-  let call := c.call
   -- SysV: 16-byte aligned before the `call` pushed the return address.
   let sp := stackTop - 72
   let stack : Mapping :=
     { base := sp - c.free.toUInt64,
-      bytes := ⟨(List.replicate c.free 0xaa ++ u64 call.returnAddress ++ [if c.relax then 1 else 0] ++
+      bytes := ⟨(List.replicate c.free 0xaa ++ u64 c.returnAddress ++ [if c.relax then 1 else 0] ++
         List.replicate 55 0xbb).toArray⟩,
       permissions := .readWrite }
   let ctr (offset : Nat) := (offset, u64 c.counters)
   let objects := [
-    obj call.result 16 [],
-    obj call.account.account account_shared_data.size
-      [(account_shared_data.data_arc, u64 call.account.arcInner),
+    obj resultPtr 16 [],
+    obj accountPtr account_shared_data.size
+      [(account_shared_data.data_arc, u64 heap.arcInner),
        (account_shared_data.lamports, u64 c.lamports),
        (account_shared_data.owner, c.owner)],
-    obj call.account.arcInner 0x28
-      [(account_shared_data.arc_inner.data_ptr, u64 call.account.data),
+    obj heap.arcInner 0x28
+      [(account_shared_data.arc_inner.data_ptr, u64 heap.data),
        (account_shared_data.arc_inner.data_len, u64 c.data.length.toUInt64)],
-    obj call.account.data (max c.data.length 1) [(0, c.data)],
-    obj call.errorMetrics transaction_error_metrics.size
+    obj heap.data (max c.data.length 1) [(0, c.data)],
+    obj metricsPtr transaction_error_metrics.size
       [ctr transaction_error_metrics.account_not_found,
        ctr transaction_error_metrics.invalid_account_for_fee,
        ctr transaction_error_metrics.insufficient_funds],
-    obj call.rent rent.size
+    obj rentPtr rent.size
       [(rent.lamports_per_byte, u64 c.lamportsPerByte),
        (rent.exemption_threshold, u64 c.threshold)]]
   let registers := (Vector.replicate 16 (0x1234567890abcdef : UInt64))
-    |>.set Register.destinationIndex.index call.result
-    |>.set Register.sourceIndex.index call.account.account
-    |>.set Register.data.index (0x1234567890ab0000 ||| call.payerIndex.toUInt64)
-    |>.set Register.counter.index call.errorMetrics
-    |>.set Register.r8.index call.rent
-    |>.set Register.r9.index call.fee
+    |>.set Register.destinationIndex.index resultPtr
+    |>.set Register.sourceIndex.index accountPtr
+    |>.set Register.data.index (0x1234567890ab0000 ||| payerIndex.toUInt64)
+    |>.set Register.counter.index metricsPtr
+    |>.set Register.r8.index rentPtr
+    |>.set Register.r9.index c.fee
     |>.set Register.stackPointer.index sp
   { instructionPointer := entryAddress c.loadBase, registers, flags := .undefined,
     vectorRegisters := Vector.replicate 16 0, floatControl := defaultFloatControl,
@@ -83,13 +86,13 @@ def Case.state (c : Case) : State :=
 def Case.account (c : Case) : Spec.Account :=
   { lamports := c.lamports, owner := Vector.ofFn fun i => c.owner.getD i 0, data := c.data }
 
-def Case.run (c : Case) : Outcome := X86.run c.call.exits fuel c.state
+def Case.run (c : Case) : Outcome := X86.run c.exits fuel c.state
 
 def Case.steps (c : Case) : Nat := go fuel c.state 0
 where
   go : Nat → State → Nat → Nat
     | 0, _, n => n
-    | k + 1, s, n => match step c.call.exits s with
+    | k + 1, s, n => match step c.exits s with
       | .running s' => go k s' (n + 1)
       | _ => n + 1
 
@@ -100,25 +103,24 @@ def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.
 def Case.rent (c : Case) : Spec.Rent := ⟨c.lamportsPerByte, c.threshold⟩
 
 def Case.expected (c : Case) : Except Spec.Error Spec.Account × Spec.ErrorMetrics :=
-  Spec.validateFeePayer c.account 7 c.rent c.fee c.relax c.metrics
+  Spec.validateFeePayer c.account payerIndex c.rent c.fee c.relax c.metrics
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
-  let call := c.call
   let returned (s : State) (r : Except Spec.TransactionError Spec.Account) (metrics : Spec.ErrorMetrics) :=
-    let counter (offset : Nat) := read s .bits64 (off call.errorMetrics offset)
-    read s .bits32 call.result == some (resultTag (r.map fun _ => ())).toUInt64 &&
+    let counter (offset : Nat) := read s .bits64 (off metricsPtr offset)
+    read s .bits32 resultPtr == some (resultTag (r.map fun _ => ())).toUInt64 &&
     (match r with
-     | .error (.insufficientFundsForRent i) => read s .bits8 (off call.result result.account_index) == some i.toUInt64
+     | .error (.insufficientFundsForRent i) => read s .bits8 (off resultPtr result.account_index) == some i.toUInt64
      | _ => true) &&
     (match r with
-     | .ok account => read s .bits64 (off call.account.account account_shared_data.lamports) == some account.lamports
+     | .ok account => read s .bits64 (off accountPtr account_shared_data.lamports) == some account.lamports
      | .error _ => true) &&
     counter transaction_error_metrics.account_not_found == some metrics.accountNotFound &&
     counter transaction_error_metrics.invalid_account_for_fee == some metrics.invalidAccountForFee &&
     counter transaction_error_metrics.insufficient_funds == some metrics.insufficientFunds &&
-    s.register .accumulator == call.result && s.stackPointer == c.state.stackPointer + 8 &&
-    calleeSaved.all fun r => s.register r == c.state.register r
+    s.register .accumulator == resultPtr && s.stackPointer == c.state.stackPointer + 8 &&
+    SysV.calleeSaved.all fun r => s.register r == c.state.register r
   match c.expected, c.run with
   | (.error (.panic _), _), .panicked _ => true
   | (.error (.tx e), metrics), .returned s => returned s (.error e) metrics
@@ -168,7 +170,7 @@ path, 96 to the panic from the callee (`stackUse`). One byte less faults. -/
 
 /-! At a base that is only 8-aligned the f64 constants are misaligned for
 `interleaveLow32` (x86: `punpckldq`). The theorem excludes the `f64` path, so
-`Pre` does not need an aligned base. -/
+it does not need an aligned base. -/
 def floatPathAt (loadBase : UInt64) : Case :=
   { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := (3.3 : Float).toBits, loadBase }
 #guard ((floatPathAt 0x555555554008).outcome).startsWith "faulted X86.Fault.misaligned"
@@ -179,7 +181,7 @@ mapped but not executable. -/
 def returnsTo (returnAddress : UInt64) : Case := { lamports := 1000, fee := 100, returnAddress }
 
 def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
-  X86.run { c.call.exits with returnAddress := exit } fuel c.state
+  X86.run { c.exits with returnAddress := exit } fuel c.state
 
 #guard match runWithReturnExit (returnsTo 0x400000) 0x500000 with
   | .badJump s => s.instructionPointer == 0x400000 | _ => false
@@ -193,7 +195,7 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
 #guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (Image.panic_msg.at 0x555555554000)) with
   | .error (.unmapped _ _) => true | _ => false
 
-/-! `Pre` is satisfiable: it holds of a concrete entry state. -/
+/-! The theorem's hypotheses are satisfiable: they hold of a concrete entry state. -/
 deriving instance DecidableEq for Except
 
 theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write a n).toBool = true) :
@@ -204,34 +206,34 @@ theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write 
 
 def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }
 
-example : Pre example1.call example1.account example1.metrics example1.rent false example1.state where
-  image := ⟨_, rfl, by unfold IntervalsDisjoint; decide +kernel⟩
-  validBase := by decide +kernel
+theorem writable_of_mem {m : Memory} {bs : List Block} (h : (bs.all fun b => (m.bytes .write b.base b.size).toBool) = true) :
+    ∀ b ∈ bs, b.Writable m := fun b hb => writable_of_ok (List.all_eq_true.1 h b hb)
+
+example : Called example1.loadBase example1.returnAddress example1.state where
+  loaded := ⟨by decide +kernel, _, rfl, by unfold Block.Apart Block.endAddress; decide +kernel⟩
+  atEntry := by decide +kernel
   returnOutsideImage := by decide +kernel
   returnNotPanic := by decide +kernel
-  entry := by decide +kernel
-  resultRegister := by decide +kernel
-  accountRegister := by decide +kernel
-  payerIndexRegister := by decide +kernel
-  metricsRegister := by decide +kernel
-  rentRegister := by decide +kernel
-  feeRegister := by decide +kernel
+
+example : SysV.Entry example1.state example1.returnAddress where
   returnAddress := by unfold Memory.Holds; decide +kernel
-  relaxArgument := by unfold BoolEncodes Memory.Holds; decide +kernel
   stackAligned := by decide +kernel
-  stackFree := writable_of_ok (by decide +kernel)
   flags := by decide +kernel
-  integerThreshold := by decide +kernel
-  accountEncoded := by unfold Spec.Account.Encodes Memory.Holds Memory.HoldsBytes; decide +kernel
-  metricsEncoded := by unfold Spec.ErrorMetrics.Encodes Memory.Holds; decide +kernel
-  rentEncoded := by unfold Spec.Rent.Encodes Memory.Holds; decide +kernel
-  resultWritable := writable_of_ok (by decide +kernel)
-  lamportsWritable := writable_of_ok (by decide +kernel)
-  accountNotFoundWritable := writable_of_ok (by decide +kernel)
-  invalidAccountForFeeWritable := writable_of_ok (by decide +kernel)
-  insufficientFundsWritable := writable_of_ok (by decide +kernel)
-  disjoint := by unfold IntervalsDisjoint; decide +kernel
-  noWrap := by decide +kernel
+
+example : Footprint example1.loadBase example1.state heap example1.account.data.length where
+  separate := by unfold Block.Separate Block.Apart Block.endAddress; decide +kernel
+  noWrap := by unfold Block.NoWrap Block.endAddress; decide +kernel
+  writable := writable_of_mem (by decide +kernel)
+
+example : Encoded example1.state heap example1.account example1.metrics example1.rent payerIndex example1.fee false where
+  account := by unfold Spec.Account.Encodes PtrAt Memory.Holds Memory.HoldsBytes; decide +kernel
+  payerIndex := by decide +kernel
+  rent := by unfold Spec.Rent.Encodes Memory.Holds; decide +kernel
+  fee := by decide +kernel
+  relax := by unfold BoolEncodes Memory.Holds; decide +kernel
+  metrics := by unfold Spec.ErrorMetrics.Encodes Memory.Holds; decide +kernel
+
+example : IntegerThreshold example1.rent := by unfold IntegerThreshold; decide +kernel
 
 /-! A branch on a flag nobody wrote faults. -/
 #guard match ((execute (.jumpIf .equal 0)).run ({ lamports := 1, fee := 1 } : Case).state) with
