@@ -134,42 +134,6 @@ def systemAccountKind (account : Account) : Option SystemAccountKind := do
   guard ((versionsTag = 0 ∨ versionsTag = 1) ∧ stateTag = 1)
   return .nonce
 
-/-! ## `svm/src/rent_calculator.rs` -/
-
-inductive RentState where
-  | uninitialized
-  | rentPaying (lamports : UInt64) (dataSize : UInt64)
-  | rentExempt
-  deriving DecidableEq, Repr
-
-def preExecAccountRentState (lamports dataSize minBalance : UInt64) (relax : Bool) :
-    RentState :=
-  if lamports = 0 then .uninitialized
-  else if lamports ≥ minBalance ∨ relax then .rentExempt
-  else .rentPaying lamports dataSize
-
-def postExecAccountRentState (lamports dataSize minBalance : UInt64) (preState : RentState) (preBalance : UInt64) : RentState :=
-  if lamports = 0 then .uninitialized
-  else if lamports ≥ minBalance then .rentExempt
-  else if preState = .rentExempt ∧ lamports ≥ preBalance then .rentExempt
-  else .rentPaying lamports dataSize
-
-def transitionAllowed (pre post : RentState) : Bool :=
-  match post with
-  | .uninitialized | .rentExempt => true
-  | .rentPaying postLamports postDataSize =>
-    match pre with
-    | .rentPaying preLamports preDataSize => postDataSize == preDataSize && postLamports ≤ preLamports
-    | _ => false
-
-def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UInt64) (rent : Rent)
-    (accountIndex : UInt16) (relax : Bool) : Except Error Unit := do
-  let minBalance ← minimumBalance rent dataSize
-  let preState := preExecAccountRentState preBalance dataSize minBalance relax
-  let postState := postExecAccountRentState postBalance dataSize minBalance preState preBalance
-  unless transitionAllowed preState postState do
-    throw (.tx (.insufficientFundsForRent accountIndex.toUInt8))
-
 /-! ## `svm/src/account_loader.rs` -/
 
 def chargeFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
@@ -182,8 +146,14 @@ def chargeFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee 
   if account.lamports < fee then throw (.tx .insufficientFundsForFee)
   let postBalance := account.lamports - fee
   if postBalance < minBalance then throw (.tx .insufficientFundsForFee)
-  checkStaticAccountRentStateTransition account.lamports postBalance account.data.length.toUInt64
-    rent payerIndex relax
+  let rentExemptBalance ← minimumBalance rent account.data.length.toUInt64
+  -- `check_static_account_rent_state_transition` (`svm/src/rent_calculator.rs`) with its
+  -- rent states unfolded: the payer only loses lamports, so it may end rent-paying only if it
+  -- started so, which `relax` rules out for any nonzero balance; an unchanged balance passes.
+  -- `chargeFeePayer_eq_reference` proves this matches the Rust-shaped `Reference`.
+  if 0 < postBalance ∧ postBalance < rentExemptBalance ∧
+      (rentExemptBalance ≤ account.lamports ∨ relax ∧ fee ≠ 0) then
+    throw (.tx (.insufficientFundsForRent payerIndex.toUInt8))
   return { account with lamports := postBalance }
 
 def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)

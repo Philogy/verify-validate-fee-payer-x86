@@ -4,6 +4,8 @@ import ValidateFeePayer.Loader
 import ValidateFeePayer.Code
 import ValidateFeePayer.Checks
 import ValidateFeePayer.Spec
+import ValidateFeePayer.Reference
+import ValidateFeePayer.ReferenceAgrees
 import ValidateFeePayer.Contract
 import ValidateFeePayer.Correctness
 import ValidateFeePayer.Tests
