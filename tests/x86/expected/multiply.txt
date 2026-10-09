@@ -1,72 +1,72 @@
-66440fafc6 | ok rip=0x40000805 r8=0xf4aa921624c1fffc flags=-????-
-66440faf1de8030010 | ok rip=0x40000809 flags=-????-
-666bfbc0 | ok rip=0x40000804 rdi=0xa77fdc82cbad0000 flags=C????O
-666b15b8f8ff0f53 | ok rip=0x40000808 rdx=0xb49d9d626820bf flags=-????-
-664169d022d4 | ok rip=0x40000806 rdx=0xf70cace5a98aa6ae flags=C????O
-66466994ff41f390710138 | ok rip=0x4000080b r10=0x29e321e96d28ffe flags=-????-
-66440fafc1 | ok rip=0x40000805 r8=0xfba5ecf54aa9dd0c flags=C????O
-660faf0d03050010 | ok rip=0x40000808 rcx=0x153cee8e236eba50 flags=-????-
-66456bee12 | ok rip=0x40000805 r13=0x2682b8e7e7a20eb2 flags=-????-
-666b70e264 | ok rip=0x40000805 rsi=0xd87d36fc19b48d60 flags=C????O
-664469d94cf1 | ok rip=0x40000806 r11=0x6c8cbcb6ca2dbcc flags=C????O
-6645698d749dcb75a725 | ok rip=0x4000080a r9=0x357223b00d5207bf flags=C????O
-66410fafe4 | ok rip=0x40000805 rsp=0x1b24274916256500 flags=-????-
-66440faf10 | ok rip=0x40000805 r10=0x25324932aa6a4d80 flags=-????-
-66446bee5c | ok rip=0x40000805 r13=0x9c864fded6802da4 flags=-????-
-66426b2cdf23 | ok rip=0x40000806 rbp=0xf18be38275ad8023 flags=C????O
-664569cbd78f | ok rip=0x40000806 r9=0xcdf1c163d2805ba9 flags=C????O
-66690425960800504816 | ok rip=0x4000080a rax=0x69d4b0eb6366e9b8 flags=C????O
-66410faff8 | ok rip=0x40000805 rdi=0x4b780ac84845f633 flags=C????O
-660faf0425d7010050 | ok rip=0x40000809 rax=0x3a40a9b70d890000 flags=-????-
-66416bf403 | ok rip=0x40000805 rsi=0x89289cf775b8003 flags=C????O
-66416b48a44b | ok rip=0x40000806 rcx=0xd1bfb6118c4b8e8c flags=C????O
-664569c7a6f3 | ok rip=0x40000806 r8=0xa1e22b4f1116baa0 flags=C????O
-6645694c24673c23 | ok rip=0x40000808 r9=0x158c72a149654ed0 flags=C????O
-410fafda | ok rip=0x40000804 rbx=0xe741e290 flags=C????O
-440faf242568060050 | ok rip=0x40000809 r12=0x1d flags=-????-
-446bd31b | ok rip=0x40000804 r10=0x1cc2afda flags=-????-
-6b14252a03005038 | ok rip=0x40000808 rdx=0x1ff0 flags=-????-
-4469d200000100 | ok rip=0x40000807 r10=0xffff0000 flags=C????O
-4469b626a637790080ffff | ok rip=0x4000080b r14=0xf5a00000 flags=C????O
-450faffa | ok rip=0x40000804 r15=0xffffff2e flags=-????-
-440faf1d47faff0f | ok rip=0x40000808 r11=0x28a24d1a flags=-????-
-416bce31 | ok rip=0x40000804 rcx=0x80000031 flags=C????O
-456b715cd4 | ok rip=0x40000805 r14=0xffffe13c flags=-????-
-4569df0080ffff | ok rip=0x40000807 r11=0xffa78000 flags=-????-
-466934d5e109fcffe17423c1 | ok rip=0x4000080c r14=0x0 flags=-????-
-440fafe8 | ok rip=0x40000804 r13=0x609e4e80 flags=C????O
-420faf0ce2 | ok rip=0x40000805 rcx=0x7984a885 flags=C????O
-6bd1d1 | ok rip=0x40000803 rdx=0xa54fc5f2 flags=C????O
-6b4a7630 | ok rip=0x40000804 rcx=0xf4272c20 flags=C????O
-4169e6ff7f0000 | ok rip=0x40000807 rsp=0x0 flags=-????-
-44692df9ffff0fff7f0000 | ok rip=0x4000080b r13=0x7fff flags=-????-
-0fafee | ok rip=0x40000803 rbp=0x3d74 flags=-????-
-440faf0c25430d0050 | ok rip=0x40000809 r9=0x95b2c0e9 flags=C????O
-6be523 | ok rip=0x40000803 rsp=0xfff flags=-????-
-456b19f1 | ok rip=0x40000804 r11=0xfffffec5 flags=-????-
-4569e30080ffff | ok rip=0x40000807 r12=0xc6668000 flags=C????O
-42690c4dd3abf1ff00000100 | ok rip=0x4000080c rcx=0x7f0000 flags=-????-
-490fafcd | ok rip=0x40000804 rcx=0xf6b8f9d15ba29894 flags=-????-
-4b0faf84bd0bb3fc7c | ok rip=0x40000809 rax=0x606c295e6553691b flags=C????O
-4d6beeb1 | ok rip=0x40000804 r13=0xfa972cad2b146def flags=C????O
-496b743b0ab9 | ok rip=0x40000806 rsi=0x117e01a87da561cd flags=C????O
-4869e700000100 | ok rip=0x40000807 rsp=0xf00000 flags=-????-
-48690d24feff0f00000100 | ok rip=0x4000080b rcx=0x613c6662a1470000 flags=C????O
-480fafdc | ok rip=0x40000804 rbx=0xffffffffffffffc4 flags=C????O
-4d0faf0c47 | ok rip=0x40000805 r9=0xe76cdba7f5a41656 flags=C????O
-496be182 | ok rip=0x40000804 rsp=0x12775af46b189bb0 flags=C????O
-4c6b1e85 | ok rip=0x40000804 r11=0x72d0c22a65e2ead flags=C????O
-4c69fb00000100 | ok rip=0x40000807 r15=0x370000 flags=-????-
-4c690d1dfbff0fff7f0000 | ok rip=0x4000080b r9=0xffffffffffff8001 flags=-????-
-490fafd8 | ok rip=0x40000804 rbx=0x0 flags=C????O
-4c0faf0425860d0050 | ok rip=0x40000809 r8=0x0 flags=-????-
-496be4e7 | ok rip=0x40000804 rsp=0x5619f212c0192b06 flags=C????O
-4c6b2415fa94f1ff18 | ok rip=0x40000809 r12=0xbe8 flags=-????-
-4c69e2524aa39b | ok rip=0x40000807 r12=0xffffffff374694a4 flags=-????-
-48692de900001078d280e4 | ok rip=0x4000080b rbp=0x1b7f2d88 flags=-????-
-4d0fafe2 | ok rip=0x40000804 r12=0x5cd76034cb18690e flags=C????O
-4c0faf8c3a10adf7f1 | ok rip=0x40000809 r9=0xbf5838cad73268a1 flags=C????O
-4c6bc695 | ok rip=0x40000804 r8=0x6edb0d0d53c3b55f flags=C????O
-486b2284 | ok rip=0x40000804 rsp=0xff130b56ac94760 flags=C????O
-4d69e5ff7f0000 | ok rip=0x40000807 r12=0x9dc1334c9e950b5b flags=C????O
-48690c25a7070050ff7f0000 | ok rip=0x4000080c rcx=0x537f59 flags=-????-
+66440fafc6 | ok rip=0x40000805 r8=0xf4aa921624c1fffc flags=-PA-S-
+66440faf1de8030010 | ok rip=0x40000809
+666bfbc0 | ok rip=0x40000804 rdi=0xa77fdc82cbad0000
+666b15b8f8ff0f53 | ok rip=0x40000808 rdx=0xb49d9d626820bf flags=-P--S-
+664169d022d4 | ok rip=0x40000806 rdx=0xf70cace5a98aa6ae
+66466994ff41f390710138 | ok rip=0x4000080b r10=0x29e321e96d28ffe flags=--AZ--
+66440fafc1 | ok rip=0x40000805 r8=0xfba5ecf54aa9dd0c flags=C----O
+660faf0d03050010 | ok rip=0x40000808 rcx=0x153cee8e236eba50
+66456bee12 | ok rip=0x40000805 r13=0x2682b8e7e7a20eb2 flags=----S-
+666b70e264 | ok rip=0x40000805 rsi=0xd87d36fc19b48d60 flags=C-AZSO
+664469d94cf1 | ok rip=0x40000806 r11=0x6c8cbcb6ca2dbcc flags=CP-Z-O
+6645698d749dcb75a725 | ok rip=0x4000080a r9=0x357223b00d5207bf flags=C-AZ-O
+66410fafe4 | ok rip=0x40000805 rsp=0x1b24274916256500
+66440faf10 | ok rip=0x40000805 r10=0x25324932aa6a4d80 flags=------
+66446bee5c | ok rip=0x40000805 r13=0x9c864fded6802da4
+66426b2cdf23 | ok rip=0x40000806 rbp=0xf18be38275ad8023
+664569cbd78f | ok rip=0x40000806 r9=0xcdf1c163d2805ba9
+66690425960800504816 | ok rip=0x4000080a rax=0x69d4b0eb6366e9b8 flags=C-AZ-O
+66410faff8 | ok rip=0x40000805 rdi=0x4b780ac84845f633
+660faf0425d7010050 | ok rip=0x40000809 rax=0x3a40a9b70d890000
+66416bf403 | ok rip=0x40000805 rsi=0x89289cf775b8003
+66416b48a44b | ok rip=0x40000806 rcx=0xd1bfb6118c4b8e8c flags=CP---O
+664569c7a6f3 | ok rip=0x40000806 r8=0xa1e22b4f1116baa0 flags=C---SO
+6645694c24673c23 | ok rip=0x40000808 r9=0x158c72a149654ed0
+410fafda | ok rip=0x40000804 rbx=0xe741e290 flags=CPA--O
+440faf242568060050 | ok rip=0x40000809 r12=0x1d flags=--AZ--
+446bd31b | ok rip=0x40000804 r10=0x1cc2afda
+6b14252a03005038 | ok rip=0x40000808 rdx=0x1ff0
+4469d200000100 | ok rip=0x40000807 r10=0xffff0000 flags=CP-ZSO
+4469b626a637790080ffff | ok rip=0x4000080b r14=0xf5a00000 flags=CP---O
+450faffa | ok rip=0x40000804 r15=0xffffff2e
+440faf1d47faff0f | ok rip=0x40000808 r11=0x28a24d1a flags=-PAZS-
+416bce31 | ok rip=0x40000804 rcx=0x80000031 flags=C--Z-O
+456b715cd4 | ok rip=0x40000805 r14=0xffffe13c
+4569df0080ffff | ok rip=0x40000807 r11=0xffa78000
+466934d5e109fcffe17423c1 | ok rip=0x4000080c r14=0x0 flags=-PAZS-
+440fafe8 | ok rip=0x40000804 r13=0x609e4e80 flags=CP--SO
+420faf0ce2 | ok rip=0x40000805 rcx=0x7984a885 flags=C-AZ-O
+6bd1d1 | ok rip=0x40000803 rdx=0xa54fc5f2 flags=CP---O
+6b4a7630 | ok rip=0x40000804 rcx=0xf4272c20
+4169e6ff7f0000 | ok rip=0x40000807 rsp=0x0 flags=--A-S-
+44692df9ffff0fff7f0000 | ok rip=0x4000080b r13=0x7fff flags=------
+0fafee | ok rip=0x40000803 rbp=0x3d74
+440faf0c25430d0050 | ok rip=0x40000809 r9=0x95b2c0e9
+6be523 | ok rip=0x40000803 rsp=0xfff flags=-PA-S-
+456b19f1 | ok rip=0x40000804 r11=0xfffffec5
+4569e30080ffff | ok rip=0x40000807 r12=0xc6668000 flags=CP-ZSO
+42690c4dd3abf1ff00000100 | ok rip=0x4000080c rcx=0x7f0000 flags=-P--S-
+490fafcd | ok rip=0x40000804 rcx=0xf6b8f9d15ba29894 flags=--AZS-
+4b0faf84bd0bb3fc7c | ok rip=0x40000809 rax=0x606c295e6553691b flags=C----O
+4d6beeb1 | ok rip=0x40000804 r13=0xfa972cad2b146def flags=CP--SO
+496b743b0ab9 | ok rip=0x40000806 rsi=0x117e01a87da561cd flags=CP-Z-O
+4869e700000100 | ok rip=0x40000807 rsp=0xf00000 flags=-PAZ--
+48690d24feff0f00000100 | ok rip=0x4000080b rcx=0x613c6662a1470000 flags=C-AZ-O
+480fafdc | ok rip=0x40000804 rbx=0xffffffffffffffc4 flags=CP---O
+4d0faf0c47 | ok rip=0x40000805 r9=0xe76cdba7f5a41656 flags=CPA-SO
+496be182 | ok rip=0x40000804 rsp=0x12775af46b189bb0 flags=C-A-SO
+4c6b1e85 | ok rip=0x40000804 r11=0x72d0c22a65e2ead
+4c69fb00000100 | ok rip=0x40000807 r15=0x370000 flags=--AZS-
+4c690d1dfbff0fff7f0000 | ok rip=0x4000080b r9=0xffffffffffff8001 flags=-PAZ--
+490fafd8 | ok rip=0x40000804 rbx=0x0 flags=CPAZSO
+4c0faf0425860d0050 | ok rip=0x40000809 r8=0x0 flags=-PAZS-
+496be4e7 | ok rip=0x40000804 rsp=0x5619f212c0192b06 flags=CPA-SO
+4c6b2415fa94f1ff18 | ok rip=0x40000809 r12=0xbe8 flags=------
+4c69e2524aa39b | ok rip=0x40000807 r12=0xffffffff374694a4 flags=-PA-S-
+48692de900001078d280e4 | ok rip=0x4000080b rbp=0x1b7f2d88 flags=---Z--
+4d0fafe2 | ok rip=0x40000804 r12=0x5cd76034cb18690e flags=C-A-SO
+4c0faf8c3a10adf7f1 | ok rip=0x40000809 r9=0xbf5838cad73268a1 flags=C-A--O
+4c6bc695 | ok rip=0x40000804 r8=0x6edb0d0d53c3b55f flags=C--ZSO
+486b2284 | ok rip=0x40000804 rsp=0xff130b56ac94760 flags=CPAZ-O
+4d69e5ff7f0000 | ok rip=0x40000807 r12=0x9dc1334c9e950b5b flags=CP-Z-O
+48690c25a7070050ff7f0000 | ok rip=0x4000080c rcx=0x537f59 flags=-P-ZS-
