@@ -9,6 +9,7 @@ Seeded, so a rerun writes the same files; CI checks that.
 """
 import os
 import random
+import re
 import subprocess
 import sys
 import tempfile
@@ -773,7 +774,130 @@ def faults(g):
     add("lock mov rax, rbx", [], raw="f04889d8")
 
 
-GROUPS = [arithmetic, moves, unary, multiply, shifts, conditionals, branches, stack, sse, floating, faults]
+def edges(g):
+    """Cases a handful of random vectors rarely hit."""
+    def add(text, fields, **kw):
+        g.add("edge", Vector(text, fields, **kw))
+
+    # adc with the carry in and b all ones gives r = a: the carry out is still set.
+    # sbb with the carry in and a = b borrows.
+    for w in WIDTHS:
+        for _ in range(6):
+            used = set()
+            d, di, _ = g.register(w, used)
+            s, si, _ = g.register(w, used)
+            a = g.value(w)
+            fl = g.flags().replace("-", "")
+            add(f"adc {d}, {s}", [(R64[di], hexn(g.with_low(w, a))), (R64[si], hexn(g.with_low(w, mask(w)))),
+                                  ("flags", "C" + fl.replace("C", ""))])
+            add(f"sbb {d}, {s}", [(R64[di], hexn(g.with_low(w, a))), (R64[si], hexn(g.with_low(w, a))),
+                                  ("flags", "C" + fl.replace("C", ""))])
+            add(f"sbb {d}, {s}", [(R64[di], hexn(g.with_low(w, a))), (R64[si], hexn(g.with_low(w, a + 1))),
+                                  ("flags", fl or "-")])
+    for v in [0, 1, 0x7F, 0x80, mask(64)]:
+        add("sbb rcx, 0x0", [("rcx", hexn(v)), ("flags", "C")])
+        add("sbb rcx, 0x0", [("rcx", hexn(v)), ("flags", "Z")])
+    # ptest: CF says the source has no bit outside the destination, ZF no bit inside.
+    for _ in range(12):
+        lo, hi = g.rng.getrandbits(64), g.rng.getrandbits(64)
+        slo, shi = lo & g.rng.getrandbits(64), hi & g.rng.getrandbits(64)
+        if g.rng.random() < 0.5:
+            slo |= 1 << g.rng.randrange(64)
+        d, s = g.rng.sample(range(16), 2)
+        add(f"ptest xmm{d}, xmm{s}", [(f"xmm{d}", xmm_value(lo, hi)), (f"xmm{s}", xmm_value(slo, shi)), ("flags", g.flags())])
+        used = set()
+        target = DATA_PAGE + g.rng.randrange(0, 255) * 16
+        m, f, _, rip = g.memory(128, used, target=target)
+        add(f"ptest xmm{d}, {m}", [(f"xmm{d}", xmm_value(lo, hi))] + f +
+            [("mem", f"{hexn(target)}:{le(slo, 8)}{le(shi, 8)}"), ("flags", g.flags())], rip_target=rip)
+    for v in [(0, 0), (1, 0), (0, 1 << 63), (mask(64), mask(64))]:
+        add("ptest xmm2, xmm2", [("xmm2", xmm_value(*v)), ("flags", g.flags())])
+    # call [m] reads its target before it pushes, so a target addressed through
+    # rsp is read at the old rsp, and a target fault comes before a stack fault.
+    for off in [0, 8, 0x10]:
+        sp = STACK_PAGE + 0x800
+        add(f"call qword ptr [rsp{Gen.disp(off)}]",
+            [("mem", f"{hexn(sp - 8)}:{le(canonical(g), 8)}{le(canonical(g), 8)}{le(canonical(g), 8)}{le(canonical(g), 8)}")])
+    add("call qword ptr [rbx]", [("rbx", hexn(UNMAPPED + 0x100)), ("rsp", hexn(UNMAPPED + 0x800))])
+    add("call qword ptr [rbx]", [("rbx", hexn(DATA_PAGE + 0x100)), ("rsp", hexn(UNMAPPED + 0x800)),
+                                 ("mem", f"{hexn(DATA_PAGE + 0x100)}:{le(canonical(g), 8)}")])
+    add("call qword ptr [rbx]", [("rbx", hexn(DATA_PAGE + 0x100)), ("rsp", hexn(READ_ONLY_PAGE + 0x800)),
+                                 ("mem", f"{hexn(DATA_PAGE + 0x100)}:{le(canonical(g), 8)}")])
+    add("call rax", [("rax", hexn(canonical(g))), ("rsp", hexn(UNMAPPED + 0x800))])
+
+
+CARVED = HERE.parent.parent / "artifacts" / "validate_fee_payer.intel.s"
+ALL_GPR = {name: i for names in (R64, R32, R16, R8) for i, name in enumerate(names)}
+ALL_GPR.update({name: i for i, name in enumerate(HIGH)})
+GPR_WIDTH = {name: w for w, names in NAMES.items() for name in names}
+
+
+def carved_instructions():
+    """(bytes, text) of each distinct instruction of the carved code, as
+    disasm-to-lean.py reads them."""
+    seen = {}
+    for line in CARVED.read_text().splitlines():
+        m = re.match(r"^ +([0-9a-f]+): ([0-9a-f]{2}(?: [0-9a-f]{2})*) *\t(.*)$", line)
+        if m:
+            text = re.sub(r"\s*#.*$", "", m.group(3))
+            text = re.sub(r"\s*<[^>]*>", "", text)
+            seen.setdefault(m.group(2).replace(" ", ""), " ".join(text.split("\t")).strip())
+    return list(seen.items())
+
+
+def carved(g):
+    """Each instruction of the carved code with its exact bytes, from random
+    states, so its own registers, immediates and displacement are exercised
+    rather than only its form."""
+    for raw, text in carved_instructions():
+        mnemonic, _, operands = text.partition(" ")
+        at = g.rng.randrange(0x100, 0xF00)
+        length = len(raw) // 2
+        relative = (mnemonic.startswith("j") or mnemonic == "call") and re.fullmatch(r"0x[0-9a-f]+", operands)
+        if relative:
+            rel = int.from_bytes(bytes.fromhex(raw)[-1 if length == 2 else -4:], "little", signed=True)
+            text = f"{mnemonic} {hexn(branch_target(rel, length, at))}"
+        memory = re.search(r"\[([^\]]*)\]", text)
+        rip_relative = memory is not None and memory.group(1).startswith("rip")
+        for k in range(2 if rip_relative else 10):
+            # A relative branch's text names its target, which depends on `at`.
+            fields = [("at", hexn(at if relative else g.rng.randrange(0x100, 0xF00)))]
+            set_regs = {}
+            if memory and not rip_relative and mnemonic not in ("lea", "nop"):
+                terms = [t.strip() for t in re.split(r"\s*\+\s*|\s*(?=-)", memory.group(1)) if t.strip()]
+                disp, base, index, scale = 0, None, None, 1
+                for t in terms:
+                    if re.fullmatch(r"-?\s*0x[0-9a-f]+", t):
+                        disp = int(t.replace(" ", ""), 16)
+                    elif "*" in t:
+                        sc, reg = t.split("*")
+                        index, scale = ALL_GPR[reg], int(sc)
+                    else:
+                        base = ALL_GPR[t]
+                faulting = g.rng.random() < 0.15
+                target = (UNMAPPED if faulting else DATA_PAGE) + g.rng.randrange(0, 4096 - 16) // 16 * 16
+                iv = g.rng.randrange(0, 64) if index is not None else 0
+                if index is not None:
+                    set_regs[index] = iv
+                if base is not None:
+                    set_regs[base] = (target - disp - iv * scale) & mask(64)
+                if not faulting:
+                    fields.append(("mem", f"{hexn(target)}:{g.rng.getrandbits(128).to_bytes(16, 'little').hex()}"))
+            if mnemonic == "ret":
+                fields.append(("mem", f"{hexn(STACK_PAGE + 0x800)}:{le(canonical(g), 8)}"))
+            for name in re.findall(r"\b([a-z][a-z0-9]*)\b", text):
+                if name in ALL_GPR and ALL_GPR[name] not in set_regs and ALL_GPR[name] != 4:
+                    w = GPR_WIDTH.get(name, 8)
+                    set_regs[ALL_GPR[name]] = g.with_low(w, g.value(w), high=name in HIGH)
+            for i, v in sorted(set_regs.items()):
+                fields.append((R64[i], hexn(v)))
+            for x in sorted(set(re.findall(r"\bxmm(\d+)\b", text)), key=int):
+                fields.append((f"xmm{x}", xmm_value(f64_random(g), f64_random(g))))
+            fields.append(("flags", g.flags()))
+            g.add("carved", Vector(text, fields, raw=raw))
+
+
+GROUPS = [arithmetic, moves, unary, multiply, shifts, conditionals, branches, stack, sse, floating, faults, edges, carved]
 
 
 def main():
