@@ -12,6 +12,9 @@ assembly; and fails unless every form of the carved code and every
 
 `lake exe x86-test decode <file>`: compares the decoder with llvm-objdump on
 the encodings in `<file>` (`tests/x86/decode.py` writes it).
+
+`lake exe x86-test same <dir> <other>`: compares two CPUs' outcomes up to the
+flags the model leaves undefined.
 -/
 
 open X86 X86Test
@@ -84,6 +87,27 @@ def behaviour (dir : System.FilePath) : IO UInt32 := do
   let ok := failures == 0 && missingForms.isEmpty && missingConstructors.isEmpty
   return if ok then 0 else 1
 
+/-- Compares the CPU outcomes in `<dir>/expected` with those in `other`, up to
+flags the model leaves undefined. -/
+def same (dir other : System.FilePath) : IO UInt32 := do
+  let mut differences := 0
+  let files := ((← (dir / "vectors").readDir).filter (·.fileName.endsWith ".txt")).qsort (·.fileName < ·.fileName)
+  for file in files do
+    let inputs ← readLines file.path
+    let mine ← readLines (dir / "expected" / file.fileName)
+    let theirs ← readLines (other / file.fileName)
+    if inputs.length != mine.length || inputs.length != theirs.length then
+      IO.println s!"{file.fileName}: different numbers of outcomes"
+      differences := differences + 1
+      continue
+    for ((line, a), b) in (inputs.zip mine).zip theirs do
+      let .ok v := parseVector line | continue
+      unless sameModuloUndefined v.state.flags (outcome v).1 a b do
+        differences := differences + 1
+        IO.println s!"DIFFERENT {file.fileName}: {v.asm}\n  here:  {a}\n  other: {b}"
+  IO.println s!"{differences} outcomes differ beyond flags the model leaves undefined"
+  return if differences == 0 then 0 else 1
+
 /-- A line of the decode file: `address | bytes | length | text`, from
 llvm-objdump; length 0 means it found no instruction. -/
 def decode (file : System.FilePath) : IO UInt32 := do
@@ -146,6 +170,7 @@ def main : List String → IO UInt32
   | ["behaviour", dir] => behaviour dir
   | ["model", file] => model file
   | ["decode", file] => decode file
+  | ["same", dir, other] => same dir other
   | _ => do
-    IO.eprintln "usage: x86-test behaviour <tests/x86> | x86-test decode <file>"
+    IO.eprintln "usage: x86-test behaviour <tests/x86> | x86-test decode <file> | x86-test same <tests/x86> <expected dir>"
     return 2

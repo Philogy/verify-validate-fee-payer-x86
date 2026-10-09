@@ -129,16 +129,27 @@ def renderFlags (fs : Flags) : String :=
   String.ofList ((flagLetters.zip flagOrder).map fun (c, f) =>
     match fs.get f with | some true => c | some false => '-' | none => '?')
 
+/-- An outcome line without its flags, and the flags after it. -/
+def splitFlags (before : Flags) (line : String) : List String × List Char :=
+  let tokens := line.splitOn " "
+  let flags := (tokens.find? (·.startsWith "flags=")).map (·.drop 6 |>.toString)
+  (tokens.filter (!·.startsWith "flags="), (flags.getD (renderFlags before)).toList)
+
 /-- Whether the CPU's outcome is one the model allows: a flag the model
 leaves undefined (`?`) allows any value, everything else must be equal. -/
 def agrees (before : Flags) (model cpu : String) : Bool :=
-  let split (line : String) : List String × List Char :=
-    let tokens := line.splitOn " "
-    let flags := (tokens.find? (·.startsWith "flags=")).map (·.drop 6 |>.toString)
-    (tokens.filter (!·.startsWith "flags="), (flags.getD (renderFlags before)).toList)
-  let (m, mFlags) := split model
-  let (c, cFlags) := split cpu
+  let (m, mFlags) := splitFlags before model
+  let (c, cFlags) := splitFlags before cpu
   m == c && mFlags.length == cFlags.length && (mFlags.zip cFlags).all fun (a, b) => a == '?' || a == b
+
+/-- Whether two CPUs' outcomes differ at most in flags the model leaves
+undefined, which vendors and models set differently. -/
+def sameModuloUndefined (before : Flags) (model cpu cpu' : String) : Bool :=
+  let (_, mFlags) := splitFlags before model
+  let (c, cFlags) := splitFlags before cpu
+  let (c', cFlags') := splitFlags before cpu'
+  c == c' && cFlags.length == cFlags'.length &&
+    ((cFlags.zip cFlags').zipIdx).all fun ((a, b), i) => a == b || mFlags[i]? == some '?'
 
 def hex (n : Nat) : String := "0x" ++ Print.hexDigits n
 

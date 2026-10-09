@@ -1,4 +1,4 @@
-name: x86 model against the CPU
+name: x86 model against the CPU, and the proof
 
 on:
   push:
@@ -43,13 +43,13 @@ jobs:
         working-directory: tests/x86
         run: ../../lean/.lake/build/bin/x86-test behaviour .
 
-      # Undefined flags can differ between CPUs, so a different runner may
-      # not reproduce the committed outcomes.
+      # Undefined flags differ between CPUs, so only the rest is compared.
       - name: CPU outcomes match the committed ones
         if: always()
         run: |
-          git add -N tests/x86/expected
-          git diff --stat --exit-code tests/x86/expected || echo "::warning::CPU outcomes differ from the committed ones"
+          mkdir -p /tmp/committed
+          for f in tests/x86/expected/*.txt; do git show "HEAD:$f" > "/tmp/committed/$(basename "$f")"; done
+          cd tests/x86 && ../../lean/.lake/build/bin/x86-test same . /tmp/committed || echo "::warning::CPU outcomes differ from the committed ones"
 
       - name: Decoder against llvm-objdump
         if: always()
@@ -66,3 +66,32 @@ jobs:
           path: |
             tests/x86/expected
             tests/x86/decode.txt
+
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      # Lake rebuilds whatever changed, so the newest cache for the toolchain will do.
+      - uses: actions/cache@v4
+        with:
+          path: lean/.lake
+          key: proof-${{ hashFiles('lean/lean-toolchain') }}-${{ github.sha }}
+          restore-keys: proof-${{ hashFiles('lean/lean-toolchain') }}-
+
+      - name: Build (proof, axioms, tests)
+        working-directory: lean
+        run: lake build
+
+      - name: DecodeTable is generated
+        working-directory: lean
+        run: lake env lean --run scripts/DecodeTable.lean | diff - ValidateFeePayer/Proof/DecodeTable.lean
+
+      - name: No sorry
+        working-directory: lean
+        run: "! grep -rnw sorry --include='*.lean' X86 X86Test ValidateFeePayer scripts"
