@@ -1,0 +1,37 @@
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x50002000
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x50001ffc
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x50001ff8
+mov qword ptr [rbx], rax | 488903 | rbx=0x50001000
+mov qword ptr [rbx], rax | 488903 | rbx=0x50000ffc
+mov dword ptr [rbx], eax | 8903 | rbx=0x40000010
+add qword ptr [rbx], rax | 480103 | rbx=0x50001008
+inc byte ptr [rbx] | fe03 | rbx=0x50001008
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x4ffffff8
+mov rax, qword ptr [rbx + 8*rcx] | 488b04cb | rbx=0x50000000 rcx=0x2000000000000001
+push rax | 50 | rsp=0x50000000
+push rax | 50 | rsp=0x50002008
+pop rax | 58 | rsp=0x50002000
+pop qword ptr [rbx] | 8f03 | rbx=0x50001000
+ret | c3 | rsp=0x50002000
+call rax | ffd0 | rsp=0x50001100 rax=0x50000000
+call qword ptr [rbx] | ff13 | rbx=0x50002000
+jmp qword ptr [rbx] | ff23 | rbx=0x50002000
+movdqu xmm0, xmmword ptr [rbx] | f30f6f03 | rbx=0x50001ff8
+movdqu xmmword ptr [rbx], xmm0 | f30f7f03 | rbx=0x50000ff8
+movdqa xmm0, xmmword ptr [rbx] | 660f6f03 | rbx=0x50002008
+movdqa xmm0, xmmword ptr [rbx] | 660f6f03 | rbx=0x50002000
+movsd qword ptr [rbx], xmm0 | f20f1103 | rbx=0x50001000
+movq xmm0, qword ptr [rbx] | 66480f6e03 | rbx=0x50002000
+cvttsd2si rax, qword ptr [rbx] | f2480f2c03 | rbx=0x50002000
+ucomisd xmm0, qword ptr [rbx] | 660f2e03 | rbx=0x50002000
+setne byte ptr [rbx] | 0f9503 | rbx=0x50001000
+mov rax, rbx | 4889d8 | at=0xffd
+mov rax, rbx | 4889d8 | at=0xffe
+mov rax, qword ptr [rip + 0x0] | 488b0500000000 | at=0xff9
+movabs rax, 0x1122334455667788 | 48b88877665544332211 | at=0xff8
+jmp 0x40001000 | e900000000 | at=0xffb
+je 0x40001006 | 0f8402000000 | at=0xffe flags=Z
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x800000000000 known=noncanonical
+mov qword ptr [rbx], rax | 488903 | rbx=0x800000001000 known=noncanonical
+ud2 | 0f0b | 
+lock mov rax, rbx | f04889d8 | 
