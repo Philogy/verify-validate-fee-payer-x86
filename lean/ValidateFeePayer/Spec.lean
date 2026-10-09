@@ -62,6 +62,12 @@ inductive Error where
 
 instance : MonadLift (Except Panic) (Except Error) := ⟨Except.mapError .panic⟩
 
+instance : Alternative (Except Panic) where
+  failure := .error .maximumPermittedDataLengthExceeded
+  orElse
+    | .ok x, _ => .ok x
+    | .error _, y => y ()
+
 def UInt64.MIN : UInt64 := 0
 def UInt64.MAX : UInt64 := 0xffffffffffffffff
 theorem UInt64.MIN_is_min : ∀ (x : UInt64), UInt64.MIN ≤ x := by grind [MIN]
@@ -100,15 +106,14 @@ is 1.0 on mainnet-beta since epoch 943 and was 2.0 before, so in production
 only the integer paths run; the `f64` path needs a non-standard genesis, the
 `[0; 8]` snapshot default, or a malformed sysvar. -/
 def minimumBalance (rent : Rent) (dataLength : UInt64) : Except Panic UInt64 := do
-  if dataLength > maxPermittedDataLength ∨
-      (rent.lamportsPerByte > currentMaxLamportsPerByte ∧
-        rent.exemptionThreshold = currentExemptionThreshold) ∨
-      (rent.lamportsPerByte > simd0194MaxLamportsPerByte ∧
-        rent.exemptionThreshold = simd0194ExemptionThreshold) then
-    throw .maximumPermittedDataLengthExceeded
+  guard (dataLength ≤ maxPermittedDataLength)
   let bytes := accountStorageOverhead + dataLength
-  if rent.exemptionThreshold = simd0194ExemptionThreshold then return bytes * rent.lamportsPerByte
-  if rent.exemptionThreshold = currentExemptionThreshold then return 2 * bytes * rent.lamportsPerByte
+  if rent.exemptionThreshold = simd0194ExemptionThreshold then
+    guard (rent.lamportsPerByte ≤ simd0194MaxLamportsPerByte)
+    return bytes * rent.lamportsPerByte
+  else if rent.exemptionThreshold = currentExemptionThreshold then
+    guard (rent.lamportsPerByte ≤ currentMaxLamportsPerByte)
+    return 2 * bytes * rent.lamportsPerByte
   return f64ToU64 (F64.mul (u64ToF64 (bytes * rent.lamportsPerByte)) rent.exemptionThreshold).1
 
 /-! ## `solana-nonce-account` 5.0.0 -/
@@ -137,21 +142,14 @@ inductive RentState where
   | rentExempt
   deriving DecidableEq, Repr
 
-def accountRentState (lamports dataSize minBalance : UInt64) : RentState :=
+def preExecAccountRentState (lamports dataSize minBalance : UInt64) (relax : Bool) :
+    RentState :=
   if lamports = 0 then .uninitialized
-  else if lamports ≥ minBalance then .rentExempt
+  else if lamports ≥ minBalance ∨ relax then .rentExempt
   else .rentPaying lamports dataSize
 
-def preExecAccountRentState (lamports dataSize minBalance : UInt64) (disallowRentPaying : Bool) :
-    RentState :=
-  match accountRentState lamports dataSize minBalance with
-  | .rentPaying .. => if disallowRentPaying then .rentExempt else .rentPaying lamports dataSize
-  | state => state
-
-def postExecAccountRentState (lamports dataSize minBalance : UInt64) (preState : RentState)
-    (preBalance : UInt64) (relax : Bool) : RentState :=
-  if !relax then accountRentState lamports dataSize minBalance
-  else if lamports = 0 then .uninitialized
+def postExecAccountRentState (lamports dataSize minBalance : UInt64) (preState : RentState) (preBalance : UInt64) : RentState :=
+  if lamports = 0 then .uninitialized
   else if lamports ≥ minBalance then .rentExempt
   else if preState = .rentExempt ∧ lamports ≥ preBalance then .rentExempt
   else .rentPaying lamports dataSize
@@ -168,7 +166,7 @@ def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UIn
     (accountIndex : UInt16) (relax : Bool) : Except Error Unit := do
   let minBalance ← minimumBalance rent dataSize
   let preState := preExecAccountRentState preBalance dataSize minBalance relax
-  let postState := postExecAccountRentState postBalance dataSize minBalance preState preBalance relax
+  let postState := postExecAccountRentState postBalance dataSize minBalance preState preBalance
   unless transitionAllowed preState postState do
     throw (.tx (.insufficientFundsForRent accountIndex.toUInt8))
 
@@ -181,8 +179,9 @@ def chargeFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee 
   let minBalance ← match kind with
     | .system => pure 0
     | .nonce => minimumBalance rent nonceStateSize.toUInt64
-  if account.lamports.toNat < fee.toNat + minBalance.toNat then throw (.tx .insufficientFundsForFee)
+  if account.lamports < fee then throw (.tx .insufficientFundsForFee)
   let postBalance := account.lamports - fee
+  if postBalance < minBalance then throw (.tx .insufficientFundsForFee)
   checkStaticAccountRentStateTransition account.lamports postBalance account.data.length.toUInt64
     rent payerIndex relax
   return { account with lamports := postBalance }
@@ -190,7 +189,7 @@ def chargeFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee 
 def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
     (relax : Bool) (metrics : ErrorMetrics) : Except Error Account × ErrorMetrics :=
   let result := chargeFeePayer account payerIndex rent fee relax
-  let metrics := match result with
+  let metrics' := match result with
     | .error (.tx .accountNotFound) =>
       { metrics with accountNotFound := saturatingIncrement metrics.accountNotFound }
     | .error (.tx .invalidAccountForFee) =>
@@ -198,6 +197,6 @@ def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fe
     | .error (.tx .insufficientFundsForFee) =>
       { metrics with insufficientFunds := saturatingIncrement metrics.insufficientFunds }
     | _ => metrics
-  (result, metrics)
+  (result, metrics')
 
 end ValidateFeePayer.Spec
