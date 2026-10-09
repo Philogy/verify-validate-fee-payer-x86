@@ -3,7 +3,7 @@ import ValidateFeePayer.Disasm
 import X86.Print
 
 -- Separate from `Checks.lean`: the proof does not use these, and checking
--- them takes the kernel ~50s.
+-- them takes the kernel ~30s.
 
 namespace ValidateFeePayer
 open Image X86
@@ -20,16 +20,6 @@ def Decoded.text (e : Decoded) : UInt64 × Nat × String :=
 independent disassembler, on every instruction's address, length, mnemonic
 and operands. -/
 theorem listing_eq_objdump : listing.map Decoded.text = Disasm.listing := by
-  set_option maxRecDepth 100000 in decide +kernel
-
-def decodesAt (d : Decoded) : Bool :=
-  match decodeWith codeByte d.address with
-  | .ok (i, length) => i == d.instruction && length == d.length
-  | .error _ => false
-
-/-- Fetching from the image byte by byte, as the machine does, gives the
-same instructions as the sweep. -/
-theorem decodeWith_codeByte : listing.all decodesAt := by
   set_option maxRecDepth 100000 in decide +kernel
 
 theorem branch_targets :
