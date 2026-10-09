@@ -94,7 +94,7 @@ theorem DataAt.evolved {lb : UInt64} {m m' : Memory} (hd : DataAt lb m) (h : Evo
 
 /-- `Writable` of a `wr` chain, from a `Writable` hypothesis about its
 base, possibly for a larger range. -/
-macro "writable" : tactic => `(tactic| (
+macro "writableByApply" : tactic => `(tactic| (
   repeat' apply X86.Memory.Writable.wr
   -- Reducible unification only: matching `S + 80` against `met + ?k` at
   -- default transparency unfolds `UInt64` addition.
@@ -107,9 +107,84 @@ macro "writable" : tactic => `(tactic| (
        case h => with_reducible assumption
        case hk => decide)))
 
+/-- `a` as `x + c` with `c` a literal, and a proof of `a = x + c`. -/
+def withOffset (a : Expr) : MetaM (Expr × Expr × Expr) := do
+  match_expr a with
+  | HAdd.hAdd _ _ _ _ x c =>
+    if (← getOfNatValue? c ``UInt64).isSome then return (x, c, ← mkEqRefl a)
+  | _ => pure ()
+  let zero := toExpr (0 : UInt64)
+  return (a, zero, ← mkEqSymm (mkApp (mkConst ``UInt64.add_zero) a))
+
+/-- A proof of `p` by `decide`, if it holds. -/
+def decideProof? (p : Expr) : MetaM (Option Expr) := do
+  let d ← mkDecide p
+  let r ← withAtLeastTransparency .default <| whnf d
+  unless r.isConstOf ``true do return none
+  return some (mkApp3 (mkConst ``of_decide_eq_true) p d.appArg! (← mkEqRefl (mkConst ``true)))
+
+/-- The memory under a chain of `wr`s, and the stores, outermost first, each
+with the memory it stores into. -/
+partial def stores (m : Expr) (acc : Array (Expr × Expr × Expr × Expr) := #[]) :
+    Expr × Array (Expr × Expr × Expr × Expr) :=
+  match_expr m with
+  | wr m' w a v => stores m' (acc.push (m', w, a, v))
+  | _ => (m, acc)
+
+/-- `Writable m a n` from a hypothesis `Writable m a' n'` with `a` at a
+literal offset in it. -/
+def writableAtBase? (m a n : Expr) : MetaM (Option Expr) := do
+  let (x, k, _) ← withOffset a
+  for d in ← getLCtx do
+    if d.isImplementationDetail then continue
+    let_expr X86.Memory.Writable m' a' n' := ← instantiateMVars d.type | continue
+    unless m' == m do continue
+    if a' == a then
+      if n' == n then return some d.toExpr
+      let some hn ← decideProof? (mkNatLE n n') | continue
+      return some (mkAppN (mkConst ``X86.Memory.Writable.le) #[m, a, n', n, d.toExpr, hn])
+    if a' == x then
+      let some hk ← decideProof? (mkNatLE (mkNatAdd (mkApp (mkConst ``UInt64.toNat) k) n) n') | continue
+      return some (mkAppN (mkConst ``X86.Memory.Writable.sub) #[m, a', k, n', n, d.toExpr, hk])
+  return none
+
+/-- `Writable` of a `wr` chain, as `writableByApply` proves it, built as a
+term: by `apply`, a walk spends half its time here. -/
+def writableProof? (t : Expr) : MetaM (Option Expr) := do
+  let_expr X86.Memory.Writable m a n := t | return none
+  if t.hasMVar then return none
+  let (base, ss) := stores m
+  let some h ← writableAtBase? base a n | return none
+  return some <| ss.foldr (init := h) fun (m', w, b, v) pf =>
+    mkAppN (mkConst ``X86.Memory.Writable.wr) #[m', a, b, v, n, w, pf]
+
+/-- `Evolved base chain`, built as a term. -/
+def evolvedProof? (t : Expr) : MetaM (Option Expr) := do
+  let_expr Evolved base m := t | return none
+  if t.hasMVar then return none
+  let (base', ss) := stores m
+  unless base' == base do return none
+  let mut pf := mkApp (mkConst ``Evolved.refl) base
+  for (m', w, a, v) in ss.reverse do
+    let some hw ← writableProof? (mkApp3 (mkConst ``X86.Memory.Writable) m' a (mkApp (mkConst ``OperandSize.byteCount) w))
+      | return none
+    pf := mkAppN (mkConst ``Evolved.wr) #[base, m', w, a, v, pf, hw]
+  return some pf
+
+/-- Close the main goal with `proof? target`, else run `fallback`. -/
+def closeWith (proof? : Expr → MetaM (Option Expr)) (fallback : TacticM Unit) : TacticM Unit := do
+  let g ← getMainGoal
+  if let some pf ← g.withContext do proof? (← instantiateMVars (← g.getType)) then
+    g.assign pf; replaceMainGoal []
+  else fallback
+
+elab "writable" : tactic => closeWith writableProof? do evalTactic (← `(tactic| writableByApply))
+
 /-- `Evolved base chain`. -/
-macro "evolved" : tactic => `(tactic| (
+macro "evolvedByApply" : tactic => `(tactic| (
   repeat' (first | with_reducible exact Evolved.refl _ | (apply Evolved.wr; rotate_left; writable))))
+
+elab "evolved" : tactic => closeWith evolvedProof? do evalTactic (← `(tactic| evolvedByApply))
 
 /-- Two objects as `Nat` intervals do not overlap; an empty one overlaps
 nothing. Kept behind a definition so that `omega` does not see it: with many
@@ -145,22 +220,6 @@ theorem apart_same {a b x c1 c2 : UInt64} {n n' : Nat} (ha : a = x + c1) (hb : b
   simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat'] at e
   have := x.toNat_lt; have := c1.toNat_lt; have := c2.toNat_lt
   omega
-
-/-- `a` as `x + c` with `c` a literal, and a proof of `a = x + c`. -/
-def withOffset (a : Expr) : MetaM (Expr × Expr × Expr) := do
-  match_expr a with
-  | HAdd.hAdd _ _ _ _ x c =>
-    if (← getOfNatValue? c ``UInt64).isSome then return (x, c, ← mkEqRefl a)
-  | _ => pure ()
-  let zero := toExpr (0 : UInt64)
-  return (a, zero, ← mkEqSymm (mkApp (mkConst ``UInt64.add_zero) a))
-
-/-- A proof of `p` by `decide`, if it holds. -/
-def decideProof? (p : Expr) : MetaM (Option Expr) := do
-  let d ← mkDecide p
-  let r ← withAtLeastTransparency .default <| whnf d
-  unless r.isConstOf ``true do return none
-  return some (mkApp3 (mkConst ``of_decide_eq_true) p d.appArg! (← mkEqRefl (mkConst ``true)))
 
 /-- `Apart a n b n'` without `omega`, when both addresses are an object plus a
 literal offset: from the offsets alone within one object, or from the
