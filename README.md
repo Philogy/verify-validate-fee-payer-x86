@@ -87,17 +87,23 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   from memory equals the sweep), `Spec` (the Rust functions in Lean:
   a panic or a `TransactionError` is an `Error`; `chargeFeePayer` does the
   checks, `validateFeePayer` updates the error metrics from its error), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
-  theorem; its proof is the package's only `sorry`), `Tests` (machine
+  theorem; the proof, a symbolic walk of every path, is in `Proof/`), `Tests` (machine
   against `Spec` on concrete inputs).
 
 The theorem: from any state satisfying `Pre` (arguments where SysV puts
 them, each pointing at an encoding of a Lean value, enough free stack,
-disjoint objects), `run` with 240 steps of fuel ends in `panicked` exactly
+disjoint objects, an exemption threshold of `1.0` or `2.0`, a return address
+other than the panic entry), `run` with 240 steps of fuel ends in `panicked` exactly
 when `Spec.validateFeePayer` throws a `Panic` (`lamports_per_byte` above the
 cap for its exemption threshold), and otherwise in `returned` with the
 result, the metrics and, on success, the account encoded, callee-saved
 registers restored and every byte outside the result, the lamports, three
-counters and 96 bytes of stack unchanged.
+counters and 96 bytes of stack unchanged. It depends on `propext`,
+`Classical.choice` and `Quot.sound` only.
+
+The threshold is `1.0` on mainnet since SIMD-0194 and `2.0` before; other
+values take the `f64` path in `Rent::minimum_balance`, which the proof does
+not cover.
 
 `check_static_account_rent_state_transition` is carved and called through
 its GOT slot like any other code, so it needs no contract. Only
