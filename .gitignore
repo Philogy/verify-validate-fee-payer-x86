@@ -2,3 +2,6 @@
 /lean/.lake/
 # Container build cache (cargo target dir and registry); see ci-image.sh.
 /cache/
+/tests/x86/oracle
+/tests/x86/decode.txt
+/tests/x86/__pycache__/

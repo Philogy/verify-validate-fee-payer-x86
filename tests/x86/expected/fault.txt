@@ -1,0 +1,37 @@
+488b03 | pagefault unmapped 0x50002000
+488b03 | pagefault unmapped 0x50002000
+488b03 | ok rip=0x40000803 rax=0x48aa0c6ecf3193f5
+488903 | pagefault denied 0x50001000
+488903 | pagefault denied 0x50001000
+8903 | pagefault denied 0x40000010
+480103 | pagefault denied 0x50001008
+fe03 | pagefault denied 0x50001008
+488b03 | pagefault unmapped 0x4ffffff8
+488b04cb | ok rip=0x40000804 rax=0x3d9e0062c42587e9
+50 | pagefault unmapped 0x4ffffff8
+50 | pagefault unmapped 0x50002000
+58 | pagefault unmapped 0x50002000
+8f03 | pagefault denied 0x50001000
+c3 | pagefault unmapped 0x50002000
+ffd0 | pagefault denied 0x500010f8
+ff13 | pagefault unmapped 0x50002000
+ff23 | pagefault unmapped 0x50002000
+f30f6f03 | pagefault unmapped 0x50002000
+f30f7f03 | pagefault denied 0x50001000
+660f6f03 | gp
+660f6f03 | pagefault unmapped 0x50002000
+f20f1103 | pagefault denied 0x50001000
+66480f6e03 | pagefault unmapped 0x50002000
+f2480f2c03 | pagefault unmapped 0x50002000
+660f2e03 | pagefault unmapped 0x50002000
+0f9503 | pagefault denied 0x50001000
+4889d8 | ok rip=0x40001000 rax=0x404040404040404
+4889d8 | pagefault unmapped 0x40001000
+488b0500000000 | pagefault unmapped 0x40001000
+48b88877665544332211 | pagefault unmapped 0x40001000
+e900000000 | ok rip=0x40001000
+0f8402000000 | pagefault unmapped 0x40001000
+488b03 | gp
+488903 | gp
+0f0b | ill
+f04889d8 | ill
