@@ -17,7 +17,8 @@ A vector: `asm | bytes | field=value ...`. An outcome:
 `bytes | ok|pagefault unmapped A|pagefault denied A|gp|ill field=value ...`,
 listing only what changed. Flags print as `CPAZSO` letters and `-` for clear;
 the model prints `?` for a flag it leaves undefined (`none`), which accepts
-whatever the CPU holds.
+whatever the CPU holds: the model faults on reading such a flag, so its value
+cannot affect a run the model completes.
 MXCSR exception bits are compared although the machine does not keep them
 (`Harness.floatExceptions` recomputes them from `F64`).
 
@@ -31,9 +32,16 @@ Known differences (`known=`):
   the model has no canonical-address check and reports a page fault. Both
   stop the program.
 
-Not compared: state the model omits (segment registers, x87/MMX, YMM upper
-halves); `rflags` bits outside the six flags are printed if they change, so
+Not compared: state the model omits (segment registers, FS/GS bases, x87/MMX,
+AVX-512 masks, and YMM upper halves, which legacy SSE encodings leave
+alone); `rflags` bits outside the six flags are printed if they change, so
 an unexpected change fails.
+
+The CPU is whatever GitHub's runner has (CI logs its CPUID), so one vendor
+per run. Undefined flags are vendor-specific, which the `?` covers, but a
+vendor difference in defined behaviour would only show on another runner.
+CI also compares the runner's outcomes with the committed `expected/` up to
+undefined flags (`x86-test same`).
 
 ## Decoding: the decoder against llvm-objdump
 
