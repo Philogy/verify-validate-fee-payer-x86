@@ -98,24 +98,6 @@ theorem Evolved.data {lb : UInt64} {m m' : Memory} (h : Evolved m m') (hd : Data
 theorem DataAt.evolved {lb : UInt64} {m m' : Memory} (hd : DataAt lb m) (h : Evolved m m') :
     DataAt lb m' := h.data hd
 
-theorem Evolved.writable {m m' : Memory} {a : UInt64} {n : Nat} (h : Evolved m m')
-    (hw : WritableAt m a n) : WritableAt m' a n := by
-  obtain ⟨ws, h⟩ := h
-  intro i hi
-  obtain ⟨b, hb⟩ := hw i hi
-  exact h.writable _ _ hb
-
-theorem Evolved.trans {m m' m'' : Memory} (h : Evolved m m') (h' : Evolved m' m'') : Evolved m m'' := by
-  obtain ⟨ws, h⟩ := h
-  obtain ⟨ws', h'⟩ := h'
-  refine ⟨ws' ++ ws, fun acc x hx => ?_, fun acc x hx => ?_, fun x v hv => ?_⟩
-  · rw [h'.outside acc x fun ⟨p, hp, hi⟩ => hx ⟨p, List.mem_append_left _ hp, hi⟩]
-    exact h.outside acc x fun ⟨p, hp, hi⟩ => hx ⟨p, List.mem_append_right _ hp, hi⟩
-  · rw [h'.readOnly acc x fun v e => hx v (by rw [← h.readOnly .write x hx]; exact e)]
-    exact h.readOnly acc x hx
-  · obtain ⟨v', hv'⟩ := h.writable x v hv
-    exact h'.writable x v' hv'
-
 /-! ## Dischargers -/
 
 /-- `WritableAt` of a `wr` chain, from a `WritableAt` hypothesis about its
@@ -240,16 +222,6 @@ attribute [vexec high] read_wr_same
   have := x.toNat_lt
   omega
 
-/-- The SSE constants are 16-byte aligned in the binary, so at a 16-byte
-aligned base. -/
-@[vexec] theorem aligned_add {lb c : UInt64} (h : lb % 16 = 0) : (lb + c) % 16 = c % 16 := by
-  apply UInt64.toNat_inj.1
-  have h := congrArg UInt64.toNat h
-  simp only [UInt64.toNat_mod, UInt64.toNat_add, UInt64.toNat_ofNat, Nat.reducePow, Nat.reduceMod] at h ⊢
-  have := lb.toNat_lt
-  have := c.toNat_lt
-  omega
-
 /-- Fold `a op b` on `UInt64` literals, with an `Eq.refl` proof at the
 literals. The built-in `UInt64.reduceAdd` is a `dsimproc`: it leaves no
 proof, so the kernel has to rediscover `lb + c ≡ lb + (a + b)` itself, and
@@ -296,8 +268,6 @@ simproc decideBEq ((_ : UInt64) == _) := fun e => do
   let r := toExpr (UInt64.ofNat x == UInt64.ofNat y)
   return .done { expr := r, proof? := some (← mkExpectedTypeHint (← mkEqRefl r) (← mkEq e r)) }
 
-@[vexec] theorem ite_true_false {c : Prop} {hc : Decidable c} : (if c then True else False) = c := by
-  by_cases c <;> simp_all
 @[vexec] theorem ite_false_true {c : Prop} {hc : Decidable c} : (if c then False else True) = ¬c := by
   by_cases c <;> simp_all
 
@@ -333,30 +303,7 @@ attribute [vexec] decideEq decideBEq literalFirst fixDecide Bool.ite_eq_true_dis
 @[vexec] theorem highHalf_ofHalves (l h : UInt64) : highHalf (ofHalves l h) = h := by
   simp only [highHalf, ofHalves]; bv_decide
 
-@[vexec] theorem lowHalf_interleaveLow32 (a b : BitVec 128) :
-    lowHalf (lane32 b 1 ++ lane32 a 1 ++ lane32 b 0 ++ lane32 a 0) =
-      ((lowHalf b &&& 0xffffffff) <<< 32) ||| (lowHalf a &&& 0xffffffff) := by
-  simp only [lowHalf, lane32]; bv_decide
-
-@[vexec] theorem highHalf_interleaveLow32 (a b : BitVec 128) :
-    highHalf (lane32 b 1 ++ lane32 a 1 ++ lane32 b 0 ++ lane32 a 0) =
-      (lowHalf b &&& (0xffffffff00000000 : UInt64)) ||| (lowHalf a >>> 32) := by
-  simp only [lowHalf, highHalf, lane32]; bv_decide
-
-@[vexec] theorem lowHalf_xor_self (a : BitVec 128) : lowHalf (a ^^^ a) = 0 := by
-  simp only [lowHalf]; bv_decide
-
 @[vexec] theorem xor_self (x : UInt64) : x ^^^ x = 0 := UInt64.xor_self
-
-@[vexec] theorem signExtend_bits64 (x : UInt64) : OperandSize.bits64.signExtend x = x := by
-  -- The 64-bit sign extension is the identity: both branches are `x`.
-  simp only [OperandSize.signExtend, show OperandSize.bits64.mask = 0xffffffffffffffff from rfl,
-    show ~~~(0xffffffffffffffff : UInt64) = 0 from rfl, UInt64.or_zero, and_allOnes, ite_self]
-
-/-- `sar x, 63`. -/
-@[vexec] theorem shiftRightArithmetic_63 (x : UInt64) :
-    (x.toInt64 >>> UInt64.toInt64 63).toUInt64 = if x < 0x8000000000000000 then 0 else 0xffffffffffffffff := by
-  split <;> bv_decide
 
 attribute [vexec] DoubleOp.eval
 
@@ -440,13 +387,9 @@ variable {c : Prop} {hc : Decidable c} {a b k : UInt64}
 @[vexec] theorem ite_and : (if c then a else b) &&& k = if c then a &&& k else b &&& k := by split <;> rfl
 @[vexec] theorem ite_or : (if c then a else b) ||| k = if c then a ||| k else b ||| k := by split <;> rfl
 @[vexec] theorem ite_beq : ((if c then a else b) == k) = if c then a == k else b == k := by split <;> rfl
-@[vexec] theorem ite_shiftRight : (if c then a else b) >>> k = if c then a >>> k else b >>> k := by
-  split <;> rfl
 end
 
 @[vexec] theorem lowByte_of_merge (x y : UInt64) : (x &&& ~~~255 ||| y) &&& 255 = y &&& 255 := by bits64
-@[vexec] theorem lowWord_of_merge (x y : UInt64) :
-    (x &&& ~~~4294967295 ||| y) &&& 4294967295 = y &&& 4294967295 := by bits64
 @[vexec] theorem and_mask_mask (x : UInt64) : x &&& 4294967295 &&& 4294967295 = x &&& 4294967295 := by
   rw [UInt64.and_assoc, UInt64.and_self]
 /-- `cmp r32, c` sets the zero flag on the low 32 bits of `x - c`. -/
@@ -485,8 +428,6 @@ variable {c d : Prop} {hc : Decidable c} {hd : Decidable d}
 @[vexec high] theorem setcc_or :
     (if c then (1 : UInt64) else 0) ||| (if d then 1 else 0) = if c ∨ d then 1 else 0 := by
   by_cases c <;> by_cases d <;> simp_all
-@[vexec high] theorem setcc_eq_zero : ((if c then (1 : UInt64) else 0) = 0) = ¬c := by
-  by_cases c <;> simp_all
 @[vexec high] theorem setcc_beq_zero : ((if c then (1 : UInt64) else 0) == 0) = !decide c := by
   by_cases c <;> simp_all
 end
@@ -496,8 +437,6 @@ end
 state, 1 for rent-paying and 2 for rent-exempt. -/
 @[vexec] theorem two_sub_setcc {c : Prop} {hc : Decidable c} :
     (2 : UInt64) - (if c then 1 else 0) = if c then 1 else 2 := by by_cases c <;> simp_all
-@[vexec] theorem rentState_eq_one {c : Prop} {hc : Decidable c} : ((if c then (1 : UInt64) else 2) = 1) = c := by
-  by_cases c <;> simp_all
 
 @[vexec] theorem zero_or (x : UInt64) : 0 ||| x = x := UInt64.zero_or
 @[vexec] theorem or_zero (x : UInt64) : x ||| 0 = x := UInt64.or_zero
@@ -521,8 +460,6 @@ elab "vskip" : tactic => do
 
 /-- `decide` with whatever instance `simp` left after rewriting the
 proposition: the standard lemmas expect the synthesized one. -/
-theorem decide_eq_true' {p : Prop} {h : Decidable p} : (@decide p h = true) = p := by
-  cases h <;> simp_all
 theorem decide_eq_false' {p : Prop} {h : Decidable p} : (@decide p h = false) = ¬p := by
   cases h <;> simp_all
 
@@ -584,9 +521,9 @@ elab "toNat_bounds" : tactic => withMainContext do
 
 /-- What `uomega` rewrites: `UInt64` facts as facts about `toNat`. -/
 macro "uomega" : tactic => `(tactic| (
-  try simp only [fixDecide, decide_eq_false', decide_eq_true', decide_eq_false_iff_not, decide_eq_true_eq, not_and, Classical.not_not, Bool.not_eq_true,
+  try simp only [fixDecide, decide_eq_false', decide_eq_false_iff_not, decide_eq_true_eq, not_and, Classical.not_not, Bool.not_eq_true,
     Bool.not_eq_false, beq_iff_eq, bne_iff_ne, beq_eq_false_iff_ne, Bool.not_eq_true', Bool.and_eq_true,
-    Bool.or_eq_true, ite_true_false, ite_false_true, decide_not, Bool.not_not, two_sub_setcc, rentState_eq_one,
+    Bool.or_eq_true, ite_false_true, decide_not, Bool.not_not, two_sub_setcc,
     ne_eq, Nat.toUInt64_eq, literalFirst]
   name_subtractions
   try simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le, ← UInt64.toNat_inj,
@@ -626,7 +563,7 @@ def takePath (h prf : Expr) : TacticM Unit := do
 state, so later conditions on the same values are decided by `simp`. -/
 def normalizePath : TacticM Unit := do
   evalTactic (← `(tactic| try simp only [Bool.not_eq_false, beq_iff_eq, ne_eq, Classical.not_not,
-    Bool.not_eq_true, beq_eq_false_iff_ne, ite_true_false, ite_false_true, fixDecide, decide_eq_false', decide_eq_true',
+    Bool.not_eq_true, beq_eq_false_iff_ne, ite_false_true, fixDecide, decide_eq_false',
     decide_eq_false_iff_not, decide_eq_true_eq] at $(mkIdent `path):ident))
   evalTactic (← `(tactic| try simp only [$(mkIdent `path):ident]))
 

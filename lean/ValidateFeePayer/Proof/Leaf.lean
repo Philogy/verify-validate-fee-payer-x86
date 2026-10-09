@@ -62,8 +62,8 @@ theorem systemAccountKind_eq (a : Spec.Account) (hn : a.data.length < 2 ^ 64) :
     by_cases hl : a.data.length = Spec.nonceStateSize <;>
     by_cases ht : (ofLittleEndian (a.data.take 4) = 0 ∨ ofLittleEndian (a.data.take 4) = 1) ∧
       ofLittleEndian ((a.data.drop 4).take 4) = 1 <;>
-    simp only [ho, hd, hl, ht, guard, failure, bind, Option.bind, pure, ↓reduceIte, not_false_eq_true,
-      and_true, and_false, true_and, false_and] <;> simp_all
+    simp only [ho, hd, hl, ht, guard, failure, bind, Option.bind, pure, ↓reduceIte,
+      and_true, and_false] <;> simp_all
 
 /-! ## Deciding the spec's branches -/
 
@@ -251,23 +251,5 @@ macro_rules
       Spec.maxPermittedDataLength, Spec.simd0194MaxLamportsPerByte, Spec.currentMaxLamportsPerByte,
       Spec.accountStorageOverhead, Spec.nonceStateSize, foldAdd, foldMul, UInt64.reduceOfNat, Nat.toUInt64_eq]
     all_goals first | trivial | vpost $e))
-
-/-- Debugging aid: run `t` on each goal, reporting failures (including
-runtime ones such as deep recursion) instead of stopping. -/
-elab "each_goal_report " t:tacticSeq : tactic => do
-  let gs ← getGoals
-  let mut rest := []
-  for g in gs do
-    setGoals [g]
-    let saved ← saveState
-    let err ← tryCatchRuntimeEx (do withoutRecover (evalTactic t); pure none) fun ex => pure (some ex)
-    match err with
-    | none => rest := rest ++ (← getGoals)
-    | some ex =>
-      let msg ← ex.toMessageData.format
-      saved.restore
-      logWarning m!"failed: {msg}"
-      rest := rest ++ [g]
-  setGoals rest
 
 end ValidateFeePayer.Proof

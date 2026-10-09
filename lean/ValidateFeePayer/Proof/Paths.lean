@@ -27,7 +27,6 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   dataPtr : c.account.data = dat
   resultPtr : c.result = res
   metricsPtr : c.errorMetrics = met
-  rentPtr : c.rent = rnt
   feeArg : c.fee = fee
   returnAddress : c.returnAddress = ra
   memory : s.memory = m
@@ -68,7 +67,6 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   readInvalidAccountForFee : m.read .bytes8 (met + 88) = .ok metrics.invalidAccountForFee
   readInsufficientFunds : m.read .bytes8 (met + 80) = .ok metrics.insufficientFunds
   accountEncoded : account.Encodes m c.account
-  metricsEncoded : metrics.Encodes m c.errorMetrics
   dataLength : account.data.length < 2 ^ 64
   stackBound : S.toNat + 112 ≤ 2 ^ 64
   resultBound : res.toNat + 12 ≤ 2 ^ 64
@@ -133,14 +131,14 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
   have h80 : account.data.length.toUInt64 = 80 → account.data.length = 80 := by
     intro h; have := congrArg UInt64.toNat h
     simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat'] at this; simp at this; omega
-  simp only [Memory.Holds, BoolEncodes, off_eq, Image.Layout.rent.lamports_per_byte,
+  simp only [Memory.Holds, off_eq, Image.Layout.rent.lamports_per_byte,
     Image.Layout.rent.exemption_threshold, Image.Layout.transaction_error_metrics.account_not_found,
     Image.Layout.transaction_error_metrics.invalid_account_for_fee,
     Image.Layout.transaction_error_metrics.insufficient_funds, Nat.toUInt64_eq, UInt64.reduceOfNat,
     UInt64.add_zero] at hlpb hthr hc1 hc2 hc3
   refine
     { loadBase := rfl, accountPtr := rfl, arcInnerPtr := rfl, dataPtr := rfl, resultPtr := rfl,
-      metricsPtr := rfl, rentPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl,
+      metricsPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl,
       stackPointer := hsp.symm, payerIndex := pre.payerIndexRegister, base := rfl, framePointer := rfl,
       r12 := rfl, r13 := rfl, r14 := rfl, r15 := rfl,
       notPanic := fun h => notPanic (by rw [h]; rfl),
@@ -151,7 +149,7 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       readVersions := fun h => (hdata (h80 h)).1, readState := fun h => (hdata (h80 h)).2,
       readLamportsPerByte := hlpb, readThreshold := hthr, readAccountNotFound := hc1,
       readInvalidAccountForFee := hc2, readInsufficientFunds := hc3,
-      accountEncoded := pre.accountEncoded, metricsEncoded := pre.metricsEncoded, dataLength := hn,
+      accountEncoded := pre.accountEncoded, dataLength := hn,
       stackBound := sep.stack, resultBound := sep.result, accountBound := sep.account,
       arcBound := sep.arcInner, dataBound := sep.data, metricsBound := sep.metrics, rentBound := sep.rent,
       result_account := sep.result_account, result_arcInner := sep.result_arcInner,

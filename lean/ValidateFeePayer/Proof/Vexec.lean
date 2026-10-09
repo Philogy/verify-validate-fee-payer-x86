@@ -43,10 +43,6 @@ def andThen (r : Except Stop (α × State)) (k : α → State → Except Stop (�
 
 @[vexec] theorem run_modify (f : State → State) (s : State) : (modify f : Exec Unit).run s = .ok ((), f s) := Eq.trans rfl rfl
 
-@[vexec] theorem run_modifyGet (f : State → α × State) (s : State) : (modifyGet f : Exec α).run s = .ok (f s) := Eq.trans rfl rfl
-
-@[vexec] theorem run_throw (e : Stop) (s : State) : (throw e : Exec α).run s = .error e := Eq.trans rfl rfl
-
 @[vexec] theorem run_ite (c : Prop) [Decidable c] (x y : Exec α) (s : State) :
     (if c then x else y).run s = if c then x.run s else y.run s := by
   split <;> rfl

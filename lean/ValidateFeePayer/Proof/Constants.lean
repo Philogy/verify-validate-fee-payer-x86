@@ -32,14 +32,6 @@ macro "constant_read" r:term:max a:num k:num : tactic => `(tactic| (
     | rw [Memory.read, bytes_data ‹DataAt _ _› (by simp [Image.data]) rfl (by decide)]
   decide))
 
-theorem read128_exponents {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read128 (lb + 0x2e6f30) = .ok (ofHalves 0x4530000043300000 0) := by
-  constant_read Image.u64_to_f64_exponents 0x2e6f30 0
-
-theorem read128_bias {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read128 (lb + 0x2e59a0) = .ok (ofHalves 0x4330000000000000 0x4530000000000000) := by
-  constant_read Image.u64_to_f64_bias 0x2e59a0 0
-
 theorem read128_systemProgramId_low {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
     m.read128 (lb + 0x2f1060) = .ok 0 := by
   constant_read Image.system_program_id 0x2f1060 0
@@ -47,14 +39,6 @@ theorem read128_systemProgramId_low {lb : UInt64} {m : Memory} (hd : DataAt lb m
 theorem read128_systemProgramId_high {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
     m.read128 (lb + 0x2f1070) = .ok 0 := by
   constant_read Image.system_program_id 0x2f1070 16
-
-theorem read_f64_2pow63 {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read .bytes8 (lb + 0x2f5f28) = .ok 0x43e0000000000000 := by
-  constant_read Image.f64_2pow63 0x2f5f28 0
-
-theorem read_f64_maxBelow2pow64 {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
-    m.read .bytes8 (lb + 0x2f3b78) = .ok 0x43efffffffffffff := by
-  constant_read Image.f64_max_below_2pow64 0x2f3b78 0
 
 theorem read_got {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
     {target : UInt64} (ht : r.contents = .pointer target) :
@@ -80,7 +64,7 @@ theorem read_got_rentCheck {lb : UInt64} {m : Memory} (hd : DataAt lb m) :
     m.read .bytes8 (lb + 0x37f5120) = .ok (lb + 0x27f3790) :=
   read_got hd (r := Image.got_check_static_account_rent_state_transition) (by simp [Image.data]) rfl
 
-attribute [vexec] read128_exponents read128_bias read128_systemProgramId_low read128_systemProgramId_high
-  read_f64_2pow63 read_f64_maxBelow2pow64 read_got_expectFailed read_got_rentCheck
+attribute [vexec] read128_systemProgramId_low read128_systemProgramId_high read_got_expectFailed
+  read_got_rentCheck
 
 end ValidateFeePayer.Proof

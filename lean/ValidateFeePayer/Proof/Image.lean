@@ -116,7 +116,7 @@ theorem dataAt_image {lb : UInt64} (hBase : ValidLoadBase lb) (rest : List Mappi
     simp [Image.data] at hr
     rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
   refine ⟨?_, fun v => ?_⟩
-  · rw [byte_image hBase hreg hb hi]; simp [hdata, Permissions.allows]
+  · rw [byte_image hBase hreg hb hi]; simp [Permissions.allows]
   · rw [byte_image hBase hreg hb hi]; simp [hdata, Permissions.allows, Permissions.readOnly]
 
 end ValidateFeePayer.Proof

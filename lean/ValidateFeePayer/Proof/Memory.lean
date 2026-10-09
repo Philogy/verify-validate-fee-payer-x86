@@ -104,11 +104,6 @@ theorem writeBytes_byte_ok {m m' : Memory} {a : UInt64} {bs : List UInt8} {acc :
 theorem length_littleEndianBytes_size (w : Width) (v : UInt64) : (littleEndianBytes w.size v).length = w.size :=
   length_littleEndianBytes _ _
 
-theorem read_write_other {m m' : Memory} {w w' : Width} {a b v : UInt64} (h : m.write w a v = .ok m')
-    (hd : ∀ i < w'.size, ∀ j < w.size, a + j.toUInt64 ≠ b + i.toUInt64) : m'.read w' b = m.read w' b :=
-  read_congr fun i hi => writeBytes_byte_outside h fun j hj =>
-    hd i hi j (by rwa [length_littleEndianBytes_size] at hj)
-
 theorem length_of_mapM_ok {α β ε : Type} {f : α → Except ε β} :
     ∀ {l : List α} {r : List β}, l.mapM f = .ok r → r.length = l.length
   | [], r, h => by cases h; rfl
@@ -158,10 +153,6 @@ structure Stored (m0 m : Memory) (ws : List (UInt64 × Nat)) : Prop where
 theorem Stored.refl (m : Memory) (ws : List (UInt64 × Nat)) : Stored m m ws :=
   ⟨fun _ _ _ => rfl, fun _ _ _ => rfl, fun _ v h => ⟨v, h⟩⟩
 
-theorem Stored.mono {m0 m : Memory} {ws ws' : List (UInt64 × Nat)} (h : Stored m0 m ws)
-    (hsub : ∀ p ∈ ws, p ∈ ws') : Stored m0 m ws' :=
-  ⟨fun acc x hx => h.outside acc x fun ⟨p, hp, hi⟩ => hx ⟨p, hsub p hp, hi⟩, h.readOnly, h.writable⟩
-
 theorem Stored.write {m0 m m' : Memory} {ws : List (UInt64 × Nat)} {w : Width} {a v : UInt64}
     (h : Stored m0 m ws) (hw : m.write w a v = .ok m') : Stored m0 m' ((a, w.size) :: ws) where
   outside acc x hx := by
@@ -192,25 +183,5 @@ theorem Stored.trans_data {lb : UInt64} {m0 m : Memory} {ws : List (UInt64 × Na
   intro r hr bytes hb i hi
   obtain ⟨hf, hw⟩ := hc r hr bytes hb i hi
   refine ⟨by rw [h.readOnly _ _ hw]; exact hf, fun v => by rw [h.readOnly _ _ hw]; exact hw v⟩
-
-theorem Stored.read_eq {m0 m : Memory} {ws : List (UInt64 × Nat)} {w : Width} {a : UInt64}
-    (h : Stored m0 m ws) (hx : ∀ i < w.size, ¬ InRanges ws (a + i.toUInt64)) : m.read w a = m0.read w a :=
-  read_congr fun i hi => h.outside _ _ (hx i hi)
-
-theorem Stored.bytes_eq {m0 m : Memory} {ws : List (UInt64 × Nat)} {a : UInt64} {n : Nat}
-    (h : Stored m0 m ws) (hx : ∀ i < n, ¬ InRanges ws (a + i.toUInt64)) : m.bytes .read a n = m0.bytes .read a n :=
-  bytes_congr fun i hi => h.outside _ _ (hx i hi)
-
-theorem Stored.write_ok {m0 m : Memory} {ws : List (UInt64 × Nat)} {w : Width} {a v b : UInt64} {n : Nat}
-    (h : Stored m0 m ws) {bs : List UInt8} (hw : m0.bytes .write b n = .ok bs)
-    (hin : ∀ i < w.size, ∃ j < n, a + i.toUInt64 = b + j.toUInt64) :
-    m.write w a v = .ok ⟨stores a (littleEndianBytes w.size v) 0 m.mappings⟩ := by
-  apply writeBytes_ok
-  intro i hi
-  rw [length_littleEndianBytes_size] at hi
-  obtain ⟨j, hj, e⟩ := hin i hi
-  obtain ⟨c, hc⟩ := byte_of_bytes hw j hj
-  rw [e]
-  exact h.writable _ _ hc
 
 end ValidateFeePayer.Proof

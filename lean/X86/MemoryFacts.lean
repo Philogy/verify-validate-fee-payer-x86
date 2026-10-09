@@ -115,12 +115,6 @@ theorem go_stores_outside {acc : Access} {a : UInt64} {bs : List UInt8} {k : Nat
     rw [stores_cons, ih (fun i h1 h2 => hx i (by omega) (by simp at h2 ⊢; omega)),
       go_setByte_ne (hx k (by omega) (by simp))]
 
-theorem mapped_stores {a : UInt64} {bs : List UInt8} {k : Nat} {ms : List Mapping} {x : UInt64} :
-    Mapped (stores a bs k ms) x ↔ Mapped ms x := by
-  induction bs generalizing k ms with
-  | nil => rfl
-  | cons b bs ih => rw [stores_cons, ih, mapped_setByte]
-
 theorem go_stores {a : UInt64} {bs : List UInt8} {k : Nat} {ms : List Mapping}
     (hk : k + bs.length ≤ 2 ^ 64) (hm : ∀ i < bs.length, Mapped ms (a + (k + i).toUInt64))
     (j : Nat) (hj : j < bs.length) :
