@@ -6,19 +6,38 @@ namespace ValidateFeePayer.Reference
 
 open Spec
 
+theorem getPreExecAccountRentState_eq (lamports dataSize minBalance : UInt64) (relax : Bool) :
+    getPreExecAccountRentState lamports dataSize minBalance relax =
+      if lamports = 0 then .uninitialized
+      else if lamports ≥ minBalance ∨ relax then .rentExempt
+      else .rentPaying lamports dataSize := by
+  unfold getPreExecAccountRentState getAccountRentState
+  by_cases h0 : lamports = 0 <;> by_cases h1 : lamports ≥ minBalance <;> cases relax <;> simp [h0, h1]
+
+theorem getPostExecAccountRentState_eq (lamports dataSize minBalance : UInt64) (pre : RentState)
+    (preBalance : UInt64) (relax : Bool) :
+    getPostExecAccountRentState lamports dataSize minBalance pre preBalance relax =
+      if lamports = 0 then .uninitialized
+      else if lamports ≥ minBalance then .rentExempt
+      else if relax ∧ pre = .rentExempt ∧ lamports ≥ preBalance then .rentExempt
+      else .rentPaying lamports dataSize := by
+  unfold getPostExecAccountRentState getAccountRentState
+  cases relax <;> simp <;> rfl
+
 /-- The rent-state transition fails exactly when the simplified condition of
 `Spec.chargeFeePayer` holds, given what the earlier checks establish. -/
 theorem transitionAllowed_iff {lamports fee dataSize minBalance : UInt64} {relax : Bool}
     (hl : lamports ≠ 0) (hf : fee ≤ lamports) :
-    let pre := preExecAccountRentState lamports dataSize minBalance relax
+    let pre := getPreExecAccountRentState lamports dataSize minBalance relax
     transitionAllowed pre
-        (postExecAccountRentState (lamports - fee) dataSize minBalance pre lamports) =
+        (getPostExecAccountRentState (lamports - fee) dataSize minBalance pre lamports relax) =
       !decide (0 < lamports - fee ∧ lamports - fee < minBalance ∧
         (minBalance ≤ lamports ∨ relax ∧ fee ≠ 0)) := by
   have hsub : (lamports - fee).toNat = lamports.toNat - fee.toNat := UInt64.toNat_sub_of_le _ _ hf
+  simp only [getPreExecAccountRentState_eq, getPostExecAccountRentState_eq]
   simp only [UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, UInt64.toNat_zero] at *
-  simp only [preExecAccountRentState, postExecAccountRentState, transitionAllowed,
-    UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_zero, ge_iff_le, hsub, hl]
+  simp only [transitionAllowed,
+    UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_zero, hsub, hl]
   have hl' : lamports.toNat ≠ 0 := fun h => hl (UInt64.toNat_inj.mp h)
   have hfee : fee = 0 ↔ fee.toNat = 0 := by simp [← UInt64.toNat_inj]
   by_cases h0 : lamports.toNat - fee.toNat = 0 <;>

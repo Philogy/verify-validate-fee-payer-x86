@@ -1,10 +1,10 @@
 import ValidateFeePayer.Spec
 
 /-!
-The rent-state check of `svm/src/rent_calculator.rs` written as in Rust
-(pre-exec state, post-exec state, allowed transition), and `chargeFeePayer`
-calling it. `Spec.chargeFeePayer` folds this into one condition; the theorem
-in `ValidateFeePayer/ReferenceAgrees.lean` says the two agree.
+The rent-state check of `svm/src/rent_calculator.rs` function by function as
+in Rust, and `chargeFeePayer` calling it. `Spec.chargeFeePayer` folds this
+into one condition; the theorem in `ValidateFeePayer/ReferenceAgrees.lean`
+says the two agree.
 -/
 
 namespace ValidateFeePayer.Reference
@@ -17,31 +17,43 @@ inductive RentState where
   | rentExempt
   deriving DecidableEq, Repr
 
-def preExecAccountRentState (lamports dataSize minBalance : UInt64) (relax : Bool) :
-    RentState :=
-  if lamports = 0 then .uninitialized
-  else if lamports ≥ minBalance ∨ relax then .rentExempt
-  else .rentPaying lamports dataSize
+def getAccountRentState (accountLamports accountSize minBalance : UInt64) : RentState :=
+  if accountLamports = 0 then .uninitialized
+  else if accountLamports ≥ minBalance then .rentExempt
+  else .rentPaying accountLamports accountSize
 
-def postExecAccountRentState (lamports dataSize minBalance : UInt64) (preState : RentState) (preBalance : UInt64) : RentState :=
-  if lamports = 0 then .uninitialized
-  else if lamports ≥ minBalance then .rentExempt
-  else if preState = .rentExempt ∧ lamports ≥ preBalance then .rentExempt
-  else .rentPaying lamports dataSize
+def getPreExecAccountRentState (accountLamports accountSize minBalance : UInt64)
+    (disallowRentPaying : Bool) : RentState :=
+  match getAccountRentState accountLamports accountSize minBalance, disallowRentPaying with
+  | .rentPaying .., true => .rentExempt
+  | rentState, _ => rentState
 
-def transitionAllowed (pre post : RentState) : Bool :=
-  match post with
+def getPostExecAccountRentState (accountLamports accountSize minBalance : UInt64)
+    (preRentState : RentState) (preExecBalance : UInt64) (relaxRentExemptCriteria : Bool) :
+    RentState := Id.run do
+  if !relaxRentExemptCriteria then
+    return getAccountRentState accountLamports accountSize minBalance
+  if accountLamports = 0 then .uninitialized
+  else if accountLamports ≥ minBalance then .rentExempt
+  else if preRentState = .rentExempt ∧ accountLamports ≥ preExecBalance then .rentExempt
+  else .rentPaying accountLamports accountSize
+
+def transitionAllowed (preRentState postRentState : RentState) : Bool :=
+  match postRentState with
   | .uninitialized | .rentExempt => true
   | .rentPaying postLamports postDataSize =>
-    match pre with
+    match preRentState with
+    | .uninitialized | .rentExempt => false
     | .rentPaying preLamports preDataSize => postDataSize == preDataSize && postLamports ≤ preLamports
-    | _ => false
 
-def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UInt64) (rent : Rent)
-    (accountIndex : UInt16) (relax : Bool) : Except Error Unit := do
-  let minBalance ← minimumBalance rent dataSize
-  let preState := preExecAccountRentState preBalance dataSize minBalance relax
-  let postState := postExecAccountRentState postBalance dataSize minBalance preState preBalance
+def checkStaticAccountRentStateTransition (preExecBalance postExecBalance dataSize : UInt64)
+    (rent : Rent) (accountIndex : UInt16) (relaxPostExecMinBalanceCheck : Bool) :
+    Except Error Unit := do
+  let rentMinBalance ← minimumBalance rent dataSize
+  let preState := getPreExecAccountRentState preExecBalance dataSize rentMinBalance
+    relaxPostExecMinBalanceCheck
+  let postState := getPostExecAccountRentState postExecBalance dataSize rentMinBalance preState
+    preExecBalance relaxPostExecMinBalanceCheck
   unless transitionAllowed preState postState do
     throw (.tx (.insufficientFundsForRent accountIndex.toUInt8))
 
