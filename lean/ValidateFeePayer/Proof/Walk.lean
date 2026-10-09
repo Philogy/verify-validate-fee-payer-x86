@@ -144,7 +144,9 @@ def Separate (a : UInt64) (n : Nat) (b : UInt64) (n' : Nat) : Prop :=
   a.toNat + n ≤ b.toNat ∨ b.toNat + n' ≤ a.toNat
 
 /-- Prove `Apart a n b n'` by `omega` on the addresses as `Nat`s, using at
-most one `Separate` hypothesis. -/
+most one `Separate` hypothesis. Hypotheses that hold on one path only, such
+as the account data's bounds when it is long enough to be read, are
+`p → _`; they are used when `p` is in context. -/
 elab "apart" : tactic => do
   evalTactic (← `(tactic| (
     unfold Apart
@@ -154,12 +156,27 @@ elab "apart" : tactic => do
     replace e := congrArg UInt64.toNat e
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat,
       Width.size, Nat.reducePow, Nat.reduceMod] at e hi hj)))
-  if ← tryTactic (evalTactic (← `(tactic| omega))) then return
+  let mut separations := #[]
   for d in ← getLCtx do
     if d.isImplementationDetail then continue
-    if (← instantiateMVars d.type).isAppOf ``Separate then
-      let h := mkIdent d.userName
-      if ← tryTactic (evalTactic (← `(tactic| (have h' := $h; unfold Separate at h'; omega)))) then return
+    let h := mkIdent d.userName
+    let ty ← instantiateMVars d.type
+    if ty.isAppOf ``Separate then separations := separations.push h
+    else if ty.isArrow then
+      let conclusion := ty.bindingBody!
+      unless conclusion.isAppOf ``Separate || conclusion.isAppOf ``LE.le do continue
+      let premise := ty.bindingDomain!
+      let some p ← (← getLCtx).findDeclM? fun p => do
+          if p.isImplementationDetail then return none
+          if ← withReducible (isDefEq p.type premise) then return some p else return none
+        | continue
+      let h' := mkIdent (← mkFreshUserName `h)
+      let pf ← Term.exprToSyntax (mkApp d.toExpr p.toExpr)
+      evalTactic (← `(tactic| have $h' := $pf))
+      if conclusion.isAppOf ``Separate then separations := separations.push h'
+  if ← tryTactic (evalTactic (← `(tactic| omega))) then return
+  for h in separations do
+    if ← tryTactic (evalTactic (← `(tactic| (have h' := $h; unfold Separate at h'; omega)))) then return
   throwError "apart: no hypothesis separates the addresses"
 
 /-! ## Stepping -/
@@ -169,7 +186,11 @@ attribute [vexec] beq_iff_eq reduceCtorEq Bool.or_eq_true Bool.and_eq_true or_fa
   not_false_eq_true not_true_eq_false decide_eq_true_eq decide_not Bool.not_eq_true' bne_iff_ne ne_eq
   Bool.not_eq_eq_eq_not Bool.not_true Bool.not_false Bool.and_true Bool.true_and Bool.or_false Bool.false_or
   dite_eq_ite
-attribute [vexec] UInt64.add_zero
+attribute [vexec] UInt64.add_zero UInt64.and_self Width.mask VectorMove.aligned BitVec.xor_zero
+  BitVec.zero_xor beq_eq_false_iff_ne
+
+/-- `cmp x, c` sets the zero flag on `x - c`, which the walk sees as `x + (-c)`. -/
+@[vexec] theorem add_literal_beq_zero (x c : UInt64) : (x + c == 0) = (x == 0 - c) := by bv_decide
 attribute [vexec] Nat.reducePow Nat.reduceMod Nat.reduceSub read_wr_lowByte read_wr_other read128_wr_other bytes_wr_other write_eq_wr
 attribute [vexec high] read_wr_same
 
@@ -329,5 +350,36 @@ macro_rules
     -- instruction would unfold into every case.
     simp only [decode_table, decodeThen_ok]
     simp (disch := walk_disch) only [execThen_ok, vexec, ↓reduceIte, ↓reduceDIte, $ls,*]))
+
+/-- Split on the condition of the conditional jump that `vstep` left in the
+instruction pointer. -/
+elab "vsplit" : tactic => do
+  let t ← instantiateMVars (← getMainTarget)
+  let_expr Finishes _ _ s _ := t | throwError "vsplit: not a Finishes goal"
+  let_expr X86.State.mk ip _ _ _ _ _ := s | throwError "vsplit: state not explicit"
+  let_expr ite _ c _ _ _ := ip | throwError "vsplit: no branch"
+  evalTactic (← `(tactic| by_cases hpath : $(← Term.exprToSyntax c) <;>
+    simp only [hpath, ↓reduceIte, not_false_eq_true] <;>
+    try simp only [Bool.not_eq_false, beq_iff_eq, ne_eq, Classical.not_not, Bool.not_eq_true,
+      beq_eq_false_iff_ne] at hpath))
+
+syntax "vwalk" (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
+
+/-- `vstep` and `vsplit` until no goal moves. A loop rather than `repeat'`,
+whose recursion is as deep as the code is long. -/
+elab_rules : tactic
+  | `(tactic| vwalk $[[$ls,*]]?) => do
+    let ls := ls.getD ⟨#[]⟩
+    let step ← `(tactic| first | vstep [$ls,*] | vsplit)
+    let mut todo := ← getGoals
+    let mut done : Array MVarId := #[]
+    while !todo.isEmpty do
+      let g := todo.head!
+      todo := todo.tail
+      if ← g.isAssigned then continue
+      setGoals [g]
+      if ← tryTactic (evalTactic step) then todo := (← getGoals) ++ todo
+      else done := done.push g
+    setGoals done.toList
 
 end ValidateFeePayer.Proof
