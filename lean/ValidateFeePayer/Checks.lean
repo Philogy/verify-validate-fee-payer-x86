@@ -16,22 +16,22 @@ theorem got_targets :
 
 theorem functions_are_code : functions.all (·.contents.isCode) := by decide
 
-theorem panic_unmapped : regions.all fun r => !decide (r.Contains Image.panicEntry) := by decide
+theorem panic_unmapped : regions.all fun r => !decide (r.Contains Image.panicEntry.off) := by decide
 
 theorem panic_objects_unmapped :
     [panic_msg, panic_location, panic_location_file].all fun a =>
-      decide (reservedStart ≤ a ∧ a.toNat < reservedEnd) && regions.all fun r => !decide (r.Contains a) := by
+      decide (reservedStart.off ≤ a.off ∧ a.off.toNat < reservedEnd) && regions.all fun r => !decide (r.Contains a.off) := by
   set_option maxRecDepth 5000 in decide
 
 theorem regions_nonempty : regions.all (0 < ·.size) := by
   set_option maxRecDepth 5000 in decide
 
-theorem regions_within_reserved : regions.all fun r => reservedStart ≤ r.address ∧ r.endAddress ≤ reservedEnd := by
+theorem regions_within_reserved : regions.all fun r => reservedStart.off ≤ r.address.off ∧ r.endAddress ≤ reservedEnd := by
   set_option maxRecDepth 5000 in decide
 
 theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBase) {r : Region}
     (hr : r ∈ regions) :
-    (r.mapping loadBase).base.toNat = loadBase.toNat + r.address.toNat ∧
+    (r.mapping loadBase).base.toNat = loadBase.toNat + r.address.off.toNat ∧
       (r.mapping loadBase).endAddress = loadBase.toNat + r.endAddress := by
   have hne := List.all_eq_true.1 regions_nonempty r hr
   have hle := List.all_eq_true.1 regions_within_reserved r hr
@@ -39,8 +39,8 @@ theorem Region.mapping_bounds {loadBase : UInt64} (hBase : ValidLoadBase loadBas
   have hs := Contents.size_bytesAt (c := r.contents) (loadBase := loadBase) rfl
   unfold ValidLoadBase at hBase
   unfold Region.endAddress Region.size at *
-  have : loadBase.toNat + r.address.toNat < 2 ^ 64 := by omega
-  simp only [Region.mapping, Mapping.endAddress, UInt64.toNat_add, Nat.mod_eq_of_lt this]
+  have : loadBase.toNat + r.address.off.toNat < 2 ^ 64 := by omega
+  simp only [Region.mapping, ImageOffset.at, Mapping.endAddress, UInt64.toNat_add, Nat.mod_eq_of_lt this]
   exact ⟨trivial, by omega⟩
 
 theorem imageMappings_disjoint {loadBase : UInt64} (hBase : ValidLoadBase loadBase) :

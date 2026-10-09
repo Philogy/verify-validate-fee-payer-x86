@@ -30,8 +30,8 @@ def sweep : (fuel : Nat) → (address : UInt64) → List UInt8 →
 
 def sweepRegion (r : Region) : Except (UInt64 × DecodeError) (List Decoded) :=
   match r.contents with
-  | .code bytes => sweep bytes.size r.address bytes.toList
-  | _ => throw (r.address, .unsupported "not a code region")
+  | .code bytes => sweep bytes.size r.address.off bytes.toList
+  | _ => throw (r.address.off, .unsupported "not a code region")
 
 def sweepImage : Except (UInt64 × DecodeError) (List Decoded) := do
   return (← Image.functions.mapM sweepRegion).flatten
@@ -48,7 +48,7 @@ def instructionAt (address : UInt64) : Option Decoded := listing.find? (·.addre
 def codeByte (address : UInt64) : Except PageFault UInt8 :=
   match Image.functions.find? (fun r => decide (r.Contains address)) with
   | some { address := start, contents := .code bytes, .. } =>
-    match bytes[address.toNat - start.toNat]? with
+    match bytes[address.toNat - start.off.toNat]? with
     | some b => .ok b
     | none => .error (.unmapped address .fetch)
   | _ => .error (.unmapped address .fetch)

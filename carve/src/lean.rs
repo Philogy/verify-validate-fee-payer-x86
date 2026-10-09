@@ -69,7 +69,7 @@ namespace ValidateFeePayer.Image
     }
     for o in &address_only {
         s += &format!(
-            "\n/-- {} -/\ndef {} : UInt64 := {:#x}\n",
+            "\n/-- {} -/\ndef {} : ImageOffset := {:#x}\n",
             o.description, o.name, o.vaddr
         );
     }
@@ -85,11 +85,11 @@ def regions : List Region := functions ++ data
 
 /-- From the lowest `p_vaddr` to the highest `p_vaddr + p_memsz` of the source
 binary's `PT_LOAD` segments. -/
-def reservedStart : UInt64 := {:#x}
+def reservedStart : ImageOffset := {:#x}
 def reservedEnd : Nat := {:#x}
 
 /-- `{}`, not carved. -/
-def panicEntry : UInt64 := {:#x}
+def panicEntry : ImageOffset := {:#x}
 
 /-! Measured on x86_64-linux with the validator's toolchain; offsets in bytes. -/
 namespace Layout

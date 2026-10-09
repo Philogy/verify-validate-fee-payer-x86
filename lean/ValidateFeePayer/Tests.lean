@@ -190,7 +190,7 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
   | .badJump s => s.instructionPointer == data | _ => false
 
 /-! What was not carved is unmapped, though the code takes its address. -/
-#guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (0x555555554000 + Image.panic_msg)) with
+#guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (Image.panic_msg.at 0x555555554000)) with
   | .error (.unmapped _ _) => true | _ => false
 
 /-! `Pre` is satisfiable: it holds of a concrete entry state. -/

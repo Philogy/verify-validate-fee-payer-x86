@@ -32,7 +32,7 @@ theorem codeByte_mapped {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b
     simp only [decide_eq_true_eq, Region.endAddress, Region.size, hcode, Contents.size] at this
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   unfold Mapping.Contains Mapping.endAddress
-  simp only [Region.mapping, hbytes] at hbase hend ⊢
+  simp only [Region.mapping, ImageOffset.at, hbytes] at hbase hend ⊢
   rw [hx]; omega
 
 theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
@@ -46,9 +46,9 @@ theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c 
     obtain ⟨r, hr, hc⟩ := codeByte_in_regions hx
     have := List.all_eq_true.1 panic_unmapped r hr
     simp only [Bool.not_eq_true', decide_eq_false_iff_not] at this
-    have hxp : x = Image.panicEntry := by
-      have he : c.loadBase + x = c.loadBase + Image.panicEntry := by
-        simpa [Call.exits, panicAddress] using e
+    have hxp : x = Image.panicEntry.off := by
+      have he : c.loadBase + x = c.loadBase + Image.panicEntry.off := by
+        simpa [Call.exits, panicAddress, ImageOffset.at] using e
       exact (UInt64.add_right_inj c.loadBase).mp he
     exact absurd (hxp ▸ hc) this
 

@@ -244,7 +244,7 @@ macro_rules
          · simp only [Call.exits, ($e).returnAddress])
       | (refine (Finishes.panicked ?_ ?_ ?_).mono (by omega)
          · simp only [Call.exits, ($e).returnAddress]; exact fun h => ($e).notPanic h.symm
-         · simp only [Call.exits, panicAddress, Image.panicEntry, ($e).loadBase])
+         · simp only [Call.exits, panicAddress, ImageOffset.at, Image.panicEntry, ($e).loadBase]; rfl)
     have path := ($e).dataLength
     have := ($e).result_data
     have := ($e).account_data

@@ -132,13 +132,13 @@ def got_check_static_account_rent_state_transition : Region where
   contents := .pointer 0x27f3790
 
 /-- file name referenced by panic_location -/
-def panic_location_file : UInt64 := 0x2b5e4d
+def panic_location_file : ImageOffset := 0x2b5e4d
 
 /-- message of the expect() in Rent::minimum_balance; passed to expect_failed -/
-def panic_msg : UInt64 := 0x60cd1c
+def panic_msg : ImageOffset := 0x60cd1c
 
 /-- core::panic::Location { /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-rent-4.5.0/src/lib.rs, line 120, col 14 }; passed to expect_failed -/
-def panic_location : UInt64 := 0x3759860
+def panic_location : ImageOffset := 0x3759860
 
 def functions : List Region := [validate_fee_payer, check_static_account_rent_state_transition]
 
@@ -148,11 +148,11 @@ def regions : List Region := functions ++ data
 
 /-- From the lowest `p_vaddr` to the highest `p_vaddr + p_memsz` of the source
 binary's `PT_LOAD` segments. -/
-def reservedStart : UInt64 := 0x0
+def reservedStart : ImageOffset := 0x0
 def reservedEnd : Nat := 0x3a423d4
 
 /-- `_RNvNtCsgxBkk5gSRhY_4core6option13expect_failed`, not carved. -/
-def panicEntry : UInt64 := 0x12be100
+def panicEntry : ImageOffset := 0x12be100
 
 /-! Measured on x86_64-linux with the validator's toolchain; offsets in bytes. -/
 namespace Layout

@@ -8,12 +8,12 @@ open X86 Memory
 
 theorem bytes_data {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
     {bytes : ByteArray} (hb : r.contents.bytesAt lb = bytes) {k n : Nat} (hn : k + n ≤ bytes.size) :
-    m.bytes .read (lb + r.address + k.toUInt64) n = .ok ((List.range n).map fun i => bytes.data[k + i]!) := by
+    m.bytes .read (lb + r.address.off + k.toUInt64) n = .ok ((List.range n).map fun i => bytes.data[k + i]!) := by
   unfold Memory.bytes
   apply mapM_ok
   intro i hi
   have hi : i < n := by simpa using hi
-  have e : lb + r.address + k.toUInt64 + i.toUInt64 = lb + r.address + (k + i).toUInt64 := by
+  have e : lb + r.address.off + k.toUInt64 + i.toUInt64 = lb + r.address.off + (k + i).toUInt64 := by
     rw [UInt64.add_assoc]; congr 1
     simp only [Nat.toUInt64_eq]
     apply UInt64.toNat_inj.1
@@ -30,7 +30,7 @@ theorem bytesAt_constant {c : Contents} {lb : UInt64} {bytes : ByteArray} (h : c
 
 /-- A constant region read at byte `k`. -/
 macro "constant_read" r:term:max a:num k:num : tactic => `(tactic| (
-  rw [show ($a : UInt64) = ($r).address + (($k : Nat).toUInt64) from rfl, ← UInt64.add_assoc]
+  rw [show ($a : UInt64) = ($r).address.off + (($k : Nat).toUInt64) from rfl, ← UInt64.add_assoc]
   first
     | rw [Memory.read128, bytes_data ‹DataAt _ _› (by simp [Image.data]) (bytesAt_constant rfl) (by decide)]
     | rw [Memory.read, bytes_data ‹DataAt _ _› (by simp [Image.data]) (bytesAt_constant rfl) (by decide)]
@@ -45,18 +45,18 @@ theorem read128_systemProgramId_high {lb : UInt64} {m : Memory} (hd : DataAt lb 
   constant_read Image.system_program_id 0x2f1070 16
 
 theorem read_got {lb : UInt64} {m : Memory} (hd : DataAt lb m) {r : Region} (hr : r ∈ Image.data)
-    {target : UInt64} (ht : r.contents = .pointer target) :
-    m.read .bits64 (lb + r.address) = .ok (lb + target) := by
-  have hb : r.contents.bytesAt lb = ⟨(littleEndianBytes 8 (lb + target)).toArray⟩ := by
-    simp [ht, Contents.bytesAt]
+    {target : ImageOffset} (ht : r.contents = .pointer target) :
+    m.read .bits64 (lb + r.address.off) = .ok (lb + target.off) := by
+  have hb : r.contents.bytesAt lb = ⟨(littleEndianBytes 8 (lb + target.off)).toArray⟩ := by
+    simp [ht, Contents.bytesAt, ImageOffset.at]
   have := bytes_data hd hr hb (k := 0) (n := 8) (by simp [ByteArray.size, length_littleEndianBytes])
-  rw [show lb + r.address = lb + r.address + (0 : Nat).toUInt64 by simp, Memory.read, OperandSize.byteCount, this]
+  rw [show lb + r.address.off = lb + r.address.off + (0 : Nat).toUInt64 by simp, Memory.read, OperandSize.byteCount, this]
   simp only [bind, Except.bind, pure, Except.pure, Except.ok.injEq]
-  have e : ((List.range 8).map fun i => (littleEndianBytes 8 (lb + target)).toArray[0 + i]!) =
-      littleEndianBytes 8 (lb + target) := by
+  have e : ((List.range 8).map fun i => (littleEndianBytes 8 (lb + target.off)).toArray[0 + i]!) =
+      littleEndianBytes 8 (lb + target.off) := by
     simp [littleEndianBytes, List.range_succ]
   rw [e]
-  have := ofLittleEndian_littleEndianBytes .bits64 (lb + target)
+  have := ofLittleEndian_littleEndianBytes .bits64 (lb + target.off)
   simp only [OperandSize.byteCount, OperandSize.mask] at this
   rw [this, ValidateFeePayer.Proof.and_allOnes]
 

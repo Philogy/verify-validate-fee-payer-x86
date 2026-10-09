@@ -40,7 +40,7 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   r13 : s.register .r13 = r13
   r14 : s.register .r14 = r14
   r15 : s.register .r15 = r15
-  notPanic : ra ≠ lb + Image.panicEntry
+  notPanic : ra ≠ lb + Image.panicEntry.off
   codeExits : CodeExits lb c.exits
   code : CodeAt lb m
   data : DataAt lb m
