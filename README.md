@@ -84,10 +84,9 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   `Loader` (the image mapped at `loadBase`), `Code` (a linear sweep with the
   generic decoder, used only by checks and proofs), `Checks` (kernel-checked
   facts: regions disjoint, sweep equals llvm-objdump's disassembly, decoding
-  from memory equals the sweep), `Spec` (the Rust functions as pure Lean:
-  a panic or a `TransactionError` is an `Error`, the metrics a function of
-  the error), `Spec.RustShaped` (statement by statement, the `&mut`
-  arguments as state) and `Equivalence` (the two agree), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
+  from memory equals the sweep), `Spec` (the Rust functions in Lean:
+  a panic or a `TransactionError` is an `Error`, the `&mut` error metrics
+  state that survives errors), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
   theorem; its proof is the package's only `sorry`), `Tests` (machine
   against `Spec` on concrete inputs).
 

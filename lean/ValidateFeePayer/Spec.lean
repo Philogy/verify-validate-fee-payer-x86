@@ -3,13 +3,11 @@ import X86.Bytes
 
 /-!
 `validate_fee_payer` (`svm/src/account_loader.rs` at the pinned Agave commit)
-and what it calls, as pure Lean functions over the values its arguments
-point to. Names follow the Rust source; `Option` is Rust's `Option`. A Rust
-panic and a returned `TransactionError` are the two kinds of `Error`. The
-`&mut` account is returned on success; the `&mut` error metrics are a
-function of the error alone (`TransactionError.metric?`), so they are not
-threaded through. `RustShaped` keeps the version that mirrors the Rust
-statements and `Equivalence` relates the two.
+and what it calls, as Lean functions over the values its arguments point to.
+Names follow the Rust source; `Option` is Rust's `Option`. A Rust panic and a
+returned `TransactionError` are the two kinds of `Error`. The `&mut` error
+metrics are state that survives an error; the `&mut` account is returned on
+success only, since after an error the caller drops it.
 
 Arithmetic is on `UInt64` with wrapping, as in a release build (no overflow
 checks); the Rust source uses `checked_sub` where it needs checking.
@@ -63,17 +61,6 @@ inductive Error where
 
 instance : MonadLift (Except Panic) (Except Error) := ⟨Except.mapError .panic⟩
 
-inductive Metric where
-  | accountNotFound | invalidAccountForFee | insufficientFunds
-  deriving DecidableEq, Repr
-
-/-- The counter `validate_fee_payer` increments before returning `e`. -/
-def TransactionError.metric? : TransactionError → Option Metric
-  | .accountNotFound => some .accountNotFound
-  | .invalidAccountForFee => some .invalidAccountForFee
-  | .insufficientFundsForFee => some .insufficientFunds
-  | .insufficientFundsForRent _ => none
-
 def UInt64.MIN : UInt64 := 0
 def UInt64.MAX : UInt64 := 0xffffffffffffffff
 theorem UInt64.MIN_is_min : ∀ (x : UInt64), UInt64.MIN ≤ x := by grind [MIN]
@@ -81,17 +68,6 @@ theorem UInt64.MAX_is_max : ∀ (x : UInt64), x ≤ UInt64.MAX := by grind [MAX]
 
 /-- `+= 1` on a `Saturating<usize>`. -/
 def saturatingIncrement (c : UInt64) : UInt64 := if c = UInt64.MAX then c else c + 1
-
-def ErrorMetrics.increment (m : ErrorMetrics) : Metric → ErrorMetrics
-  | .accountNotFound => { m with accountNotFound := saturatingIncrement m.accountNotFound }
-  | .invalidAccountForFee => { m with invalidAccountForFee := saturatingIncrement m.invalidAccountForFee }
-  | .insufficientFunds => { m with insufficientFunds := saturatingIncrement m.insufficientFunds }
-
-/-- The metrics after `validate_fee_payer` returned `e`. -/
-def ErrorMetrics.record (m : ErrorMetrics) (e : TransactionError) : ErrorMetrics :=
-  match e.metric? with
-  | some k => m.increment k
-  | none => m
 
 /-! ## `solana-rent` 4.5.0 -/
 
@@ -113,32 +89,26 @@ def f64ToU64 (x : UInt64) : UInt64 :=
     let t := (F64.scaled x).toNat / 2 ^ 1074
     if t ≥ UInt64.size then UInt64.MAX else t.toUInt64
 
-/-- `exemption_threshold` is a deprecated field ("empty space"), kept only for
+/-- `Rent::minimum_balance`: `try_minimum_balance` and its `expect`.
+
+`exemption_threshold` is a deprecated field ("empty space"), kept only for
 the 17-byte `Rent` layout: SIMD-0194 (feature `rent6iVy6PDoViPBeJ6k5EJQrkj62h7DPyLbWGHwjrC`)
 folded it into `lamports_per_byte` (3480 × 2.0 → 6960 × 1.0; Agave
 `runtime/src/rent_collector.rs:49`, `bank.rs:6337`, `bank.rs:6412`). Per SIMD-0607 it
 is 1.0 on mainnet-beta since epoch 943 and was 2.0 before, so in production
 only the integer paths run; the `f64` path needs a non-standard genesis, the
 `[0; 8]` snapshot default, or a malformed sysvar. -/
-def minimumBalanceUnchecked (rent : Rent) (dataLength : UInt64) : UInt64 :=
+def minimumBalance (rent : Rent) (dataLength : UInt64) : Except Panic UInt64 := do
+  if dataLength > maxPermittedDataLength ∨
+      (rent.lamportsPerByte > currentMaxLamportsPerByte ∧
+        rent.exemptionThreshold = currentExemptionThreshold) ∨
+      (rent.lamportsPerByte > simd0194MaxLamportsPerByte ∧
+        rent.exemptionThreshold = simd0194ExemptionThreshold) then
+    throw .maximumPermittedDataLengthExceeded
   let bytes := accountStorageOverhead + dataLength
-  if rent.exemptionThreshold = simd0194ExemptionThreshold then bytes * rent.lamportsPerByte
-  else if rent.exemptionThreshold = currentExemptionThreshold then 2 * bytes * rent.lamportsPerByte
-  else f64ToU64 (F64.mul (u64ToF64 (bytes * rent.lamportsPerByte)) rent.exemptionThreshold).1
-
-def tryMinimumBalance (rent : Rent) (dataLength : UInt64) : Option UInt64 :=
-  if dataLength > maxPermittedDataLength then none
-  else if (rent.lamportsPerByte > currentMaxLamportsPerByte ∧
-      rent.exemptionThreshold = currentExemptionThreshold) ∨
-    (rent.lamportsPerByte > simd0194MaxLamportsPerByte ∧
-      rent.exemptionThreshold = simd0194ExemptionThreshold) then none
-  else some (minimumBalanceUnchecked rent dataLength)
-
-/-- `Rent::minimum_balance`: the `expect` on `try_minimum_balance`. -/
-def minimumBalance (rent : Rent) (dataLength : UInt64) : Except Panic UInt64 :=
-  match tryMinimumBalance rent dataLength with
-  | some v => .ok v
-  | none => .error .maximumPermittedDataLengthExceeded
+  if rent.exemptionThreshold = simd0194ExemptionThreshold then return bytes * rent.lamportsPerByte
+  if rent.exemptionThreshold = currentExemptionThreshold then return 2 * bytes * rent.lamportsPerByte
+  return f64ToU64 (F64.mul (u64ToF64 (bytes * rent.lamportsPerByte)) rent.exemptionThreshold).1
 
 /-! ## `solana-nonce-account` 5.0.0 -/
 
@@ -204,16 +174,24 @@ def checkStaticAccountRentStateTransition (preBalance postBalance dataSize : UIn
 /-! ## `svm/src/account_loader.rs` -/
 
 def validateFeePayer (account : Account) (payerIndex : UInt16) (rent : Rent) (fee : UInt64)
-    (relax : Bool) : Except Error Account := do
-  if account.lamports = 0 then throw (.tx .accountNotFound)
-  let some kind := systemAccountKind account | throw (.tx .invalidAccountForFee)
+    (relax : Bool) : ExceptT Error (StateM ErrorMetrics) Account := do
+  if account.lamports = 0 then
+    modify fun m => { m with accountNotFound := saturatingIncrement m.accountNotFound }
+    throw (.tx .accountNotFound)
+  let some kind := systemAccountKind account
+    | modify fun m => { m with invalidAccountForFee := saturatingIncrement m.invalidAccountForFee }
+      throw (.tx .invalidAccountForFee)
   let minBalance ← match kind with
     | .system => pure 0
     | .nonce => minimumBalance rent nonceStateSize.toUInt64
-  if account.lamports.toNat < fee.toNat + minBalance.toNat then throw (.tx .insufficientFundsForFee)
-  let postBalance := account.lamports - fee
-  checkStaticAccountRentStateTransition account.lamports postBalance account.data.length.toUInt64
-    rent payerIndex relax
+  if account.lamports.toNat < fee.toNat + minBalance.toNat then
+    modify fun m => { m with insufficientFunds := saturatingIncrement m.insufficientFunds }
+    throw (.tx .insufficientFundsForFee)
+  let preBalance := account.lamports
+  if preBalance < fee then throw (.tx .insufficientFundsForFee)
+  let postBalance := preBalance - fee
+  checkStaticAccountRentStateTransition preBalance postBalance account.data.length.toUInt64 rent
+    payerIndex relax
   return { account with lamports := postBalance }
 
 end ValidateFeePayer.Spec

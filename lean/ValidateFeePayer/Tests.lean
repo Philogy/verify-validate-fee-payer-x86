@@ -93,15 +93,14 @@ def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read 
 
 def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.counters⟩
 
-def Case.expected (c : Case) : Except Spec.Error Spec.Account :=
-  Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax
+def Case.expected (c : Case) : Except Spec.Error Spec.Account × Spec.ErrorMetrics :=
+  (Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax).run.run c.metrics
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
   let call := c.call
-  let returned (s : State) (r : Except Spec.TransactionError Spec.Account) :=
+  let returned (s : State) (r : Except Spec.TransactionError Spec.Account) (metrics : Spec.ErrorMetrics) :=
     let counter (offset : Nat) := read s .bytes8 (off call.errorMetrics offset)
-    let metrics := match r with | .ok _ => c.metrics | .error e => c.metrics.record e
     read s .bytes4 call.result == some (resultTag (r.map fun _ => ())).toUInt64 &&
     (match r with
      | .error (.insufficientFundsForRent i) => read s .bytes1 (off call.result result.account_index) == some i.toUInt64
@@ -115,9 +114,9 @@ def Case.agrees (c : Case) : Bool :=
     s.register .accumulator == call.result && s.stackPointer == c.state.stackPointer + 8 &&
     calleeSaved.all fun r => s.register r == c.state.register r
   match c.expected, c.run with
-  | .error (.panic _), .panicked _ => true
-  | .error (.tx e), .returned s => returned s (.error e)
-  | .ok account, .returned s => returned s (.ok account)
+  | (.error (.panic _), _), .panicked _ => true
+  | (.error (.tx e), metrics), .returned s => returned s (.error e) metrics
+  | (.ok account, metrics), .returned s => returned s (.ok account) metrics
   | _, _ => false
 
 def Case.outcome (c : Case) : String :=

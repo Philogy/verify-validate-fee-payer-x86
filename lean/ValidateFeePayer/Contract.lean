@@ -165,15 +165,13 @@ def Call.Written (c : Call) (sp a : UInt64) : Prop :=
   inside (sp - stackUse.toUInt64) stackUse
 
 /-- The state `s'` after a normal return from entry state `s`, for which the
-spec gave `result`. After an error the account is only bound by the frame:
-the code may have written the lamports already. -/
+spec gave `result` and left `metrics`. After an error the account is only
+bound by the frame: the code may have written the lamports already. -/
 structure Post (c : Call) (s : State) (metrics : Spec.ErrorMetrics)
     (result : Except Spec.TransactionError Spec.Account) (s' : State) : Prop where
   resultEncoded : ResultEncodes s'.memory c.result (result.map fun _ => ())
   accountEncoded : ∀ account, result = .ok account → account.Encodes s'.memory c.account
-  metricsEncoded : (match result with
-    | .ok _ => metrics
-    | .error e => metrics.record e).Encodes s'.memory c.errorMetrics
+  metricsEncoded : metrics.Encodes s'.memory c.errorMetrics
   returnsResultPointer : s'.register .accumulator = c.result
   stackPopped : s'.stackPointer = s.stackPointer + 8
   calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r
