@@ -3,7 +3,7 @@ import ValidateFeePayer.Proof.Correctness
 
 /-!
 The correctness theorem. Its statement lives here; the proof is in
-`ValidateFeePayer/Proof/`, reduced to the one symbolic-execution `sorry`.
+`ValidateFeePayer/Proof/`.
 -/
 
 namespace ValidateFeePayer

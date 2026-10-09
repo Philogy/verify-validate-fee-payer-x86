@@ -118,6 +118,9 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   alignedBase : c.loadBase % 16 = 0
   -- Otherwise the code could "return" by jumping into itself.
   returnOutsideImage : ∀ mp ∈ imageMappings c.loadBase, ¬ mp.Contains c.returnAddress
+  -- Reaching the panic entry would count as a return; a caller's return
+  -- address is in its own code, never at `expect_failed`.
+  returnNotPanic : c.returnAddress ≠ panicAddress c.loadBase
   entry : s.instructionPointer = entryAddress c.loadBase
   resultRegister : s.register .destinationIndex = c.result
   accountRegister : s.register .sourceIndex = c.account.account
