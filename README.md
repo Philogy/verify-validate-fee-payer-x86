@@ -90,7 +90,8 @@ hold `B + value` instead of `value`. The manifest lists them per object.
 
 The theorem: from any state satisfying `Pre` (arguments where SysV puts
 them, each pointing at an encoding of a Lean value, enough free stack,
-disjoint objects, an exemption threshold of `1.0` or `2.0`, a return address
+disjoint objects, nothing but the carved image mapped in the binary's span,
+an exemption threshold of `1.0` or `2.0`, a return address
 other than the panic entry), `run` with at least 240 steps of fuel ends in
 `panicked` exactly when `Spec.validateFeePayer` throws a `Panic`, and
 otherwise in `returned` with the result, the metrics and, on success, the
@@ -102,6 +103,13 @@ and `Quot.sound` only.
 The threshold is `1.0` on mainnet since SIMD-0194 and `2.0` before; other
 values take the `f64` path in `Rent::minimum_balance`, which the proof does
 not cover.
+
+The loader maps the carved regions inside the span the source binary's
+`PT_LOAD` segments occupy (`Image.reservedStart`..`reservedEnd`, here
+`[0, 0x3a423d4)`) and leaves the rest of that span unmapped. Whatever was not
+carved therefore faults when touched rather than holding assumed bytes;
+forgetting something can only add a fault, never an unsound read. The
+panic's message and `Location` are just addresses in that span.
 
 `check_static_account_rent_state_transition` is carved and called through
 its GOT slot like any other code, so it needs no contract. Only
@@ -128,9 +136,12 @@ workspace's plus `iced-x86`; shared dependencies have the same versions.
   instructions of the carved code, and calls only through relocated pointer
   slots aimed at a carved function or at `core::option::expect_failed`. Fixed
   memory may only be read or `lea`'d, and only rip-relative.
-- `data.rs`: carves exactly the bytes the code reads, plus the objects whose
-  addresses are passed to the panic. Each must be recognised by content (e.g.
+- `data.rs`: carves exactly the bytes the code reads, and identifies the
+  objects whose addresses are passed to the panic (only their addresses go
+  into `Image.lean`). Each must be recognised by content (e.g.
   `solana_sdk_ids::system_program::ID`) or by what it points to.
+- `elf.rs`: the reserved span, from the lowest `p_vaddr` to the highest
+  `p_vaddr + p_memsz` over the `PT_LOAD` segments.
 - `layout.rs`: measures `AccountSharedData` (including the `Arc<Vec<u8>>`
   behind it), `Rent`, `TransactionErrorMetrics` and
   `Result<(), TransactionError>` on x86_64-linux, and checks that the `Result`
