@@ -1,0 +1,2 @@
+failures=1
+u.txt: outcomes without vectors

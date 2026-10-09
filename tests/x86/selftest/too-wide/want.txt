@@ -1,0 +1,2 @@
+failures=1
+does not fit in 64 bits

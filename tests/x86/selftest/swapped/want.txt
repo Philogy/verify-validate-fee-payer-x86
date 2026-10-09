@@ -1,0 +1,2 @@
+failures=2
+OUTCOME t.txt

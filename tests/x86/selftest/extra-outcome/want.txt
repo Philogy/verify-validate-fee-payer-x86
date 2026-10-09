@@ -1,0 +1,2 @@
+failures=1
+vectors but 4 expected outcomes

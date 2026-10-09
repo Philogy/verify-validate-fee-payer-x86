@@ -31,7 +31,7 @@ mov rax, qword ptr [rip + 0x0] | 488b0500000000 | at=0xff9
 movabs rax, 0x1122334455667788 | 48b88877665544332211 | at=0xff8
 jmp 0x40001000 | e900000000 | at=0xffb
 je 0x40001006 | 0f8402000000 | at=0xffe flags=Z
-mov rax, qword ptr [rbx] | 488b03 | rbx=0x100000000000000 known=noncanonical
-mov qword ptr [rbx], rax | 488903 | rbx=0x100000000001000 known=noncanonical
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x100000000000000 known=noncanonical:pagefault_unmapped_0x100000000000000
+mov qword ptr [rbx], rax | 488903 | rbx=0x100000000001000 known=noncanonical:pagefault_unmapped_0x100000000001000
 ud2 | 0f0b | 
 lock mov rax, rbx | f04889d8 | 

@@ -1,0 +1,1 @@
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x50002000

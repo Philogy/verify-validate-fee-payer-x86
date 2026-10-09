@@ -95,24 +95,36 @@ def setFlag (fs : Flags) (f : Flag) (v : Option Bool) : Flags :=
   | .auxiliaryCarry => { fs with auxiliaryCarry := v } | .zero => { fs with zero := v }
   | .sign => { fs with sign := v } | .overflow => { fs with overflow := v }
 
+/-- A field's value as a number below `2 ^ bits`. -/
+def fieldNumber (key value : String) (bits : Nat) : Except String Nat := do
+  let some n := hexValue value | throw s!"bad value {key}={value}"
+  unless n < 2 ^ bits do throw s!"{key}={value} does not fit in {bits} bits"
+  return n
+
 def applyField (s : State) (key value : String) : Except String State := do
-  let num := (hexValue value).getD 0
   if let some i := (List.range 16).find? (registerName · == key) then
-    return { s with registers := s.registers.set! i num.toUInt64 }
+    return { s with registers := s.registers.set! i (← fieldNumber key value 64).toUInt64 }
   if key.startsWith "xmm" then
     let some i := (key.drop 3).toNat? | throw s!"bad register {key}"
-    return { s with xmm := s.xmm.set! i (BitVec.ofNat 128 num) }
+    unless i < 16 do throw s!"bad register {key}"
+    return { s with xmm := s.xmm.set! i (BitVec.ofNat 128 (← fieldNumber key value 128)) }
   match key with
-  | "at" => return { s with rip := codePage + num.toUInt64 }
+  | "at" =>
+    let at_ ← fieldNumber key value 64
+    unless at_ < pageSize do throw s!"at={value} is outside the code page"
+    return { s with rip := codePage + at_.toUInt64 }
   | "flags" =>
+    unless value != "" && value.all (fun c => c == '-' || flagLetters.contains c) do throw s!"bad flags {value}"
     let set := flagsOf value
     return { s with rflags := flagOrder.foldl (fun fs f => setFlag fs f (some (set.contains f))) s.rflags }
-  | "mxcsr" => return { s with mxcsr := num.toUInt32 }
+  | "mxcsr" => return { s with mxcsr := (← fieldNumber key value 32).toUInt32 }
   | "known" => return s
   | "mem" =>
     let [address, bytes] := value.splitOn ":" | throw s!"bad mem {value}"
     let some a := hexValue address | throw s!"bad address {address}"
+    unless a < 2 ^ 64 do throw s!"bad address {address}"
     let some bs := hexBytes bytes | throw s!"bad bytes {bytes}"
+    if bs.isEmpty then throw s!"bad bytes {bytes}"
     return { s with memory := poke s.memory a.toUInt64 bs }
   | _ => throw s!"unknown field {key}"
 
@@ -125,11 +137,35 @@ def fields (s : String) : List (String × String) :=
 def parseVector (line : String) : Except String Vector := do
   let [asm, hex, rest] := line.splitOn "|" | throw "expected 'asm | bytes | fields'"
   let some bytes := hexBytes hex.trimAscii.toString | throw s!"bad bytes {hex}"
+  if bytes.isEmpty || bytes.length > 15 then throw s!"bad bytes {hex}"
   let fs := fields rest
-  let at_ := ((fs.lookup "at").bind hexValue).getD defaultAt.toNat
+  let at_ ← match fs.lookup "at" with
+    | some value => fieldNumber "at" value 12
+    | none => pure defaultAt.toNat
   let state ← fs.foldlM (fun s (k, v) => applyField s k v) (initialState bytes at_.toUInt64)
   let state := { state with memory := flatten state.memory }
   return { asm := asm.trimAscii.toString, bytes, state, known := fs.lookup "known" }
+
+/-- Each documented deviation (tests/x86/README.md) and the outcome kind the
+CPU gives for it. -/
+def knownDeviations : List (String × String) := [("noncanonical", "gp")]
+
+/-- The kind of an outcome line: `ok`, `gp`, `pagefault unmapped`, ... -/
+def outcomeKind (line : String) : String :=
+  let rest := ((line.splitOn "|").drop 1).headD ""
+  " ".intercalate (((rest.splitOn " ").filter (· ≠ "")).takeWhile fun t => !t.contains '=' && !t.startsWith "0x")
+
+/-- `known=<reason>:<model outcome>`, spaces in the outcome written as `_`:
+the model must print exactly that, and the CPU the kind the deviation names.
+Pinning both sides keeps a change in either from hiding behind the label. -/
+def checkKnown (known model cpu : String) : Except String Unit := do
+  let reason :: pinned := known.splitOn ":" | throw s!"bad known={known}"
+  let some cpuKind := knownDeviations.lookup reason | throw s!"known={reason} is not a documented deviation"
+  let pinned := (":".intercalate pinned).replace "_" " "
+  let modelRest := (((model.splitOn "| ").drop 1).headD "").trimAscii.toString
+  if pinned.isEmpty then throw s!"known={reason} does not pin the model's outcome"
+  if modelRest != pinned then throw s!"model now gives '{modelRest}', not the pinned '{pinned}'"
+  if outcomeKind cpu != cpuKind then throw s!"CPU now gives '{outcomeKind cpu}', not '{cpuKind}'"
 
 def renderFlags (fs : Flags) : String :=
   String.ofList ((flagLetters.zip flagOrder).map fun (c, f) =>

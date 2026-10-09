@@ -759,13 +759,15 @@ def faults(g):
     add("jmp 0x40001000", [("at", "0xffb")], raw="e900000000")
     add("je 0x40001006", [("at", "0xffe"), ("flags", "Z")], raw="0f8402000000")
     # A non-canonical data address raises #GP on the CPU; the model has no notion
-    # of canonical form. `known=` marks a deviation listed in tests/x86/README.md.
+    # of canonical form. `known=` marks a deviation listed in tests/x86/README.md
+    # and pins the model's outcome, spaces as `_`.
     # (Branches to such addresses are left out: Intel faults on the branch, AMD
     # on the fetch after it.) Bit 56 set and 57-63 clear is non-canonical with
     # 5-level paging too, which some CI runners have.
     nc = 0x0100000000000000
-    add("mov rax, qword ptr [rbx]", [("rbx", hexn(nc)), ("known", "noncanonical")])
-    add("mov qword ptr [rbx], rax", [("rbx", hexn(nc + 0x1000)), ("known", "noncanonical")])
+    add("mov rax, qword ptr [rbx]", [("rbx", hexn(nc)), ("known", f"noncanonical:pagefault_unmapped_{hexn(nc)}")])
+    add("mov qword ptr [rbx], rax", [("rbx", hexn(nc + 0x1000)),
+                                     ("known", f"noncanonical:pagefault_unmapped_{hexn(nc + 0x1000)}")])
     # Undefined opcodes, which the decoder rejects too.
     add("ud2", [], raw="0f0b")
     add("lock mov rax, rbx", [], raw="f04889d8")

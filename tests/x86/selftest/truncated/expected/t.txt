@@ -1,0 +1,10 @@
+4500ee | ok rip=0x40000803 flags=-P----
+4528cb | ok rip=0x40000803 r11=0x7d9bcd34ced5279e
+4a01bce3545767c2 | ok rip=0x40000808 flags=----S- mem=0x50000cb9:40ef
+660fefed | ok rip=0x40000804 xmm5=0x00000000000000000000000000000000
+f2410f58f9 | ok rip=0x40000805 xmm7=0x3aa5984c560eccfa0000000000000001 mxcsr=0x1f82
+ebbe | ok rip=0x400007c0
+488b03 | pagefault unmapped 0x50002000
+488903 | pagefault denied 0x50001000
+660f6f03 | gp
+0f0b | ill

@@ -1,0 +1,1 @@
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x100000000000000 known=whatever:pagefault_unmapped_0x100000000000000

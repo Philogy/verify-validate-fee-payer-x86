@@ -1,0 +1,11 @@
+add r14b, r13b | 4500ee | flags=C r14=0x49f73fe0a4f1e574 r13=0x56d4c10931a0aa00
+sub r11b, r9b | 4528cb | flags=AS r11=0x7d9bcd34ced527fd r9=0xe1309fddbfa6405f
+add qword ptr [rbx + 8*r12 - 0x3d98a8ac], rdi | 4a01bce3545767c2 | flags=CPO rdi=0x80 r12=0x18 rbx=0x8d98b4a5 mem=0x50000cb9:c0eea61329b048c0
+pxor xmm5, xmm5 | 660fefed | xmm5=0x5a1184e4128a2a7cde2690bff13737af flags=CPASO xmm5=0x50d24ca68dd307475fdf8618a45261cc
+addsd xmm7, xmm9 | f2410f58f9 | flags=AS xmm7=0x3aa5984c560eccfa0000000000000000 xmm9=0x76657e7746fe11770000000000000001
+jmp 0x400007c0 | ebbe | 
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x50002000
+mov qword ptr [rbx], rax | 488903 | rbx=0x50001000
+movdqa xmm0, xmmword ptr [rbx] | 660f6f03 | rbx=0x50002008
+ud2 | 0f0b | 
+mov rax, qword ptr [rbx] | 488b03 | rbx=0x100000000000000 known=noncanonical:pagefault_unmapped_0x100000000000000
