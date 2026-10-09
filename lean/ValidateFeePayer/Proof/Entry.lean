@@ -37,7 +37,7 @@ theorem codeByte_mapped {lb : UInt64} (hBase : ValidLoadBase lb) {x : UInt64} {b
   simp only [mappingOf] at hbase hend ⊢
   rw [hx]; omega
 
-theorem codeExits_of_pre {c : Call} {refs rent relax s} (pre : Pre c refs rent relax s) :
+theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeExits c.loadBase c.exits where
   notReturn x b hx e := by
     obtain ⟨mp, hmp, hc⟩ := codeByte_mapped pre.validBase hx
@@ -54,12 +54,12 @@ theorem codeExits_of_pre {c : Call} {refs rent relax s} (pre : Pre c refs rent r
       exact (UInt64.add_right_inj c.loadBase).mp he
     exact absurd (hxp ▸ hc) this
 
-theorem codeAt_of_pre {c : Call} {refs rent relax s} (pre : Pre c refs rent relax s) :
+theorem codeAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeAt c.loadBase s.memory := by
   obtain ⟨rest, hrest⟩ := pre.image
   rw [hrest]; exact codeAt_image pre.validBase rest
 
-theorem dataAt_of_pre {c : Call} {refs rent relax s} (pre : Pre c refs rent relax s) :
+theorem dataAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     DataAt c.loadBase s.memory := by
   obtain ⟨rest, hrest⟩ := pre.image
   rw [hrest]; exact dataAt_image pre.validBase rest

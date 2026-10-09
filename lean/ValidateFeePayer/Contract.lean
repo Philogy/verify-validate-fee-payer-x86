@@ -82,9 +82,6 @@ structure Call where
   fee : UInt64
   returnAddress : UInt64
 
-def Spec.MutRefs.Encodes (m : Memory) (c : Call) (x : Spec.MutRefs) : Prop :=
-  x.account.Encodes m c.account ∧ x.metrics.Encodes m c.errorMetrics
-
 def Call.exits (c : Call) : Exits :=
   { returnAddress := c.returnAddress, panicAt := panicAddress c.loadBase }
 
@@ -109,11 +106,11 @@ def Call.footprint (c : Call) (sp : UInt64) (dataLength : Nat) : List (Nat × Na
    interval (sp - stackUse.toUInt64) (stackUse + 16)] ++
   (imageMappings c.loadBase).map fun mp => (mp.base.toNat, mp.endAddress)
 
-/-- The entry state of a call `c` with argument values `refs`, `rent` and
-`relax`, as the System V ABI passes them: the result pointer in
+/-- The entry state of a call `c` with argument values `account`, `metrics`,
+`rent` and `relax`, as the System V ABI passes them: the result pointer in
 `rdi`, then `rsi rdx rcx r8 r9`, the `bool` above the return address. -/
-structure Pre (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool) (s : State) :
-    Prop where
+structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+    (relax : Bool) (s : State) : Prop where
   image : ∃ rest, s.memory = ⟨imageMappings c.loadBase ++ rest⟩
   validBase : ValidLoadBase c.loadBase
   -- The `f64` constants are read with SSE instructions that need 16-byte
@@ -142,15 +139,16 @@ structure Pre (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool)
   -- not exercised. `0x3ff0…` is `1.0`, `0x4000…` is `2.0`.
   integerThreshold : rent.exemptionThreshold = Spec.simd0194ExemptionThreshold ∨
     rent.exemptionThreshold = Spec.currentExemptionThreshold
-  refsEncoded : refs.Encodes s.memory c
+  accountEncoded : account.Encodes s.memory c.account
+  metricsEncoded : metrics.Encodes s.memory c.errorMetrics
   rentEncoded : rent.Encodes s.memory c.rent
   resultWritable : s.memory.Writable c.result result.size
   lamportsWritable : s.memory.Writable (off c.account.account account_shared_data.lamports) 8
   metricsWritable : s.memory.Writable c.errorMetrics transaction_error_metrics.size
   -- `&mut` arguments do not alias in Rust; this is that, plus no overlap
   -- with the stack or the code.
-  disjoint : IntervalsDisjoint (c.footprint s.stackPointer refs.account.data.length)
-  noWrap : ∀ i ∈ c.footprint s.stackPointer refs.account.data.length, i.2 ≤ 2 ^ 64
+  disjoint : IntervalsDisjoint (c.footprint s.stackPointer account.data.length)
+  noWrap : ∀ i ∈ c.footprint s.stackPointer account.data.length, i.2 ≤ 2 ^ 64
 
 def calleeSaved : List Register :=
   [.base, .framePointer, .r12, .r13, .r14, .r15]
@@ -166,11 +164,16 @@ def Call.Written (c : Call) (sp a : UInt64) : Prop :=
   inside (off c.errorMetrics transaction_error_metrics.insufficient_funds) 8 ∨
   inside (sp - stackUse.toUInt64) stackUse
 
-/-- The state `s'` after a normal return from entry state `s`. -/
-structure Post (c : Call) (s : State) (result : Except Spec.TransactionError Unit)
-    (refs : Spec.MutRefs) (s' : State) : Prop where
-  resultEncoded : ResultEncodes s'.memory c.result result
-  refsEncoded : refs.Encodes s'.memory c
+/-- The state `s'` after a normal return from entry state `s`, for which the
+spec gave `result`. After an error the account is only bound by the frame:
+the code may have written the lamports already. -/
+structure Post (c : Call) (s : State) (metrics : Spec.ErrorMetrics)
+    (result : Except Spec.TransactionError Spec.Account) (s' : State) : Prop where
+  resultEncoded : ResultEncodes s'.memory c.result (result.map fun _ => ())
+  accountEncoded : ∀ account, result = .ok account → account.Encodes s'.memory c.account
+  metricsEncoded : (match result with
+    | .ok _ => metrics
+    | .error e => metrics.record e).Encodes s'.memory c.errorMetrics
   returnsResultPointer : s'.register .accumulator = c.result
   stackPopped : s'.stackPointer = s.stackPointer + 8
   calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r

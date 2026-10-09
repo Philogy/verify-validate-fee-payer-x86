@@ -91,27 +91,33 @@ where
 
 def read (s : State) (w : Width) (a : UInt64) : Option UInt64 := (s.memory.read w a).toOption
 
-def Case.expected (c : Case) : Except Spec.Panic (Except Spec.TransactionError Unit × Spec.MutRefs) :=
-  (Spec.validateFeePayer 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax).run
-    ⟨c.account, ⟨c.counters, c.counters, c.counters⟩⟩
+def Case.metrics (c : Case) : Spec.ErrorMetrics := ⟨c.counters, c.counters, c.counters⟩
+
+def Case.expected (c : Case) : Except Spec.Error Spec.Account :=
+  Spec.validateFeePayer c.account 7 ⟨c.lamportsPerByte, c.threshold.toBits⟩ c.fee c.relax
 
 /-- The machine and the spec agree on the outcome and on everything `Post` names. -/
 def Case.agrees (c : Case) : Bool :=
   let call := c.call
-  match c.expected, c.run with
-  | .error _, .panicked _ => true
-  | .ok (r, ⟨account, metrics⟩), .returned s =>
+  let returned (s : State) (r : Except Spec.TransactionError Spec.Account) :=
     let counter (offset : Nat) := read s .bytes8 (off call.errorMetrics offset)
-    read s .bytes4 call.result == some (resultTag r).toUInt64 &&
+    let metrics := match r with | .ok _ => c.metrics | .error e => c.metrics.record e
+    read s .bytes4 call.result == some (resultTag (r.map fun _ => ())).toUInt64 &&
     (match r with
      | .error (.insufficientFundsForRent i) => read s .bytes1 (off call.result result.account_index) == some i.toUInt64
      | _ => true) &&
-    read s .bytes8 (off call.account.account account_shared_data.lamports) == some account.lamports &&
+    (match r with
+     | .ok account => read s .bytes8 (off call.account.account account_shared_data.lamports) == some account.lamports
+     | .error _ => true) &&
     counter transaction_error_metrics.account_not_found == some metrics.accountNotFound &&
     counter transaction_error_metrics.invalid_account_for_fee == some metrics.invalidAccountForFee &&
     counter transaction_error_metrics.insufficient_funds == some metrics.insufficientFunds &&
     s.register .accumulator == call.result && s.stackPointer == c.state.stackPointer + 8 &&
     calleeSaved.all fun r => s.register r == c.state.register r
+  match c.expected, c.run with
+  | .error (.panic _), .panicked _ => true
+  | .error (.tx e), .returned s => returned s (.error e)
+  | .ok account, .returned s => returned s (.ok account)
   | _, _ => false
 
 def Case.outcome (c : Case) : String :=

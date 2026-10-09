@@ -84,9 +84,10 @@ hold `B + value` instead of `value`. The manifest lists them per object.
   `Loader` (the image mapped at `loadBase`), `Code` (a linear sweep with the
   generic decoder, used only by checks and proofs), `Checks` (kernel-checked
   facts: regions disjoint, sweep equals llvm-objdump's disassembly, decoding
-  from memory equals the sweep), `Spec` (the Rust functions as Lean in
-  `SpecM`: the `&mut` arguments as state, a panic as a `Panic` error),
-  `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
+  from memory equals the sweep), `Spec` (the Rust functions as pure Lean:
+  a panic or a `TransactionError` is an `Error`, the metrics a function of
+  the error), `Spec.RustShaped` (statement by statement, the `&mut`
+  arguments as state) and `Equivalence` (the two agree), `Contract` (`Encodes` predicates, `Pre`, `Post`), `Correctness` (the
   theorem; its proof is the package's only `sorry`), `Tests` (machine
   against `Spec` on concrete inputs).
 
@@ -95,7 +96,7 @@ them, each pointing at an encoding of a Lean value, enough free stack,
 disjoint objects), `run` with 240 steps of fuel ends in `panicked` exactly
 when `Spec.validateFeePayer` throws a `Panic` (`lamports_per_byte` above the
 cap for its exemption threshold), and otherwise in `returned` with the
-result and the final `MutRefs` (account and metrics) encoded, callee-saved
+result, the metrics and, on success, the account encoded, callee-saved
 registers restored and every byte outside the result, the lamports, three
 counters and 96 bytes of stack unchanged.
 

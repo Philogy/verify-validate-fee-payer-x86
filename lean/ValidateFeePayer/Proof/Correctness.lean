@@ -1,4 +1,5 @@
 import ValidateFeePayer.Proof.Entry
+import ValidateFeePayer.Proof.RustShaped
 
 /-!
 The proof of `validateFeePayer_correct`.
@@ -7,21 +8,34 @@ The entry conditions of `Pre` are discharged here with the symbolic-execution
 framework (`codeExits_of_pre`, `codeAt_of_pre`): control starts in the carved
 code and neither exit points into it. What remains is the symbolic walk of the
 239 instructions — including the SSE path that computes `Rent::minimum_balance`
-and must match `F64` bit for bit — which is isolated in `symbolicRun`.
+and must match `F64` bit for bit — which is isolated in `symbolicRun`. The walk
+follows the code, so it is stated against `Spec.RustShaped` and transferred to
+`Spec.validateFeePayer` by `Spec.RustShaped.validateFeePayer_agrees`.
 -/
 
 namespace ValidateFeePayer
 
 open X86 ValidateFeePayer.Proof
 
+/-- `Post` with the account and metrics as `Spec.RustShaped` leaves them,
+which also fixes the account after an error. -/
+structure PostRefs (c : Call) (s : State) (result : Except Spec.TransactionError Unit)
+    (refs : Spec.RustShaped.MutRefs) (s' : State) : Prop where
+  resultEncoded : ResultEncodes s'.memory c.result result
+  accountEncoded : refs.account.Encodes s'.memory c.account
+  metricsEncoded : refs.metrics.Encodes s'.memory c.errorMetrics
+  returnsResultPointer : s'.register .accumulator = c.result
+  stackPopped : s'.stackPointer = s.stackPointer + 8
+  calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r
+  frame : ∀ access a, ¬ c.Written s.stackPointer a → s'.memory.byte access a = s.memory.byte access a
+
 /-- What a finished run must look like: it panics exactly when the spec
-panics, and otherwise returns in a state satisfying `Post`. This is the body
-of `validateFeePayer_correct` as a predicate on the outcome. -/
-def Spec.Outcome (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool) (s : State) :
-    X86.Outcome → Prop
-  | .returned s' => ∃ result refs', (Spec.validateFeePayer c.payerIndex rent c.fee relax).run refs
-        = .ok (result, refs') ∧ Post c s result refs' s'
-  | .panicked _ => (Spec.validateFeePayer c.payerIndex rent c.fee relax).run refs
+panics, and otherwise returns in a state satisfying `PostRefs`. -/
+def Spec.Outcome (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+    (relax : Bool) (s : State) : X86.Outcome → Prop
+  | .returned s' => ∃ result refs', (Spec.RustShaped.validateFeePayer c.payerIndex rent c.fee relax).run
+        ⟨account, metrics⟩ = .ok (result, refs') ∧ PostRefs c s result refs' s'
+  | .panicked _ => (Spec.RustShaped.validateFeePayer c.payerIndex rent c.fee relax).run ⟨account, metrics⟩
       = .error .maximumPermittedDataLengthExceeded
   | _ => False
 
@@ -29,31 +43,57 @@ def Spec.Outcome (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bo
 `fuel` steps in an outcome described by `Spec.Outcome`. Proving it is the
 symbolic walk of the code against the spec; the surrounding packaging
 (entry conditions, exit decoding, this reduction) is done. -/
-theorem symbolicRun (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool)
-    (s : State) (pre : Pre c refs rent relax s)
+theorem symbolicRun (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+    (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s)
     (hx : CodeExits c.loadBase c.exits) (hc : CodeAt c.loadBase s.memory) :
-    Proof.Finishes c.exits fuel s (Spec.Outcome c refs rent relax s) := by
+    Proof.Finishes c.exits fuel s (Spec.Outcome c account metrics rent relax s) := by
   sorry
 
-theorem correct (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool)
-    (s : State) (pre : Pre c refs rent relax s) :
-    match (Spec.validateFeePayer c.payerIndex rent c.fee relax).run refs with
-    | .error .maximumPermittedDataLengthExceeded => ∃ s', run c.exits fuel s = .panicked s'
-    | .ok (result, refs') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s result refs' s' := by
-  have hfin := (symbolicRun c refs rent relax s pre (codeExits_of_pre pre) (codeAt_of_pre pre)).run_eq
-    (Nat.le_refl fuel)
+theorem correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
+    (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
+    match Spec.validateFeePayer account c.payerIndex rent c.fee relax with
+    | .error (.panic _) => ∃ s', run c.exits fuel s = .panicked s'
+    | .error (.tx e) => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics (.error e) s'
+    | .ok account' => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics (.ok account') s' := by
+  have hfin := (symbolicRun c account metrics rent relax s pre (codeExits_of_pre pre)
+    (codeAt_of_pre pre)).run_eq (Nat.le_refl fuel)
+  have hagree := Spec.RustShaped.agrees account metrics c.payerIndex rent c.fee relax
   -- `hfin : Spec.Outcome … (run c.exits fuel s)`; read off the two live cases.
   cases hrun : run c.exits fuel s with
   | returned s' =>
     simp only [hrun, Spec.Outcome] at hfin
     obtain ⟨result, refs', hspec, hpost⟩ := hfin
-    rw [hspec]
-    cases result with
-    | ok => exact ⟨s', rfl, hpost⟩
-    | error e => cases e <;> exact ⟨s', rfl, hpost⟩
+    rw [hspec] at hagree
+    have post (r : Except Spec.TransactionError Spec.Account)
+        (hm : refs'.metrics.Encodes s'.memory c.errorMetrics →
+          (match r with | .ok _ => metrics | .error e => metrics.record e).Encodes s'.memory c.errorMetrics)
+        (hr : result = r.map fun _ => ()) (ha : ∀ a, r = .ok a → refs'.account = a) :
+        Post c s metrics r s' :=
+      { resultEncoded := hr ▸ hpost.resultEncoded
+        accountEncoded := fun a h => ha a h ▸ hpost.accountEncoded
+        metricsEncoded := hm hpost.metricsEncoded
+        returnsResultPointer := hpost.returnsResultPointer
+        stackPopped := hpost.stackPopped
+        calleeSavedKept := hpost.calleeSavedKept
+        frame := hpost.frame }
+    cases hv : Spec.validateFeePayer account c.payerIndex rent c.fee relax with
+    | ok account' =>
+      simp only [hv, Spec.RustShaped.Agrees, Except.ok.injEq, Prod.mk.injEq] at hagree
+      obtain ⟨rfl, rfl⟩ := hagree
+      exact ⟨s', rfl, post (.ok account') id rfl fun _ h => by cases h; rfl⟩
+    | error e =>
+      cases e with
+      | panic => simp [hv, Spec.RustShaped.Agrees] at hagree
+      | tx e =>
+        simp only [hv, Spec.RustShaped.Agrees, Except.ok.injEq, Prod.mk.injEq] at hagree
+        obtain ⟨a, rfl, rfl⟩ := hagree
+        exact ⟨s', rfl, post (.error e) id rfl fun _ h => by cases h⟩
   | panicked s' =>
     simp only [hrun, Spec.Outcome] at hfin
-    rw [hfin]; exact ⟨s', rfl⟩
+    rw [hfin] at hagree
+    cases hv : Spec.validateFeePayer account c.payerIndex rent c.fee relax with
+    | ok => simp [hv, Spec.RustShaped.Agrees] at hagree
+    | error e => cases e <;> simp [hv, Spec.RustShaped.Agrees] at hagree ⊢
   | running s' => simp only [hrun, Spec.Outcome] at hfin
   | badJump t s' => simp only [hrun, Spec.Outcome] at hfin
   | undecodable w s' => simp only [hrun, Spec.Outcome] at hfin
