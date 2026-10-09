@@ -38,11 +38,12 @@ theorem symbolicRun (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMet
 
 theorem correct (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) (pre : Pre c account metrics rent relax s) :
-    match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics with
-    | (.error (.panic _), _) => ∃ s', run c.exits fuel s = .panicked s'
-    | (.error (.tx e), metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.error e) s'
-    | (.ok account', metrics') => ∃ s', run c.exits fuel s = .returned s' ∧ Post c s metrics' (.ok account') s' := by
-  have hfin := (symbolicRun c account metrics rent relax s pre).run_eq (Nat.le_refl fuel)
+    ∀ n ≥ fuel, match Spec.validateFeePayer account c.payerIndex rent c.fee relax metrics with
+    | (.error (.panic _), _) => ∃ s', run c.exits n s = .panicked s' ∧ c.Frame s s'
+    | (.error (.tx e), metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post c s metrics' (.error e) s'
+    | (.ok account', metrics') => ∃ s', run c.exits n s = .returned s' ∧ Post c s metrics' (.ok account') s' := by
+  intro n hn
+  have hfin := (symbolicRun c account metrics rent relax s pre).run_eq hn
   unfold Spec.Outcome at hfin
   split
   all_goals rename_i h; rw [h] at hfin; split at hfin <;> simp_all

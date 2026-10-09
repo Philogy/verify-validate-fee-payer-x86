@@ -92,8 +92,10 @@ def stackUse : Nat := 96
 
 def interval (a : UInt64) (n : Nat) : Nat × Nat := (a.toNat, a.toNat + n)
 
+-- An empty interval overlaps nothing: an empty `Vec`'s pointer is dangling
+-- and may be any address.
 def IntervalsDisjoint (l : List (Nat × Nat)) : Prop :=
-  l.Pairwise fun (a, b) (c, d) => b ≤ c ∨ d ≤ a
+  l.Pairwise fun x y => x.1 = x.2 ∨ y.1 = y.2 ∨ x.2 ≤ y.1 ∨ y.2 ≤ x.1
 
 /-- Every object the code touches, as `[start, end)`. -/
 def Call.footprint (c : Call) (sp : UInt64) (dataLength : Nat) : List (Nat × Nat) :=
@@ -113,9 +115,6 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
     (relax : Bool) (s : State) : Prop where
   image : ∃ rest, s.memory = ⟨imageMappings c.loadBase ++ rest⟩
   validBase : ValidLoadBase c.loadBase
-  -- The `f64` constants are read with SSE instructions that need 16-byte
-  -- alignment; the loader's bases are page-aligned anyway.
-  alignedBase : c.loadBase % 16 = 0
   -- Otherwise the code could "return" by jumping into itself.
   returnOutsideImage : ∀ mp ∈ imageMappings c.loadBase, ¬ mp.Contains c.returnAddress
   -- Reaching the panic entry would count as a return; a caller's return
@@ -135,7 +134,6 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   stackAligned : s.stackPointer % 16 = 8
   stackFree : s.memory.Writable (s.stackPointer - stackUse.toUInt64) stackUse
   flags : s.flags = .undefined
-  floatControl : s.floatControl &&& ~~~0x3f = defaultFloatControl
   -- Only the two exemption thresholds that take an integer path in
   -- `Rent::minimum_balance` are covered; the `f64`/`cvttsd2si` path (the SSE
   -- blocks at `0x27f369b` and `0x27f384b`) is excluded, so the `F64` model is
@@ -147,7 +145,12 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   rentEncoded : rent.Encodes s.memory c.rent
   resultWritable : s.memory.Writable c.result result.size
   lamportsWritable : s.memory.Writable (off c.account.account account_shared_data.lamports) 8
-  metricsWritable : s.memory.Writable c.errorMetrics transaction_error_metrics.size
+  accountNotFoundWritable :
+    s.memory.Writable (off c.errorMetrics transaction_error_metrics.account_not_found) 8
+  invalidAccountForFeeWritable :
+    s.memory.Writable (off c.errorMetrics transaction_error_metrics.invalid_account_for_fee) 8
+  insufficientFundsWritable :
+    s.memory.Writable (off c.errorMetrics transaction_error_metrics.insufficient_funds) 8
   -- `&mut` arguments do not alias in Rust; this is that, plus no overlap
   -- with the stack or the code.
   disjoint : IntervalsDisjoint (c.footprint s.stackPointer account.data.length)
@@ -167,6 +170,10 @@ def Call.Written (c : Call) (sp a : UInt64) : Prop :=
   inside (off c.errorMetrics transaction_error_metrics.insufficient_funds) 8 ∨
   inside (sp - stackUse.toUInt64) stackUse
 
+/-- `s'` differs from `s` only in bytes `c` may write. -/
+def Call.Frame (c : Call) (s s' : State) : Prop :=
+  ∀ access a, ¬ c.Written s.stackPointer a → s'.memory.byte access a = s.memory.byte access a
+
 /-- The state `s'` after a normal return from entry state `s`, for which the
 spec gave `result` and left `metrics`. After an error the account is only
 bound by the frame: the code may have written the lamports already. -/
@@ -178,11 +185,11 @@ structure Post (c : Call) (s : State) (metrics : Spec.ErrorMetrics)
   returnsResultPointer : s'.register .accumulator = c.result
   stackPopped : s'.stackPointer = s.stackPointer + 8
   calleeSavedKept : ∀ r ∈ calleeSaved, s'.register r = s.register r
-  frame : ∀ access a, ¬ c.Written s.stackPointer a → s'.memory.byte access a = s.memory.byte access a
+  floatControlKept : s'.floatControl &&& ~~~0x3f = s.floatControl &&& ~~~0x3f
+  frame : c.Frame s s'
 
-/-- The code has no loops (its only backward branch goes to the epilogue), so
-each of its 239 instructions runs at most once; one more step reaches the
-exit. -/
+/-- The control-flow graph is acyclic, so each of the 239 instructions runs
+at most once; one more step reaches the exit. -/
 def fuel : Nat := 240
 
 end ValidateFeePayer

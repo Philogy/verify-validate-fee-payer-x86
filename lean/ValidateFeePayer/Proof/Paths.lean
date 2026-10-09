@@ -20,7 +20,7 @@ open X86
 and the spec values. -/
 structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) (lb S acct arc dat res met rnt fee ra : UInt64)
-    (r2 r3 r5 r12 r13 r14 r15 : UInt64) (o1 o2 : BitVec 128) (m : Memory) : Prop where
+    (r2 r3 r5 r12 r13 r14 r15 : UInt64) (o1 o2 : BitVec 128) (fc : UInt32) (m : Memory) : Prop where
   loadBase : c.loadBase = lb
   accountPtr : c.account.account = acct
   arcInnerPtr : c.account.arcInner = arc
@@ -30,6 +30,7 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   feeArg : c.fee = fee
   returnAddress : c.returnAddress = ra
   memory : s.memory = m
+  floatControl : s.floatControl = fc
   stackPointer : s.stackPointer = S + 96
   -- Only the low 16 bits of `rdx` are the `u16`.
   payerIndex : r2 &&& 0xffff = c.payerIndex.toUInt64
@@ -39,14 +40,15 @@ structure Entry (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics
   r13 : s.register .r13 = r13
   r14 : s.register .r14 = r14
   r15 : s.register .r15 = r15
-  notPanic : ra ≠ lb + 0x12be100
+  notPanic : ra ≠ lb + Image.panicEntry
   codeExits : CodeExits lb c.exits
   code : CodeAt lb m
   data : DataAt lb m
-  aligned : lb % 16 = 0
   stackFree : WritableAt m S 96
   resultWritable : WritableAt m res 12
-  metricsWritable : WritableAt m met 192
+  accountNotFoundWritable : WritableAt m (met + 32) 8
+  insufficientFundsWritable : WritableAt m (met + 80) 8
+  invalidAccountForFeeWritable : WritableAt m (met + 88) 8
   lamportsWritable : WritableAt m (acct + 8) 8
   readReturn : m.read .bytes8 (S + 96) = .ok ra
   readRelax : m.read .bytes1 (S + 104) = .ok (if relax then 1 else 0)
@@ -120,7 +122,7 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
     Entry c account metrics rent relax s c.loadBase (s.stackPointer - 96) c.account.account
       c.account.arcInner c.account.data c.result c.errorMetrics c.rent c.fee c.returnAddress
       (s.register .data) (s.register .base) (s.register .framePointer) (s.register .r12) (s.register .r13)
-      (s.register .r14) (s.register .r15) (ownerLow account) (ownerHigh account) s.memory := by
+      (s.register .r14) (s.register .r15) (ownerLow account) (ownerHigh account) s.floatControl s.memory := by
   have sep := separation_of_pre pre
   obtain ⟨harc, hlam, ho1, ho2, hdat, hlen, hdata⟩ := Spec.Account.reads pre.accountEncoded
   obtain ⟨hlpb, hthr⟩ := pre.rentEncoded
@@ -138,12 +140,12 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
     UInt64.add_zero] at hlpb hthr hc1 hc2 hc3
   refine
     { loadBase := rfl, accountPtr := rfl, arcInnerPtr := rfl, dataPtr := rfl, resultPtr := rfl,
-      metricsPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl,
+      metricsPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl, floatControl := rfl,
       stackPointer := hsp.symm, payerIndex := pre.payerIndexRegister, base := rfl, framePointer := rfl,
       r12 := rfl, r13 := rfl, r14 := rfl, r15 := rfl,
       notPanic := fun h => notPanic (by rw [h]; rfl),
       codeExits := codeExits_of_pre pre, code := codeAt_of_pre pre, data := dataAt_of_pre pre,
-      aligned := pre.alignedBase, owner := ownerHalves_eq_zero account.owner,
+      owner := ownerHalves_eq_zero account.owner,
       readArc := harc, readLamports := hlam, readOwnerLow := ho1, readOwnerHigh := ho2, readData := hdat,
       readLength := hlen,
       readVersions := fun h => (hdata (h80 h)).1, readState := fun h => (hdata (h80 h)).2,
@@ -163,12 +165,18 @@ theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
       metrics_rent := sep.metrics_rent, metrics_stack := sep.metrics_stack, rent_stack := sep.rent_stack,
       nonceData_stack := fun h => by have := sep.data_stack; rwa [h80 h] at this,
       nonceDataBound := fun h => by have := sep.data; rwa [h80 h] at this,
-      stackFree := ?_, resultWritable := ?_, metricsWritable := ?_, lamportsWritable := ?_,
+      stackFree := ?_, resultWritable := ?_, lamportsWritable := ?_, accountNotFoundWritable := ?_,
+      insufficientFundsWritable := ?_, invalidAccountForFeeWritable := ?_,
       readReturn := ?_, readRelax := ?_ }
   · have := WritableAt.of_writable pre.stackFree
     simpa [stackUse] using this
   · simpa [Image.Layout.result.size] using WritableAt.of_writable pre.resultWritable
-  · simpa [Image.Layout.transaction_error_metrics.size] using WritableAt.of_writable pre.metricsWritable
+  · simpa [off_eq, Image.Layout.transaction_error_metrics.account_not_found] using
+      WritableAt.of_writable pre.accountNotFoundWritable
+  · simpa [off_eq, Image.Layout.transaction_error_metrics.insufficient_funds] using
+      WritableAt.of_writable pre.insufficientFundsWritable
+  · simpa [off_eq, Image.Layout.transaction_error_metrics.invalid_account_for_fee] using
+      WritableAt.of_writable pre.invalidAccountForFeeWritable
   · simpa [off_eq, Image.Layout.account_shared_data.lamports] using WritableAt.of_writable pre.lamportsWritable
   · rw [hsp]; exact pre.returnAddress
   · have := pre.relaxArgument

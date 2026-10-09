@@ -119,11 +119,11 @@ macro "writable" : tactic => `(tactic| (
 macro "evolved" : tactic => `(tactic| (
   repeat' (first | with_reducible exact Evolved.refl _ | (apply Evolved.wr; rotate_left; writable))))
 
-/-- Two objects as `Nat` intervals do not overlap. Kept behind a definition
-so that `omega` does not see it: with many of these in context it would
-split on every disjunction. -/
+/-- Two objects as `Nat` intervals do not overlap; an empty one overlaps
+nothing. Kept behind a definition so that `omega` does not see it: with many
+of these in context it would split on every disjunction. -/
 def Separate (a : UInt64) (n : Nat) (b : UInt64) (n' : Nat) : Prop :=
-  a.toNat + n ≤ b.toNat ∨ b.toNat + n' ≤ a.toNat
+  n = 0 ∨ n' = 0 ∨ a.toNat + n ≤ b.toNat ∨ b.toNat + n' ≤ a.toNat
 
 /-- The object an address points into: `x` for `x + c` with `c` a literal. -/
 def addressBase (a : Expr) : MetaM Expr := do

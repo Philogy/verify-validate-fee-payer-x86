@@ -15,4 +15,7 @@ theorem chargeFeePayer_eq_reference (account : Spec.Account) (payerIndex : UInt1
       Reference.chargeFeePayer account payerIndex rent fee relax :=
   Reference.chargeFeePayer_eq' account payerIndex rent fee relax
 
+/-- info: 'ValidateFeePayer.chargeFeePayer_eq_reference' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms chargeFeePayer_eq_reference
+
 end ValidateFeePayer

@@ -180,11 +180,31 @@ theorem uint8_toUInt64_and_255 (x : UInt8) : x.toUInt64 &&& 255 = x.toUInt64 := 
   rw [show (255 : Nat) = 2 ^ 8 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
   omega
 
+/-- The final state wrote only what the call may write. -/
+syntax "vframe" term : tactic
+macro_rules
+  | `(tactic| vframe $e) => `(tactic| (
+    unfold Call.Frame
+    intro access a ha
+    rw [← ($e).memory]
+    simp only [Call.Written, ($e).resultPtr, ($e).accountPtr, ($e).metricsPtr, ($e).stackPointer, off_eq,
+      Image.Layout.result.size, Image.Layout.account_shared_data.lamports,
+      Image.Layout.transaction_error_metrics.account_not_found,
+      Image.Layout.transaction_error_metrics.invalid_account_for_fee,
+      Image.Layout.transaction_error_metrics.insufficient_funds, stackUse, Nat.toUInt64_eq, UInt64.reduceOfNat,
+      not_or, not_and, Nat.not_lt] at ha
+    repeat rw [byte_wr_other (by
+      intro j hj eq
+      replace eq := congrArg UInt64.toNat eq
+      simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat, Width.size,
+        Nat.reducePow, Nat.reduceMod, UInt64.toNat_sub] at eq hj ha
+      omega)]))
+
 /-- The final state of a returning path meets `Post`. -/
 syntax "vpost" term : tactic
 macro_rules
   | `(tactic| vpost $e) => `(tactic| (
-    refine ⟨?r, ?a, ?m, ?rax, ?sp, ?cs, ?frame⟩
+    refine ⟨?r, ?a, ?m, ?rax, ?sp, ?cs, ?fc, ?frame⟩
     case r =>
       simp only [ResultEncodes, resultTag, Except.map, ($e).resultPtr, Memory.Holds, off_eq,
         Image.Layout.result.tags.AccountNotFound, Image.Layout.result.tags.InvalidAccountForFee,
@@ -210,21 +230,8 @@ macro_rules
     case cs =>
       simp only [calleeSaved, List.mem_cons, List.not_mem_nil, forall_eq_or_imp, or_false, forall_eq, vexec,
         ($e).base, ($e).framePointer, ($e).r12, ($e).r13, ($e).r14, ($e).r15, and_self]
-    case frame =>
-      intro access a ha
-      rw [← ($e).memory]
-      simp only [Call.Written, ($e).resultPtr, ($e).accountPtr, ($e).metricsPtr, ($e).stackPointer, off_eq,
-        Image.Layout.result.size, Image.Layout.account_shared_data.lamports,
-        Image.Layout.transaction_error_metrics.account_not_found,
-        Image.Layout.transaction_error_metrics.invalid_account_for_fee,
-        Image.Layout.transaction_error_metrics.insufficient_funds, stackUse, Nat.toUInt64_eq, UInt64.reduceOfNat,
-        not_or, not_and, Nat.not_lt] at ha
-      repeat rw [byte_wr_other (by
-        intro j hj eq
-        replace eq := congrArg UInt64.toNat eq
-        simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat, Width.size,
-          Nat.reducePow, Nat.reduceMod, UInt64.toNat_sub] at eq hj ha
-        omega)]))
+    case fc => simp only [($e).floatControl]
+    case frame => vframe $e))
 
 /-- Close a path: it returned or panicked, the path conditions decide the
 spec, and the final state meets `Post`. `minimumBalance_eq` is the
@@ -250,6 +257,6 @@ macro_rules
       systemAccountKind_eq $account ($e).dataLength, ← ($e).owner, $minimumBalance_eq:term, ($e).feeArg,
       Spec.maxPermittedDataLength, Spec.simd0194MaxLamportsPerByte, Spec.currentMaxLamportsPerByte,
       Spec.accountStorageOverhead, Spec.nonceStateSize, foldAdd, foldMul, UInt64.reduceOfNat, Nat.toUInt64_eq]
-    all_goals first | trivial | vpost $e))
+    all_goals first | vpost $e | vframe $e | trivial))
 
 end ValidateFeePayer.Proof
