@@ -6,3 +6,10 @@ name = "X86"
 
 [[lean_lib]]
 name = "ValidateFeePayer"
+
+[[lean_lib]]
+name = "X86Test"
+
+[[lean_exe]]
+name = "x86-test"
+root = "X86Test"
