@@ -1,11 +1,7 @@
-import X86.Memory
+import X86.Fault
 import X86.Instruction
 
 namespace X86
-
-inductive Flag where
-  | carry | parity | auxiliaryCarry | zero | sign | overflow
-  deriving DecidableEq, Repr
 
 /-- `none` is a flag the SDM calls undefined after the last instruction that
 wrote it (or that the entry state leaves unspecified). -/
@@ -41,23 +37,10 @@ def State.register (s : State) (r : Register) : UInt64 := s.registers[r.index]
 
 def State.stackPointer (s : State) : UInt64 := s.register .stackPointer
 
-/-- Why the machine stopped in the middle of an instruction. The instruction
-has no effect. -/
-inductive Stop where
-  | pageFault (f : PageFault)
-  | misaligned (address : UInt64)
-  /-- The CPU returns some vendor-specific value for an undefined flag, and
-  the program may not rely on which. Stopping here instead of picking a
-  value is sound: a run that ends without this stop never read an undefined
-  flag, so it behaves the same whatever values the CPU holds there. -/
-  | undefinedFlagRead (f : Flag)
-  | unsupported (what : String)
-  deriving Repr
-
 def OperandSize.width : OperandSize → Width
   | .bits8 => .bytes1 | .bits16 => .bytes2 | .bits32 => .bytes4 | .bits64 => .bytes8
 
-abbrev Exec := StateT State (Except Stop)
+abbrev Exec := StateT State (Except Fault)
 
 namespace Exec
 

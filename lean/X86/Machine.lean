@@ -253,26 +253,23 @@ inductive Outcome where
   | running (s : State)
   | returned (s : State)
   | panicked (s : State)
-  /-- Control reached a byte that cannot be fetched and is not an exit. -/
-  | badJump (target : UInt64) (s : State)
-  | undecodable (why : DecodeError) (s : State)
-  | stopped (why : Stop) (s : State)
+  /-- Control reached an address that is neither an exit nor fetchable. -/
+  | badJump (s : State)
+  | faulted (why : Fault) (s : State)
 
 -- The exits are checked before fetching: the caller's return address and the
 -- panic entry are typically not mapped executable in the model at all.
-def step (exits : Exits) (s : State) : Outcome :=
-  if s.instructionPointer = exits.returnAddress then .returned s
-  else if s.instructionPointer = exits.panicAt then .panicked s
-  else match s.memory.byte .fetch s.instructionPointer with
-  | .error _ => .badJump s.instructionPointer s
-  | .ok _ =>
-    match decode s.memory s.instructionPointer with
-    | .error (.pageFault f) => .stopped (.pageFault f) s
-    | .error why => .undecodable why s
-    | .ok (i, length) =>
-      match (execute i).run { s with instructionPointer := s.instructionPointer + length.toUInt64 } with
-      | .ok ((), s') => .running s'
-      | .error why => .stopped why s
+def step (exits : Exits) (s : State) : Outcome := Id.run do
+  let ip := s.instructionPointer
+  if ip = exits.returnAddress then return .returned s
+  if ip = exits.panicAt then return .panicked s
+  let .ok _ := s.memory.byte .fetch ip | return .badJump s
+  let executed := do
+    let (i, length) ← decode s.memory ip
+    (execute i).run { s with instructionPointer := ip + length.toUInt64 }
+  match executed with
+  | .ok ((), s') => .running s'
+  | .error why => .faulted why s
 
 def run (exits : Exits) : (fuel : Nat) → State → Outcome
   | 0, s => .running s

@@ -1,5 +1,5 @@
 import X86.Instruction
-import X86.Memory
+import X86.Fault
 
 /-!
 `decodeBytes` is the encoding grammar (legacy prefixes, REX, the one-byte,
@@ -18,13 +18,6 @@ re-checking the bytes.
 -/
 
 namespace X86
-
-inductive DecodeError where
-  | pageFault (f : PageFault)
-  | truncated
-  | tooLong
-  | unsupported (what : String)
-  deriving DecidableEq, Repr
 
 abbrev Decoder := StateT (List UInt8) (Except DecodeError)
 
@@ -466,22 +459,22 @@ def maxInstructionLength : Nat := 15
 -- Bytes are fetched one at a time and only as many as the instruction
 -- needs: fetching past its end could fault where the CPU does not.
 def decodeWith (fetch : UInt64 → Except PageFault UInt8) (address : UInt64) :
-    Except DecodeError (Instruction × Nat) :=
+    Except Fault (Instruction × Nat) :=
   go maxInstructionLength []
 where
-  go : Nat → List UInt8 → Except DecodeError (Instruction × Nat)
-    | 0, _ => .error .tooLong
+  go : Nat → List UInt8 → Except Fault (Instruction × Nat)
+    | 0, _ => .error (.undecodable .tooLong)
     | budget + 1, bytes => do
       let b ← (fetch (address + bytes.length.toUInt64)).mapError .pageFault
       let bytes := bytes ++ [b]
       match decodeBytes bytes with
       | .ok (i, length) =>
         -- Every shorter prefix was `truncated`, so the decoder used all of them.
-        if length = bytes.length then .ok (i, length) else .error (.unsupported "trailing bytes")
+        if length = bytes.length then .ok (i, length) else .error (.undecodable (.unsupported "trailing bytes"))
       | .error .truncated => go budget bytes
-      | .error e => .error e
+      | .error e => .error (.undecodable e)
 
-def decode (m : Memory) (address : UInt64) : Except DecodeError (Instruction × Nat) :=
+def decode (m : Memory) (address : UInt64) : Except Fault (Instruction × Nat) :=
   decodeWith (m.byte .fetch) address
 
 end X86

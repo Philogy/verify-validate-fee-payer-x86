@@ -49,7 +49,7 @@ theorem step_code {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {i : In
     (hdec : decodeWith codeByte A = .ok (i, n)) :
     step exits s = match (execute i).run { s with instructionPointer := lb + A + n.toUInt64 } with
       | .ok ((), s') => .running s'
-      | .error why => .stopped why s := by
+      | .error why => .faulted why s := by
   have hf := decodeWith_fetched hdec
   obtain ⟨b, hb⟩ := hf 0 (by simp) (by
     obtain ⟨hlt, -⟩ := decodeWith_go_congr (g := codeByte) (a' := A) hdec; simpa using hlt)
@@ -74,11 +74,11 @@ theorem Finishes.exec {lb : UInt64} {exits : Exits} {s s' : State} {A : UInt64} 
 /-- `r` succeeded with `i` and `len`, and `k` holds of them. A definition,
 not a `match`: `simp` would try to reduce a `match` on `r` by evaluating it,
 and so would the kernel when checking the result. -/
-def DecodeThen (r : Except DecodeError (Instruction × Nat)) (k : Instruction → Nat → Prop) : Prop :=
+def DecodeThen (r : Except Fault (Instruction × Nat)) (k : Instruction → Nat → Prop) : Prop :=
   ∃ i len, r = .ok (i, len) ∧ k i len
 
 /-- `r` succeeded with state `s'`, and `k s'` holds. -/
-def ExecThen (r : Except Stop (Unit × State)) (k : State → Prop) : Prop :=
+def ExecThen (r : Except Fault (Unit × State)) (k : State → Prop) : Prop :=
   ∃ s', r = .ok ((), s') ∧ k s'
 
 theorem decodeThen_ok {i : Instruction} {len : Nat} {k : Instruction → Nat → Prop} :

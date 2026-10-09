@@ -21,13 +21,13 @@ section
 variable {α β : Type}
 
 /-- `bind` on the result of a run. -/
-def andThen (r : Except Stop (α × State)) (k : α → State → Except Stop (β × State)) :
-    Except Stop (β × State) :=
+def andThen (r : Except Fault (α × State)) (k : α → State → Except Fault (β × State)) :
+    Except Fault (β × State) :=
   match r with
   | .ok (a, s) => k a s
   | .error e => .error e
 
-@[vexec] theorem andThen_ok (a : α) (s : State) (k : α → State → Except Stop (β × State)) :
+@[vexec] theorem andThen_ok (a : α) (s : State) (k : α → State → Except Fault (β × State)) :
     andThen (.ok (a, s)) k = k a s := Eq.trans rfl rfl
 
 @[vexec] theorem run_bind (x : Exec α) (f : α → Exec β) (s : State) :

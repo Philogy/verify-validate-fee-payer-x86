@@ -122,8 +122,7 @@ def Case.agrees (c : Case) : Bool :=
 def Case.outcome (c : Case) : String :=
   match c.run with
   | .running _ => "running" | .returned _ => "returned" | .panicked _ => "panicked"
-  | .badJump t _ => s!"badJump {t}" | .undecodable why _ => s!"undecodable {repr why}"
-  | .stopped why _ => s!"stopped {repr why}"
+  | .badJump s => s!"badJump {s.instructionPointer}" | .faulted why _ => s!"faulted {repr why}"
 
 def nonceData : List UInt8 := u32 1 ++ u32 1 ++ List.replicate 72 0
 def minBalance (lpb : Nat) (threshold : Float) : UInt64 := (Float.ofNat (208 * lpb) * threshold).toUInt64
@@ -157,18 +156,18 @@ def cases : List Case := [
 /-! The stack: 88 bytes below the entry stack pointer on the deepest normal
 path, 96 to the panic from the callee (`stackUse`). One byte less faults. -/
 #guard ({ lamports := 1000, fee := 100, free := 88 } : Case).agrees
-#guard (({ lamports := 1000, fee := 100, free := 87 } : Case).outcome).startsWith "stopped X86.Stop.pageFault (X86.PageFault.unmapped"
+#guard (({ lamports := 1000, fee := 100, free := 87 } : Case).outcome).startsWith "faulted X86.Fault.pageFault (X86.PageFault.unmapped"
 #guard ({ lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, free := stackUse } : Case).agrees
-#guard (({ lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, free := stackUse - 1 } : Case).outcome).startsWith "stopped X86.Stop.pageFault"
+#guard (({ lamports := 1000, fee := 100, lamportsPerByte := 0xcccc28f646, free := stackUse - 1 } : Case).outcome).startsWith "faulted X86.Fault.pageFault"
 
 /-! At a base that is only 8-aligned the f64 constants are misaligned for
 `interleaveLow32` (x86: `punpckldq`), hence `Pre.alignedBase`. -/
 def floatPathAt (loadBase : UInt64) : Case :=
   { lamports := 10 ^ 9, fee := 5000, data := nonceData, threshold := 3.3, loadBase }
-#guard ((floatPathAt 0x555555554008).outcome).startsWith "stopped X86.Stop.misaligned"
+#guard ((floatPathAt 0x555555554008).outcome).startsWith "faulted X86.Fault.misaligned"
 #guard (floatPathAt 0x555555554000).agrees
 
-/-! A branch on a flag nobody wrote stops the machine. -/
+/-! A branch on a flag nobody wrote faults. -/
 #guard match ((execute (.jumpIf .equal 0)).run ({ lamports := 1, fee := 1 } : Case).state) with
   | .error (.undefinedFlagRead .zero) => true | _ => false
 
