@@ -189,6 +189,10 @@ def runWithReturnExit (c : Case) (exit : UInt64) : Outcome :=
   match runWithReturnExit (returnsTo data) 0x400000 with
   | .badJump s => s.instructionPointer == data | _ => false
 
+/-! What was not carved is unmapped, though the code takes its address. -/
+#guard match (({ lamports := 1, fee := 1 } : Case).state.memory.byte .read (0x555555554000 + Image.panic_msg)) with
+  | .error (.unmapped _ _) => true | _ => false
+
 /-! `Pre` is satisfiable: it holds of a concrete entry state. -/
 deriving instance DecidableEq for Except
 
@@ -201,7 +205,7 @@ theorem writable_of_ok {m : Memory} {a : UInt64} {n : Nat} (h : (m.bytes .write 
 def example1 : Case := { lamports := 1000, fee := 100, free := stackUse }
 
 example : Pre example1.call example1.account example1.metrics example1.rent false example1.state where
-  image := ⟨_, rfl⟩
+  image := ⟨_, rfl, by unfold IntervalsDisjoint; decide +kernel⟩
   validBase := by decide +kernel
   returnOutsideImage := by decide +kernel
   returnNotPanic := by decide +kernel

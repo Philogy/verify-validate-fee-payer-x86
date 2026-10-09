@@ -54,12 +54,12 @@ theorem codeExits_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c 
 
 theorem codeAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     CodeAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest⟩ := pre.image
+  obtain ⟨rest, hrest, -⟩ := pre.image
   rw [hrest]; exact codeAt_image pre.validBase rest
 
 theorem dataAt_of_pre {c : Call} {account metrics rent relax s} (pre : Pre c account metrics rent relax s) :
     DataAt c.loadBase s.memory := by
-  obtain ⟨rest, hrest⟩ := pre.image
+  obtain ⟨rest, hrest, -⟩ := pre.image
   rw [hrest]; exact dataAt_image pre.validBase rest
 
 end ValidateFeePayer.Proof

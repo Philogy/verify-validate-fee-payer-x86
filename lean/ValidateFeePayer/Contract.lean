@@ -98,15 +98,17 @@ def Call.footprint (c : Call) (sp : UInt64) (dataLength : Nat) : List (Nat × Na
    interval c.account.data dataLength,
    interval c.errorMetrics transaction_error_metrics.size,
    interval c.rent rent.size,
-   interval (sp - stackUse.toUInt64) (stackUse + 16)] ++
-  (imageMappings c.loadBase).map fun mp => (mp.base.toNat, mp.endAddress)
+   interval (sp - stackUse.toUInt64) (stackUse + 16),
+   reservedSpan c.loadBase]
 
 /-- The entry state of a call `c` with argument values `account`, `metrics`,
 `rent` and `relax`, as the System V ABI passes them: the result pointer in
 `rdi`, then `rsi rdx rcx r8 r9`, the `bool` above the return address. -/
 structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) (rent : Spec.Rent)
     (relax : Bool) (s : State) : Prop where
-  image : ∃ rest, s.memory = ⟨imageMappings c.loadBase ++ rest⟩
+  -- Nothing else is mapped in the reserved span, so what was not carved faults.
+  image : ∃ rest, s.memory = ⟨imageMappings c.loadBase ++ rest⟩ ∧
+    ∀ mp ∈ rest, IntervalsDisjoint [(mp.base.toNat, mp.endAddress), reservedSpan c.loadBase]
   validBase : ValidLoadBase c.loadBase
   -- Otherwise the code could "return" by jumping into itself.
   returnOutsideImage : ∀ mp ∈ imageMappings c.loadBase, ¬ mp.Contains c.returnAddress
@@ -145,7 +147,7 @@ structure Pre (c : Call) (account : Spec.Account) (metrics : Spec.ErrorMetrics) 
   insufficientFundsWritable :
     s.memory.Writable (off c.errorMetrics transaction_error_metrics.insufficient_funds) 8
   -- `&mut` arguments do not alias in Rust; this is that, plus no overlap
-  -- with the stack or the code.
+  -- with the stack or the binary.
   disjoint : IntervalsDisjoint (c.footprint s.stackPointer account.data.length)
   noWrap : ∀ i ∈ c.footprint s.stackPointer account.data.length, i.2 ≤ 2 ^ 64
 
