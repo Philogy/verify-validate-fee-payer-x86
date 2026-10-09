@@ -103,6 +103,33 @@ theorem Finishes.step' {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {n
   · rename_i i len hdec; exact Finishes.step hx hc hip hdec h
   · exact h.elim
 
+/-- `r` succeeded with `i` and `len`, and `k` holds of them. A definition,
+not a `match`: `simp` would try to reduce a `match` on `r` by evaluating it,
+and so would the kernel when checking the result. -/
+def DecodeThen (r : Except DecodeError (Instruction × Nat)) (k : Instruction → Nat → Prop) : Prop :=
+  ∃ i len, r = .ok (i, len) ∧ k i len
+
+/-- `r` succeeded with state `s'`, and `k s'` holds. -/
+def ExecThen (r : Except Stop (Unit × State)) (k : State → Prop) : Prop :=
+  ∃ s', r = .ok ((), s') ∧ k s'
+
+theorem decodeThen_ok {i : Instruction} {len : Nat} {k : Instruction → Nat → Prop} :
+    DecodeThen (.ok (i, len)) k = k i len :=
+  propext ⟨fun ⟨_, _, h, hk⟩ => by cases h; exact hk, fun hk => ⟨_, _, rfl, hk⟩⟩
+
+theorem execThen_ok {s : State} {k : State → Prop} : ExecThen (.ok ((), s)) k = k s :=
+  propext ⟨fun ⟨_, h, hk⟩ => by cases h; exact hk, fun hk => ⟨_, rfl, hk⟩⟩
+
+/-- `Finishes.step'` without `match`es. -/
+theorem Finishes.walk {lb : UInt64} {exits : Exits} {s : State} {A : UInt64} {n : Nat}
+    {P : Outcome → Prop}
+    (hx : CodeExits lb exits) (hc : CodeAt lb s.memory) (hip : s.instructionPointer = lb + A)
+    (h : DecodeThen (decodeWith codeByte A) fun i len =>
+      ExecThen ((execute i).run { s with instructionPointer := lb + A + len.toUInt64 }) fun s' =>
+        Finishes exits n s' P) : Finishes exits (n + 1) s P := by
+  obtain ⟨i, len, hdec, s', hexec, h⟩ := h
+  exact Finishes.exec hx hc hip hdec hexec h
+
 /-- A store that is known to succeed. -/
 def wr (m : Memory) (w : Width) (a v : UInt64) : Memory :=
   ⟨Memory.stores a (littleEndianBytes w.size v) 0 m.mappings⟩

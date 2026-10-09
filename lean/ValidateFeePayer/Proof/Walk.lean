@@ -95,6 +95,9 @@ theorem Evolved.data {lb : UInt64} {m m' : Memory} (h : Evolved m m') (hd : Data
     DataAt lb m' := by
   obtain ⟨_, h⟩ := h; exact h.trans_data hd
 
+theorem DataAt.evolved {lb : UInt64} {m m' : Memory} (hd : DataAt lb m) (h : Evolved m m') :
+    DataAt lb m' := h.data hd
+
 theorem Evolved.writable {m m' : Memory} {a : UInt64} {n : Nat} (h : Evolved m m')
     (hw : WritableAt m a n) : WritableAt m' a n := by
   obtain ⟨ws, h⟩ := h
@@ -177,7 +180,130 @@ attribute [vexec high] read_wr_same
   have := x.toNat_lt
   omega
 
-macro "walk_disch" : tactic => `(tactic| first | writable | apart)
+/-- The SSE constants are 16-byte aligned in the binary, so at a 16-byte
+aligned base. -/
+@[vexec] theorem aligned_add {lb c : UInt64} (h : lb % 16 = 0) : (lb + c) % 16 = c % 16 := by
+  apply UInt64.toNat_inj.1
+  have h := congrArg UInt64.toNat h
+  simp only [UInt64.toNat_mod, UInt64.toNat_add, UInt64.toNat_ofNat, Nat.reducePow, Nat.reduceMod] at h ⊢
+  have := lb.toNat_lt
+  have := c.toNat_lt
+  omega
+
+/-- Fold `a op b` on `UInt64` literals, with an `Eq.refl` proof at the
+literals. The built-in `UInt64.reduceAdd` is a `dsimproc`: it leaves no
+proof, so the kernel has to rediscover `lb + c ≡ lb + (a + b)` itself, and
+it may do so by unfolding `+` on the symbolic `lb`, which recurses once per
+unit of a literal near `2 ^ 64`. -/
+def foldLiterals (op : UInt64 → UInt64 → UInt64) (e : Expr) : SimpM Simp.Step := do
+  unless e.getAppNumArgs == 6 do return .continue
+  let some (x, _) ← getOfNatValue? e.appFn!.appArg! ``UInt64 | return .continue
+  let some (y, _) ← getOfNatValue? e.appArg! ``UInt64 | return .continue
+  let r := toExpr (op (UInt64.ofNat x) (UInt64.ofNat y))
+  return .done { expr := r, proof? := some (← mkExpectedTypeHint (← mkEqRefl r) (← mkEq e r)) }
+
+simproc foldAdd ((_ + _ : UInt64)) := foldLiterals (· + ·)
+simproc foldSub ((_ - _ : UInt64)) := foldLiterals (· - ·)
+simproc foldMul ((_ * _ : UInt64)) := foldLiterals (· * ·)
+simproc foldMod ((_ % _ : UInt64)) := foldLiterals (· % ·)
+simproc foldAnd ((_ &&& _ : UInt64)) := foldLiterals (· &&& ·)
+simproc foldOr ((_ ||| _ : UInt64)) := foldLiterals (· ||| ·)
+simproc foldXor ((_ ^^^ _ : UInt64)) := foldLiterals (· ^^^ ·)
+simproc foldShiftLeft ((_ <<< _ : UInt64)) := foldLiterals (· <<< ·)
+simproc foldShiftRight ((_ >>> _ : UInt64)) := foldLiterals (· >>> ·)
+
+simproc foldToUInt64 (UInt8.toUInt64 _) := fun e => do
+  let_expr UInt8.toUInt64 a := e | return .continue
+  let some (x, _) ← getOfNatValue? a ``UInt8 | return .continue
+  let r := toExpr (UInt8.ofNat x).toUInt64
+  return .done { expr := r, proof? := some (← mkExpectedTypeHint (← mkEqRefl r) (← mkEq e r)) }
+
+attribute [vexec] foldAdd foldSub foldMul foldMod foldAnd foldOr foldXor foldShiftLeft foldShiftRight
+  foldToUInt64 UInt64.reduceGE UInt64.reduceGT UInt64.reduceLT UInt64.reduceLE OperandSize.bits
+
+/-- Decide `a = b` on `UInt64` literals. -/
+simproc decideEq ((_ : UInt64) = _) := fun e => do
+  let_expr Eq _ a b := e | return .continue
+  let some (x, _) ← getOfNatValue? a ``UInt64 | return .continue
+  let some (y, _) ← getOfNatValue? b ``UInt64 | return .continue
+  Simp.evalPropStep e (UInt64.ofNat x == UInt64.ofNat y)
+
+attribute [vexec] decideEq
+
+/-! ## Vector registers -/
+
+@[vexec] theorem lowHalf_ofHalves (l h : UInt64) : lowHalf (ofHalves l h) = l := by
+  simp only [lowHalf, ofHalves]; bv_decide
+
+@[vexec] theorem highHalf_ofHalves (l h : UInt64) : highHalf (ofHalves l h) = h := by
+  simp only [highHalf, ofHalves]; bv_decide
+
+@[vexec] theorem lowHalf_interleaveLow32 (a b : BitVec 128) :
+    lowHalf (lane32 b 1 ++ lane32 a 1 ++ lane32 b 0 ++ lane32 a 0) =
+      ((lowHalf b &&& 0xffffffff) <<< 32) ||| (lowHalf a &&& 0xffffffff) := by
+  simp only [lowHalf, lane32]; bv_decide
+
+@[vexec] theorem highHalf_interleaveLow32 (a b : BitVec 128) :
+    highHalf (lane32 b 1 ++ lane32 a 1 ++ lane32 b 0 ++ lane32 a 0) =
+      (lowHalf b &&& (0xffffffff00000000 : UInt64)) ||| (lowHalf a >>> 32) := by
+  simp only [lowHalf, highHalf, lane32]; bv_decide
+
+@[vexec] theorem lowHalf_xor_self (a : BitVec 128) : lowHalf (a ^^^ a) = 0 := by
+  simp only [lowHalf]; bv_decide
+
+@[vexec] theorem xor_self (x : UInt64) : x ^^^ x = 0 := by bv_decide
+
+@[vexec] theorem signExtend_bits64 (x : UInt64) : OperandSize.bits64.signExtend x = x := by
+  -- The 64-bit sign extension is the identity: both branches are `x`.
+  rw [OperandSize.signExtend, show OperandSize.bits64.mask = 0xffffffffffffffff from rfl,
+    show ~~~(0xffffffffffffffff : UInt64) = 0 from by bv_decide]
+  rw [show (x ||| 0 = x) from by bv_decide, show (x &&& 0xffffffffffffffff = x) from by bv_decide]
+  split <;> rfl
+
+/-- `sar x, 63`. -/
+@[vexec] theorem shiftRightArithmetic_63 (x : UInt64) :
+    (x.toInt64 >>> UInt64.toInt64 63).toUInt64 = if x < 0x8000000000000000 then 0 else 0xffffffffffffffff := by
+  split <;> bv_decide
+
+attribute [vexec] DoubleOp.eval
+
+/-! ## Merging the two outcomes of a conditional move
+
+Both branches of `cmovcc` write the destination, so the result is one state
+whose register is an `if`. Conditional jumps produce the same shape in the
+instruction pointer, which the walk then splits on. -/
+
+section
+variable {α β : Type} {c : Prop} [Decidable c]
+
+@[vexec] theorem ite_ok {ε : Type} (a b : α) :
+    (if c then (.ok a : Except ε α) else .ok b) = .ok (if c then a else b) := by
+  split <;> rfl
+
+@[vexec] theorem ite_pair (a b : α) (x y : β) :
+    (if c then (a, x) else (b, y)) = (if c then a else b, if c then x else y) := by
+  split <;> rfl
+
+@[vexec] theorem ite_state (i i' : UInt64) (r r' : Vector UInt64 16) (f f' : Flags)
+    (v v' : Vector (BitVec 128) 16) (fc fc' : UInt32) (m m' : Memory) :
+    (if c then State.mk i r f v fc m else State.mk i' r' f' v' fc' m') =
+      State.mk (if c then i else i') (if c then r else r') (if c then f else f') (if c then v else v')
+        (if c then fc else fc') (if c then m else m') := by
+  split <;> rfl
+
+@[vexec] theorem ite_vector {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 : α} :
+    (if c then (#v[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15] : Vector α 16) else #v[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15]) =
+      #v[if c then a0 else b0, if c then a1 else b1, if c then a2 else b2, if c then a3 else b3, if c then a4 else b4, if c then a5 else b5, if c then a6 else b6, if c then a7 else b7, if c then a8 else b8, if c then a9 else b9, if c then a10 else b10, if c then a11 else b11, if c then a12 else b12, if c then a13 else b13, if c then a14 else b14, if c then a15 else b15] := by
+  split <;> rfl
+
+attribute [vexec] ite_self
+end
+
+macro "walk_disch" : tactic => `(tactic| first
+  | assumption
+  | (apply DataAt.evolved ‹DataAt _ _›; evolved)
+  | writable
+  | apart)
 
 /-- One instruction: look it up, execute it, and simplify the next state. -/
 syntax "vstep" (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
@@ -185,8 +311,14 @@ syntax "vstep" (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
 macro_rules
   | `(tactic| vstep) => `(tactic| vstep [])
   | `(tactic| vstep [$ls,*]) => `(tactic| (
-    refine Finishes.step' (by assumption)
-      (by (try dsimp only); first | assumption | (apply CodeAt.evolved ‹CodeAt _ _›; evolved)) rfl ?_
-    simp (disch := walk_disch) only [decode_table, vexec, ↓reduceIte, ↓reduceDIte, $ls,*]))
+    apply Finishes.walk
+    case hip => rfl
+    case hx => assumption
+    case hc => (try dsimp only); first | assumption | (apply CodeAt.evolved ‹CodeAt _ _›; evolved)
+    -- Look the instruction up first: `simp` rewrites inside the continuation
+    -- before the `DecodeThen` around it, and there `execute` of an unknown
+    -- instruction would unfold into every case.
+    simp only [decode_table, decodeThen_ok]
+    simp (disch := walk_disch) only [execThen_ok, vexec, ↓reduceIte, ↓reduceDIte, $ls,*]))
 
 end ValidateFeePayer.Proof
