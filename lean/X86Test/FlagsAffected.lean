@@ -138,6 +138,18 @@ def sampleViolations : List String := Id.run do
 
 #guard sampleViolations == []
 
+-- The check reports each kind of disagreement: a defined flag left
+-- undefined, an undefined one defined, a cleared one set, an unaffected one changed.
+#guard
+  let s := initialState [] defaultAt
+  let rax := RegisterOrMemory.register .rax
+  let after (f : Flags) := { s with rflags := f }
+  let defined : Flags := ⟨some true, some true, some true, some true, some true, some true⟩
+  flagViolations (.arithmetic .add .bits64 rax (.immediate 1)) s (after { defined with carry := none }) != [] &&
+  flagViolations (.arithmetic .and .bits64 rax (.immediate 1)) s (after { defined with carry := some false, overflow := some false }) != [] &&
+  flagViolations (.testVectorBits 0 (.register 1)) s (after { defined with sign := some true }) != [] &&
+  flagViolations (.move .bits64 rax (.immediate 1)) s (after { s.rflags with zero := s.rflags.zero.map (!·) }) != []
+
 -- Every constructor appears in the sample.
 #guard instructionConstructors.all fun c => sampleInstructions.any (constructorName · == c)
 

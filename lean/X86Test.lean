@@ -9,8 +9,10 @@ import ValidateFeePayer.Code
 `lake exe x86-test behaviour <dir>`: runs every vector in `<dir>/vectors/*.txt`
 through one `step` and compares with the CPU's outcome in
 `<dir>/expected/*.txt`; checks that the instruction prints back as the vector's
-assembly; and fails unless every form of the carved code and every
-`Instruction` constructor has a vector that completes.
+assembly and that the flags agree with the SDM (`FlagsAffected.lean`); and
+fails unless every form of the carved code and every `Instruction`
+constructor has a vector that completes, every outcome kind has an agreeing
+vector, and every carved instruction has one with its exact bytes.
 
 `lake exe x86-test decode <file>`: compares the decoder with llvm-objdump on
 the encodings in `<file>` (`tests/x86/decode.py` writes it).
