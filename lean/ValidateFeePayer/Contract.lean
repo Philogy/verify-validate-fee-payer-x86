@@ -136,6 +136,12 @@ structure Pre (c : Call) (refs : Spec.MutRefs) (rent : Spec.Rent) (relax : Bool)
   stackFree : s.memory.Writable (s.stackPointer - stackUse.toUInt64) stackUse
   flags : s.flags = .undefined
   floatControl : s.floatControl &&& ~~~0x3f = defaultFloatControl
+  -- Only the two exemption thresholds that take an integer path in
+  -- `Rent::minimum_balance` are covered; the `f64`/`cvttsd2si` path (the SSE
+  -- blocks at `0x27f369b` and `0x27f384b`) is excluded, so the `F64` model is
+  -- not exercised. `0x3ff0…` is `1.0`, `0x4000…` is `2.0`.
+  integerThreshold : rent.exemptionThreshold = Spec.simd0194ExemptionThreshold ∨
+    rent.exemptionThreshold = Spec.currentExemptionThreshold
   refsEncoded : refs.Encodes s.memory c
   rentEncoded : rent.Encodes s.memory c.rent
   resultWritable : s.memory.Writable c.result result.size

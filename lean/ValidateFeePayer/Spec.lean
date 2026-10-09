@@ -118,14 +118,14 @@ inductive SystemAccountKind where
 /-- `nonce::state::State::size()`. -/
 def nonceStateSize : Nat := 80
 
-def systemAccountKind (account : Account) : Option SystemAccountKind :=
-  if account.owner ≠ systemProgramId then none
-  else if account.data = [] then some .system
-  else if account.data.length = nonceStateSize then
-    let versionsTag := ofLittleEndian (account.data.take 4)
-    let stateTag := ofLittleEndian ((account.data.drop 4).take 4)
-    if (versionsTag = 0 ∨ versionsTag = 1) ∧ stateTag = 1 then some .nonce else none
-  else none
+def systemAccountKind (account : Account) : Option SystemAccountKind := do
+  guard (account.owner = systemProgramId)
+  if account.data = [] then return .system
+  guard (account.data.length = nonceStateSize)
+  let versionsTag := ofLittleEndian (account.data.take 4)
+  let stateTag := ofLittleEndian ((account.data.drop 4).take 4)
+  guard ((versionsTag = 0 ∨ versionsTag = 1) ∧ stateTag = 1)
+  return .nonce
 
 /-! ## `svm/src/rent_calculator.rs` -/
 
