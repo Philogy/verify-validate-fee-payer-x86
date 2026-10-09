@@ -165,7 +165,7 @@ macro_rules
 /-- `mov byte [rdi + 4], r9b` stores the low byte of the `u16` passed in `dx`. -/
 theorem payerIndexByte {r2 : UInt64} {p : UInt16} (h : r2 &&& 0xffff = p.toUInt64) :
     r2 &&& 4294967295 &&& 255 = p.toUInt8.toUInt64 := by
-  have e1 : r2 &&& 4294967295 &&& 255 = (r2 &&& 0xffff) &&& 255 := by bv_decide
+  have e1 : r2 &&& 4294967295 &&& 255 = (r2 &&& 0xffff) &&& 255 := by bits64
   rw [e1, h]
   apply UInt64.toNat_inj.1
   simp only [UInt64.toNat_and, UInt16.toNat_toUInt64, UInt8.toNat_toUInt64, UInt16.toNat_toUInt8,

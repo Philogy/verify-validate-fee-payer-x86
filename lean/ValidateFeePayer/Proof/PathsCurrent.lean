@@ -53,5 +53,5 @@ theorem walk_current {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMe
   vwalk [e.readReturn, e.readRelax, e.readArc, e.readLamports, e.readOwnerLow, e.readOwnerHigh, e.readData,
     e.readLength, e.readVersions, e.readState, e.readLamportsPerByte, hthrM, e.readAccountNotFound,
     e.readInvalidAccountForFee, e.readInsufficientFunds]
-  all_goals vleaf e, account, minimumBalance_current hthr
+  without_info all_goals vleaf e, account, minimumBalance_current hthr
 end ValidateFeePayer.Proof

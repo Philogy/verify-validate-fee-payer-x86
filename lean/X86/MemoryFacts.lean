@@ -1,5 +1,4 @@
 import X86.Memory
-import Std.Tactic.BVDecide
 
 -- No well-formedness is needed: `byte` reads from, and `setByte` writes to,
 -- the first mapping containing an address, so they agree even if mappings
@@ -195,12 +194,29 @@ theorem bytes_writeBytes {m m' : Memory} {a : UInt64} {bs : List UInt8}
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj, Option.getD_some]
     exact this
 
+theorem getElem_umod_256 (x : BitVec 64) (i : Nat) (h : i < 64) :
+    (x % 256#64)[i] = (x[i] && decide (i < 8)) := by
+  rw [BitVec.getElem_eq_testBit_toNat, BitVec.getElem_eq_testBit_toNat, BitVec.toNat_umod,
+    show (256#64).toNat = 2 ^ 8 from rfl, Nat.testBit_mod_two_pow, Bool.and_comm]
+
+/-- An equation of bitwise `UInt64` expressions, bit by bit. Unlike
+`bv_decide`, the proof is checked by the kernel alone, with no native
+computation. -/
+macro "bits64" : tactic => `(tactic| (
+  apply UInt64.toBitVec_inj.1
+  ext i hi
+  rcases i with _|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|i
+  all_goals first
+    | omega
+    | simp [BitVec.getElem_or, BitVec.getElem_shiftLeft, BitVec.getElem_and, BitVec.getElem_not,
+        UInt64.toBitVec_ofNat, getElem_umod_256] at *))
+
 theorem length_littleEndianBytes (n : Nat) (v : UInt64) : (littleEndianBytes n v).length = n := by
   induction n generalizing v <;> simp_all [littleEndianBytes]
 
 theorem ofLittleEndian_littleEndianBytes (w : Width) (v : UInt64) :
     ofLittleEndian (littleEndianBytes w.size v) = v &&& w.mask := by
-  cases w <;> simp [Width.size, Width.mask, littleEndianBytes, ofLittleEndian] <;> bv_decide
+  cases w <;> simp only [Width.size, Width.mask, littleEndianBytes, ofLittleEndian] <;> bits64
 
 theorem read_write_same {m m' : Memory} {w : Width} {a : UInt64} {v : UInt64}
     (h : m.write w a v = .ok m') : m'.read w a = .ok (v &&& w.mask) := by

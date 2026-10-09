@@ -1,6 +1,7 @@
 import ValidateFeePayer.Proof.Facts
 import ValidateFeePayer.Proof.Constants
 import ValidateFeePayer.Proof.Outcome
+import ValidateFeePayer.Proof.Entry
 
 /-!
 The entry state of `Pre` over plain variables: every value the code starts
@@ -107,5 +108,75 @@ abbrev entryState (lb S acct res met rnt fee r0 r2 r3 r5 r10 r11 r12 r13 r14 r15
   State.mk (lb + 0x27f3560)
     #v[r0, met, r2, r3, S + 96, r5, acct, res, rnt, fee, r10, r11, r12, r13, r14, r15]
     .undefined #v[v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15] fc m
+
+/-- The owner's halves as the code loads them. -/
+def ownerLow (x : Spec.Account) : BitVec 128 :=
+  ofHalves (ofLittleEndian ((x.owner.toList.take 16).take 8)) (ofLittleEndian ((x.owner.toList.take 16).drop 8))
+
+def ownerHigh (x : Spec.Account) : BitVec 128 :=
+  ofHalves (ofLittleEndian ((x.owner.toList.drop 16).take 8)) (ofLittleEndian ((x.owner.toList.drop 16).drop 8))
+
+theorem entry_of_pre {c : Call} {account : Spec.Account} {metrics : Spec.ErrorMetrics} {rent : Spec.Rent}
+    {relax : Bool} {s : State} (pre : Pre c account metrics rent relax s)
+    (notPanic : c.returnAddress ≠ panicAddress c.loadBase) :
+    Entry c account metrics rent relax s c.loadBase (s.stackPointer - 96) c.account.account
+      c.account.arcInner c.account.data c.result c.errorMetrics c.rent c.fee c.returnAddress
+      (s.register .data) (s.register .base) (s.register .framePointer) (s.register .r12) (s.register .r13)
+      (s.register .r14) (s.register .r15) (ownerLow account) (ownerHigh account) s.memory := by
+  have sep := separation_of_pre pre
+  obtain ⟨harc, hlam, ho1, ho2, hdat, hlen, hdata⟩ := Spec.Account.reads pre.accountEncoded
+  obtain ⟨hlpb, hthr⟩ := pre.rentEncoded
+  obtain ⟨hc1, hc2, hc3⟩ := pre.metricsEncoded
+  have hsp : s.stackPointer - 96 + 96 = s.stackPointer := UInt64.sub_add_cancel _ _
+  have hn : account.data.length < 2 ^ 64 := by
+    have := sep.result_data; have := sep.data; have := sep.result; unfold Separate at *; omega
+  have h80 : account.data.length.toUInt64 = 80 → account.data.length = 80 := by
+    intro h; have := congrArg UInt64.toNat h
+    simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat'] at this; simp at this; omega
+  simp only [Memory.Holds, BoolEncodes, off_eq, Image.Layout.rent.lamports_per_byte,
+    Image.Layout.rent.exemption_threshold, Image.Layout.transaction_error_metrics.account_not_found,
+    Image.Layout.transaction_error_metrics.invalid_account_for_fee,
+    Image.Layout.transaction_error_metrics.insufficient_funds, Nat.toUInt64_eq, UInt64.reduceOfNat,
+    UInt64.add_zero] at hlpb hthr hc1 hc2 hc3
+  refine
+    { loadBase := rfl, accountPtr := rfl, arcInnerPtr := rfl, dataPtr := rfl, resultPtr := rfl,
+      metricsPtr := rfl, rentPtr := rfl, feeArg := rfl, returnAddress := rfl, memory := rfl,
+      stackPointer := hsp.symm, payerIndex := pre.payerIndexRegister, base := rfl, framePointer := rfl,
+      r12 := rfl, r13 := rfl, r14 := rfl, r15 := rfl,
+      notPanic := fun h => notPanic (by rw [h]; rfl),
+      codeExits := codeExits_of_pre pre, code := codeAt_of_pre pre, data := dataAt_of_pre pre,
+      aligned := pre.alignedBase, owner := ownerHalves_eq_zero account.owner,
+      readArc := harc, readLamports := hlam, readOwnerLow := ho1, readOwnerHigh := ho2, readData := hdat,
+      readLength := hlen,
+      readVersions := fun h => (hdata (h80 h)).1, readState := fun h => (hdata (h80 h)).2,
+      readLamportsPerByte := hlpb, readThreshold := hthr, readAccountNotFound := hc1,
+      readInvalidAccountForFee := hc2, readInsufficientFunds := hc3,
+      accountEncoded := pre.accountEncoded, metricsEncoded := pre.metricsEncoded, dataLength := hn,
+      stackBound := sep.stack, resultBound := sep.result, accountBound := sep.account,
+      arcBound := sep.arcInner, dataBound := sep.data, metricsBound := sep.metrics, rentBound := sep.rent,
+      result_account := sep.result_account, result_arcInner := sep.result_arcInner,
+      result_data := sep.result_data, result_metrics := sep.result_metrics, result_rent := sep.result_rent,
+      result_stack := sep.result_stack, account_arcInner := sep.account_arcInner,
+      account_data := sep.account_data, account_metrics := sep.account_metrics,
+      account_rent := sep.account_rent, account_stack := sep.account_stack,
+      arcInner_data := sep.arcInner_data, arcInner_metrics := sep.arcInner_metrics,
+      arcInner_rent := sep.arcInner_rent, arcInner_stack := sep.arcInner_stack,
+      data_metrics := sep.data_metrics, data_rent := sep.data_rent, data_stack := sep.data_stack,
+      metrics_rent := sep.metrics_rent, metrics_stack := sep.metrics_stack, rent_stack := sep.rent_stack,
+      nonceData_stack := fun h => by have := sep.data_stack; rwa [h80 h] at this,
+      nonceDataBound := fun h => by have := sep.data; rwa [h80 h] at this,
+      stackFree := ?_, resultWritable := ?_, metricsWritable := ?_, lamportsWritable := ?_,
+      readReturn := ?_, readRelax := ?_ }
+  · have := WritableAt.of_writable pre.stackFree
+    simpa [stackUse] using this
+  · simpa [Image.Layout.result.size] using WritableAt.of_writable pre.resultWritable
+  · simpa [Image.Layout.transaction_error_metrics.size] using WritableAt.of_writable pre.metricsWritable
+  · simpa [off_eq, Image.Layout.account_shared_data.lamports] using WritableAt.of_writable pre.lamportsWritable
+  · rw [hsp]; exact pre.returnAddress
+  · have := pre.relaxArgument
+    simp only [BoolEncodes, Memory.Holds] at this
+    rw [show s.stackPointer - 96 + 104 = s.stackPointer + 8 by
+      rw [show (104 : UInt64) = 96 + 8 from rfl, ← UInt64.add_assoc, hsp]]
+    simpa using this
 
 end ValidateFeePayer.Proof

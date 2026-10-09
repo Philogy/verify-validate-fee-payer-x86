@@ -143,11 +143,29 @@ split on every disjunction. -/
 def Separate (a : UInt64) (n : Nat) (b : UInt64) (n' : Nat) : Prop :=
   a.toNat + n ≤ b.toNat ∨ b.toNat + n' ≤ a.toNat
 
+/-- The object an address points into: `x` for `x + c` with `c` a literal. -/
+def addressBase (a : Expr) : MetaM Expr := do
+  match_expr a with
+  | HAdd.hAdd _ _ _ _ x c => if (← getOfNatValue? c ``UInt64).isSome then return x else return a
+  | _ => return a
+
 /-- Prove `Apart a n b n'` by `omega` on the addresses as `Nat`s, using at
 most one `Separate` hypothesis. Hypotheses that hold on one path only, such
 as the account data's bounds when it is long enough to be read, are
 `p → _`; they are used when `p` is in context. -/
 elab "apart" : tactic => do
+  -- The `Separate` fact about the two objects the addresses point into, if any.
+  let some (a, b) ← withMainContext do
+      let t ← whnfR (← getMainTarget)
+      let_expr Apart a _ b _ := t | return none
+      return some (← addressBase a, ← addressBase b)
+    | throwError "apart: not an Apart goal"
+  let direct ← withMainContext do
+    for d in ← getLCtx do
+      if d.isImplementationDetail then continue
+      let_expr Separate p _ q _ := ← instantiateMVars d.type | continue
+      if (p == a && q == b) || (p == b && q == a) then return some (← Term.exprToSyntax d.toExpr)
+    return none
   evalTactic (← `(tactic| (
     unfold Apart
     intro i hi j hj
@@ -156,6 +174,8 @@ elab "apart" : tactic => do
     replace e := congrArg UInt64.toNat e
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_ofNat,
       Width.size, Nat.reducePow, Nat.reduceMod] at e hi hj)))
+  if let some h := direct then
+    if ← tryTactic (evalTactic (← `(tactic| (have h' := $h; unfold Separate at h'; omega)))) then return
   withMainContext do
   let mut separations : Array Term := #[]
   for d in ← getLCtx do
@@ -198,7 +218,11 @@ attribute [vexec] UInt64.add_zero UInt64.and_self Width.mask VectorMove.aligned 
   BitVec.zero_xor beq_eq_false_iff_ne
 
 /-- `cmp x, c` sets the zero flag on `x - c`, which the walk sees as `x + (-c)`. -/
-@[vexec] theorem add_literal_beq_zero (x c : UInt64) : (x + c == 0) = (x == 0 - c) := by bv_decide
+@[vexec] theorem add_literal_beq_zero (x c : UInt64) : (x + c == 0) = (x == 0 - c) := by
+  rw [Bool.eq_iff_iff]
+  simp only [beq_iff_eq, ← UInt64.toNat_inj, UInt64.toNat_add, UInt64.toNat_sub, UInt64.toNat_zero]
+  have := x.toNat_lt; have := c.toNat_lt
+  omega
 attribute [vexec] Nat.reducePow Nat.reduceMod Nat.reduceSub read_wr_lowByte read_wr_other read128_wr_other bytes_wr_other write_eq_wr
 attribute [vexec high] read_wr_same
 
@@ -322,14 +346,12 @@ attribute [vexec] decideEq decideBEq literalFirst fixDecide Bool.ite_eq_true_dis
 @[vexec] theorem lowHalf_xor_self (a : BitVec 128) : lowHalf (a ^^^ a) = 0 := by
   simp only [lowHalf]; bv_decide
 
-@[vexec] theorem xor_self (x : UInt64) : x ^^^ x = 0 := by bv_decide
+@[vexec] theorem xor_self (x : UInt64) : x ^^^ x = 0 := UInt64.xor_self
 
 @[vexec] theorem signExtend_bits64 (x : UInt64) : OperandSize.bits64.signExtend x = x := by
   -- The 64-bit sign extension is the identity: both branches are `x`.
-  rw [OperandSize.signExtend, show OperandSize.bits64.mask = 0xffffffffffffffff from rfl,
-    show ~~~(0xffffffffffffffff : UInt64) = 0 from by bv_decide]
-  rw [show (x ||| 0 = x) from by bv_decide, show (x &&& 0xffffffffffffffff = x) from by bv_decide]
-  split <;> rfl
+  simp only [OperandSize.signExtend, show OperandSize.bits64.mask = 0xffffffffffffffff from rfl,
+    show ~~~(0xffffffffffffffff : UInt64) = 0 from rfl, UInt64.or_zero, and_allOnes, ite_self]
 
 /-- `sar x, 63`. -/
 @[vexec] theorem shiftRightArithmetic_63 (x : UInt64) :
@@ -422,30 +444,34 @@ variable {c : Prop} {hc : Decidable c} {a b k : UInt64}
   split <;> rfl
 end
 
-@[vexec] theorem lowByte_of_merge (x y : UInt64) : (x &&& ~~~255 ||| y) &&& 255 = y &&& 255 := by bv_decide
+@[vexec] theorem lowByte_of_merge (x y : UInt64) : (x &&& ~~~255 ||| y) &&& 255 = y &&& 255 := by bits64
 @[vexec] theorem lowWord_of_merge (x y : UInt64) :
-    (x &&& ~~~4294967295 ||| y) &&& 4294967295 = y &&& 4294967295 := by bv_decide
+    (x &&& ~~~4294967295 ||| y) &&& 4294967295 = y &&& 4294967295 := by bits64
 @[vexec] theorem and_mask_mask (x : UInt64) : x &&& 4294967295 &&& 4294967295 = x &&& 4294967295 := by
-  bv_decide
+  rw [UInt64.and_assoc, UInt64.and_self]
 /-- `cmp r32, c` sets the zero flag on the low 32 bits of `x - c`. -/
 @[vexec] theorem add_literal_and_mask_eq_zero (x c : UInt64) :
     ((x &&& 4294967295) + c &&& 4294967295 = 0) = (x &&& 4294967295 = (0 - c) &&& 4294967295) := by
-  apply propext; bv_decide
+  apply propext
+  simp only [← UInt64.toNat_inj, UInt64.toNat_and, UInt64.toNat_add, UInt64.toNat_sub, UInt64.toNat_zero,
+    show (UInt64.toNat 4294967295) = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+  have := x.toNat_lt; have := c.toNat_lt
+  omega
 /-- The owner check reads the two halves of the owner and the system program
 id, which is zero. -/
-@[vexec] theorem zero_xor128 (x : BitVec 128) : 0 ^^^ x = x := by bv_decide
-@[vexec] theorem xor_zero128 (x : BitVec 128) : x ^^^ 0 = x := by bv_decide
-@[vexec] theorem and_self128 (x : BitVec 128) : x &&& x = x := by bv_decide
+@[vexec] theorem zero_xor128 (x : BitVec 128) : 0 ^^^ x = x := BitVec.zero_xor
+@[vexec] theorem xor_zero128 (x : BitVec 128) : x ^^^ 0 = x := BitVec.xor_zero
+@[vexec] theorem and_self128 (x : BitVec 128) : x &&& x = x := BitVec.and_self
 
 /-- Four bytes fit in the low 32 bits. -/
 @[vexec] theorem ofLittleEndian_take4_and_mask (l : List UInt8) :
     ofLittleEndian (l.take 4) &&& 4294967295 = ofLittleEndian (l.take 4) := by
   match l with
   | [] => rfl
-  | [a] => simp only [List.take, ofLittleEndian]; bv_decide
-  | [a, b] => simp only [List.take, ofLittleEndian]; bv_decide
-  | [a, b, c] => simp only [List.take, ofLittleEndian]; bv_decide
-  | a :: b :: c :: d :: _ => simp only [List.take, ofLittleEndian]; bv_decide
+  | [a] => simp only [List.take, ofLittleEndian]; bits64
+  | [a, b] => simp only [List.take, ofLittleEndian]; bits64
+  | [a, b, c] => simp only [List.take, ofLittleEndian]; bits64
+  | a :: b :: c :: d :: _ => simp only [List.take, ofLittleEndian]; bits64
 
 @[vexec] theorem take4_add_literal_and_mask_eq_zero (l : List UInt8) (c : UInt64) :
     (ofLittleEndian (l.take 4) + c &&& 4294967295 = 0) = (ofLittleEndian (l.take 4) = (0 - c) &&& 4294967295) := by
@@ -465,7 +491,7 @@ variable {c d : Prop} {hc : Decidable c} {hd : Decidable d}
   by_cases c <;> simp_all
 end
 
-@[vexec] theorem lowByte_cleared (x : UInt64) : x &&& ~~~255 &&& 255 = 0 := by bv_decide
+@[vexec] theorem lowByte_cleared (x : UInt64) : x &&& ~~~255 &&& 255 = 0 := by bits64
 /-- `mov ecx, 2; sbb rcx, 0`: the callee's code for the pre-execution rent
 state, 1 for rent-paying and 2 for rent-exempt. -/
 @[vexec] theorem two_sub_setcc {c : Prop} {hc : Decidable c} :
@@ -473,12 +499,12 @@ state, 1 for rent-paying and 2 for rent-exempt. -/
 @[vexec] theorem rentState_eq_one {c : Prop} {hc : Decidable c} : ((if c then (1 : UInt64) else 2) = 1) = c := by
   by_cases c <;> simp_all
 
-@[vexec] theorem zero_or (x : UInt64) : 0 ||| x = x := by bv_decide
-@[vexec] theorem or_zero (x : UInt64) : x ||| 0 = x := by bv_decide
+@[vexec] theorem zero_or (x : UInt64) : 0 ||| x = x := UInt64.zero_or
+@[vexec] theorem or_zero (x : UInt64) : x ||| 0 = x := UInt64.or_zero
 @[vexec] theorem lt_zero (x : UInt64) : (x < 0) = False := by
   apply propext; simp only [iff_false, UInt64.lt_iff_toNat_lt, UInt64.toNat_zero]; omega
 
-@[vexec] theorem zero_and (x : UInt64) : 0 &&& x = 0 := by bv_decide
+@[vexec] theorem zero_and (x : UInt64) : 0 &&& x = 0 := UInt64.zero_and
 
 /-- One step of the fall-through instruction of a jump over it (`Finishes.skip`). -/
 elab "vskip" : tactic => do
@@ -641,7 +667,7 @@ syntax "vwalk" (num)? (" [" Lean.Parser.Tactic.simpLemma,* "]")? : tactic
 /-- `vstep` and `vsplit` until no goal moves. A loop rather than `repeat'`,
 whose recursion is as deep as the code is long. -/
 elab_rules : tactic
-  | `(tactic| vwalk $[$n]? $[[$ls,*]]?) => do
+  | `(tactic| vwalk $[$n]? $[[$ls,*]]?) => withEnableInfoTree false do
     let ls := ls.getD ⟨#[]⟩
     let mut fuel := (n.map (·.getNat)).getD 100000
     let step ← `(tactic| first | vstep [$ls,*] | vskip | vsplit)
@@ -662,5 +688,9 @@ elab_rules : tactic
       if moved then todo := (← getGoals) ++ todo
       else done := done.push g
     setGoals (done.toList ++ todo)
+
+/-- Run `t` without recording info trees: they keep a copy of every goal,
+and a walk's goals are whole machine states. -/
+elab "without_info " t:tacticSeq : tactic => withEnableInfoTree false (evalTactic t)
 
 end ValidateFeePayer.Proof

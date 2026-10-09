@@ -141,9 +141,9 @@ theorem read_low_byte {m m' : Memory} {a v : UInt64} (h : m.write .bytes4 a v = 
   rw [length_littleEndianBytes] at this
   have h1 := bytes_take this (k := 1) (by decide)
   simp only [Memory.read, Width.size, h1, bind, Except.bind, pure, Except.pure]
-  simp only [Width.size, littleEndianBytes, List.take, ofLittleEndian]
+  simp only [littleEndianBytes, List.take, ofLittleEndian]
   congr 1
-  bv_decide
+  bits64
 
 /-! ## Stores relative to the entry memory -/
 
