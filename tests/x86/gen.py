@@ -761,8 +761,9 @@ def faults(g):
     # A non-canonical data address raises #GP on the CPU; the model has no notion
     # of canonical form. `known=` marks a deviation listed in tests/x86/README.md.
     # (Branches to such addresses are left out: Intel faults on the branch, AMD
-    # on the fetch after it.)
-    nc = 0x0000800000000000
+    # on the fetch after it.) Bit 56 set and 57-63 clear is non-canonical with
+    # 5-level paging too, which some CI runners have.
+    nc = 0x0100000000000000
     add("mov rax, qword ptr [rbx]", [("rbx", hexn(nc)), ("known", "noncanonical")])
     add("mov qword ptr [rbx], rax", [("rbx", hexn(nc + 0x1000)), ("known", "noncanonical")])
     # Undefined opcodes, which the decoder rejects too.
