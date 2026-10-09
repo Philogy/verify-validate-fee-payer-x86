@@ -1,6 +1,7 @@
 import X86Test.Harness
 import X86Test.Form
 import X86Test.Decode
+import X86Test.FlagsAffected
 import X86Test.Refusals
 import ValidateFeePayer.Code
 
